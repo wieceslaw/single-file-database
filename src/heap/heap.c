@@ -1,26 +1,13 @@
 //
-// Created by vyach on 12.09.2023.
+// Created by vyach on 16.09.2023.
 //
 
-#ifndef LLP_LAB1_HEAP_H
-#define LLP_LAB1_HEAP_H
+#include "heap/heap.h"
+#include "heap/list.h"
 
-#include <stdbool.h>
-#include <stddef.h>
-#include "buffer.h"
-#include "allocator/allocator.h"
-
-// data structure for storing fixed-size records
-typedef struct heap heap;
-
-typedef struct heap_it heap_it;
-
-typedef enum {
-    HEAP_OP_SUCCESS = 0,
-    HEAP_OP_ERROR = 1
-} heap_result;
-
-//size_t heap_size();
+struct heap {
+    list *list;
+};
 
 heap *heap_init(block_addr addr);
 
@@ -43,5 +30,3 @@ heap_result heap_iterator_get(heap_it *it, buffer *data);
 heap_result heap_iterator_delete(heap_it *it); // should move objects? should return back excess blocks
 
 heap_result heap_iterator_replace(heap_it *it, buffer *data);
-
-#endif //LLP_LAB1_HEAP_H

@@ -10,9 +10,14 @@ add_executable(llp_lab1
         include/heap/heap.h
         include/heap/buffer.h
         include/heap/list.h
-        include/file/file.h
         include/allocator/allocator.h
         src/heap/list.c
         src/heap/list_iterator.c
         src/allocator/allocator.c
+        include/pool.h
+        include/table_iterator.h
+        src/heap/heap.c
+        src/pool.c
+        include/table.h
+        include/query/cursor.h
 )

@@ -20,33 +20,38 @@ typedef struct {
 } list_h;
 
 typedef struct {
-    allocator *allocator;
-    block_addr header;
-} list;
-
-typedef struct {
     offset_t next;
     offset_t prev;
 } list_node_h;
 
-typedef struct {
-    list *list;
-    list_node_h *node;
-} list_it;
+struct list {
+    allocator *allocator;
+    block_addr header;
+};
 
-list_h *list_header(list *);
+typedef struct list list;
+
+typedef struct list_it list_it;
+
+list_h *list_header(list *list);
+
+list* list_init(block_addr addr);
+
+void list_free();
 
 list_result list_extend(list *, uint32_t n);
 
 list_result list_clear(list *);
 
-list_result list_iterator(list *, list_it *);
+list_it* list_get_iterator(list *);
 
-list_result list_iterator_free(list_it *);
+void list_iterator_free(list_it *);
 
 bool list_iterator_is_empty(list_it *);
 
-block* list_iterator_get(list_it *);
+block* list_iterator_get_block(list_it *);
+
+offset_t list_iterator_get_offset(list_it *);
 
 list_result list_iterator_next(list_it *);
 
