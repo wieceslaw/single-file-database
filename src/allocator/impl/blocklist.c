@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <malloc.h>
-#include "../allocator.h"
+#include "allocator/allocator.h"
 #include "blocklist.h"
 
 block_list_node *block_list_append(block_list *list, block *block) {

@@ -9,7 +9,7 @@
 
 typedef struct block_list_node block_list_node;
 
-typedef struct page page;
+typedef struct page_t page_t;
 
 typedef struct block block;
 
@@ -19,7 +19,7 @@ struct block {
     block_list_node *node;
 };
 
-struct page {
+struct page_t {
     block *block;
     offset_t offset;
 };

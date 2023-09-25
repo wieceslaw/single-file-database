@@ -47,24 +47,28 @@ typedef struct {
     offset_t entry_point_page;
 } file_h;
 
-typedef struct allocator allocator;
+typedef struct allocator_t allocator_t;
 
-typedef struct page page;
+typedef struct page_t page_t;
 
-void *page_ptr(page *p);
+void *page_ptr(page_t *p);
 
-file_status allocator_init(file_settings *settings, allocator **allocator_ptr);
+page_t* page_copy(allocator_t *allocator, page_t *page);
 
-file_status allocator_free(allocator *allocator);
+offset_t page_offset(page_t *p);
 
-allocator_result allocator_return_page(allocator *allocator, offset_t offset);
+file_status allocator_init(file_settings *settings, allocator_t **allocator_ptr);
 
-page *allocator_get_page(allocator * allocator);
+file_status allocator_free(allocator_t *allocator);
 
-allocator_result allocator_reserve_pages(allocator * allocator, uint32_t n);
+allocator_result allocator_return_page(allocator_t *allocator, offset_t offset);
 
-page *allocator_map_page(allocator *allocator, offset_t offset);
+page_t *allocator_get_page(allocator_t *allocator);
 
-allocator_result allocator_unmap_page(allocator *allocator, page *p);
+allocator_result allocator_reserve_pages(allocator_t *allocator, uint32_t n);
+
+page_t *allocator_map_page(allocator_t *allocator, offset_t offset);
+
+allocator_result allocator_unmap_page(allocator_t *allocator, page_t *page);
 
 #endif //LLP_LAB1_ALLOCATOR_H

@@ -5,11 +5,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <malloc.h>
-#include <stdio.h>
-#include "../allocator.h"
+#include "allocator/allocator.h"
 #include "blocklist.h"
 
-typedef struct free_block {
+typedef struct __attribute__((__packed__)) {
     offset_t next;
 } free_page_h;
 
@@ -37,13 +36,13 @@ static offset_t granular_offset(offset_t offset) {
 
 static allocator_result unmap_block(block *block);
 
-static block *map_block(allocator *allocator, offset_t file_offset);
+static block *map_block(allocator_t *allocator, offset_t file_offset);
 
-static block_list *allocator_get_list(allocator *allocator);
+static block_list *allocator_get_list(allocator_t *allocator);
 
-static file_h *allocator_get_header(allocator *allocator);
+static file_h *allocator_get_header(allocator_t *allocator);
 
-static allocator_result allocator_clear_list(allocator *allocator) {
+static allocator_result allocator_clear_list(allocator_t *allocator) {
     block_list_it it;
     block_list_iterator(allocator_get_list(allocator), &it);
     while (!block_list_iterator_is_empty(&it)) {
@@ -71,15 +70,23 @@ static block_list_node *block_list_find(block_list *list, offset_t offset) {
     return NULL;
 }
 
-void *page_ptr(page *p) {
+void *page_ptr(page_t *p) {
     return p->block->ptr + p->offset;
 }
 
-page *allocator_map_page(allocator *allocator, offset_t offset) {
+offset_t page_offset(page_t *p) {
+    return p->offset;
+}
+
+page_t* page_copy(allocator_t *allocator, page_t *page) {
+    return allocator_map_page(allocator, page->offset);
+}
+
+page_t *allocator_map_page(allocator_t *allocator, offset_t offset) {
     block_list *list = allocator_get_list(allocator);
     offset_t fixed_offset = granular_offset(offset);
     block_list_node *node = block_list_find(list, fixed_offset);
-    page *p = malloc(sizeof(page));
+    page_t *p = malloc(sizeof(page_t));
     if (NULL == p) {
         return NULL;
     }
@@ -96,11 +103,11 @@ page *allocator_map_page(allocator *allocator, offset_t offset) {
         }
     }
     node->used++;
-    *p = (page) {.offset = offset - fixed_offset, .block = node->block};
+    *p = (page_t) {.offset = offset - fixed_offset, .block = node->block};
     return p;
 }
 
-allocator_result allocator_unmap_page(allocator *allocator, page *p) {
+allocator_result allocator_unmap_page(allocator_t *allocator, page_t *p) {
     if (NULL == allocator || NULL == p) {
         return ALLOCATOR_UNABLE_UNMAP;
     }
@@ -127,8 +134,8 @@ allocator_result allocator_unmap_page(allocator *allocator, page *p) {
     return ALLOCATOR_SUCCESS;
 }
 
-allocator_result allocator_return_page(allocator *allocator, offset_t offset) {
-    page *p = allocator_map_page(allocator, offset);
+allocator_result allocator_return_page(allocator_t *allocator, offset_t offset) {
+    page_t *p = allocator_map_page(allocator, offset);
     if (NULL == p) {
         return ALLOCATOR_UNABLE_MAP;
     }
@@ -143,14 +150,14 @@ allocator_result allocator_return_page(allocator *allocator, offset_t offset) {
     return ALLOCATOR_SUCCESS;
 }
 
-page *allocator_get_page(allocator *allocator) {
+page_t *allocator_get_page(allocator_t *allocator) {
     if (allocator_get_header(allocator)->free_pages_count == 0) {
         if (ALLOCATOR_SUCCESS != allocator_reserve_pages(allocator, 1)) {
             return NULL;
         }
     }
     offset_t next_block_offset = allocator_get_header(allocator)->free_pages_next;
-    page *ref = allocator_map_page(allocator, next_block_offset);
+    page_t *ref = allocator_map_page(allocator, next_block_offset);
     if (NULL == ref) {
         return NULL;
     }
@@ -163,12 +170,12 @@ page *allocator_get_page(allocator *allocator) {
 
 #include "windows.h"
 
-struct allocator {
+struct allocator_t {
     HANDLE hFile;
     HANDLE hMap;
     LARGE_INTEGER liFileSize;
     block_list block_list;
-    page *header_page;
+    page_t *header_page;
 };
 
 offset_t sys_granularity() {
@@ -177,12 +184,12 @@ offset_t sys_granularity() {
     return sys_info.dwAllocationGranularity;
 }
 
-static block *map_block(allocator *allocator, offset_t offset) {
+static block *map_block(allocator_t *allocator_t, offset_t offset) {
     ULARGE_INTEGER ulOffset;
     ulOffset.QuadPart = offset;
-    offset_t mapping_size = min(block_size(), allocator->liFileSize.QuadPart - offset);
+    offset_t mapping_size = min(block_size(), allocator_t->liFileSize.QuadPart - offset);
     void *ptr = MapViewOfFile(
-            allocator->hMap,
+            allocator_t->hMap,
             FILE_MAP_READ | FILE_MAP_WRITE,
             ulOffset.HighPart,
             ulOffset.LowPart,
@@ -212,63 +219,63 @@ static allocator_result unmap_block(block *block) {
     return ALLOCATOR_SUCCESS;
 }
 
-static block_list *allocator_get_list(allocator *allocator) {
-    return &(allocator->block_list);
+static block_list *allocator_get_list(allocator_t *allocator_t) {
+    return &(allocator_t->block_list);
 }
 
-static file_h *allocator_get_header(allocator *allocator) {
-    return page_ptr(allocator->header_page);
+static file_h *allocator_get_header(allocator_t *allocator_t) {
+    return page_ptr(allocator_t->header_page);
 }
 
-file_status allocator_init(file_settings *settings, allocator **allocator_ptr) {
-    *allocator_ptr = malloc(sizeof(allocator));
+file_status allocator_init(file_settings *settings, allocator_t **allocator_ptr) {
+    *allocator_ptr = malloc(sizeof(allocator_t));
     if (*allocator_ptr == NULL) {
         return FILE_ST_ERROR;
     }
-    **allocator_ptr = (allocator) {0};
-    allocator *allocator = *allocator_ptr;
+    **allocator_ptr = (allocator_t) {0};
+    allocator_t *allocator_t = *allocator_ptr;
     switch (settings->open_type) {
         case FILE_OPEN_EXIST: {
-            allocator->hFile = CreateFile(settings->path,
+            allocator_t->hFile = CreateFile(settings->path,
                                           GENERIC_READ | GENERIC_WRITE,
                                           FILE_SHARE_READ | FILE_SHARE_WRITE,
                                           NULL,
                                           OPEN_EXISTING,
                                           FILE_ATTRIBUTE_NORMAL,
                                           0);
-            if (INVALID_HANDLE_VALUE == allocator->hFile) {
+            if (INVALID_HANDLE_VALUE == allocator_t->hFile) {
                 return FILE_ST_ALREADY_EXISTS;
             }
             break;
         }
         case FILE_OPEN_CLEAR: {
-            allocator->hFile = CreateFile(settings->path,
+            allocator_t->hFile = CreateFile(settings->path,
                                           GENERIC_READ | GENERIC_WRITE,
                                           FILE_SHARE_READ | FILE_SHARE_WRITE,
                                           NULL,
                                           OPEN_ALWAYS,
                                           FILE_ATTRIBUTE_NORMAL,
                                           0);
-            if (INVALID_HANDLE_VALUE == allocator->hFile) {
+            if (INVALID_HANDLE_VALUE == allocator_t->hFile) {
                 return FILE_ST_UNABLE_OPEN;
             }
             break;
         }
         case FILE_OPEN_CREATE: {
-            allocator->hFile = CreateFile(settings->path,
+            allocator_t->hFile = CreateFile(settings->path,
                                           GENERIC_READ | GENERIC_WRITE,
                                           FILE_SHARE_READ | FILE_SHARE_WRITE,
                                           NULL,
                                           CREATE_NEW,
                                           FILE_ATTRIBUTE_NORMAL,
                                           0);
-            if (INVALID_HANDLE_VALUE == allocator->hFile) {
+            if (INVALID_HANDLE_VALUE == allocator_t->hFile) {
                 return FILE_ST_ALREADY_EXISTS;
             }
             break;
         }
     }
-    if (!GetFileSizeEx((*allocator_ptr)->hFile, &allocator->liFileSize)) {
+    if (!GetFileSizeEx((*allocator_ptr)->hFile, &allocator_t->liFileSize)) {
         CloseHandle((*allocator_ptr)->hFile);
         return FILE_ST_ERROR;
     }
@@ -278,24 +285,24 @@ file_status allocator_init(file_settings *settings, allocator **allocator_ptr) {
                 CloseHandle((*allocator_ptr)->hFile);
                 return FILE_ST_WRONG_FORMAT;
             }
-            allocator->hMap = CreateFileMapping(
-                    allocator->hFile,
+            allocator_t->hMap = CreateFileMapping(
+                    allocator_t->hFile,
                     NULL,
                     PAGE_READWRITE,
                     0,
                     0,
                     NULL);
-            if (0 == allocator->hMap) {
+            if (0 == allocator_t->hMap) {
                 CloseHandle((*allocator_ptr)->hFile);
                 return FILE_ST_ERROR;
             }
-            allocator->header_page = allocator_map_page(allocator, 0);
-            if (allocator->header_page == NULL) {
+            allocator_t->header_page = allocator_map_page(allocator_t, 0);
+            if (allocator_t->header_page == NULL) {
                 CloseHandle((*allocator_ptr)->hMap);
                 CloseHandle((*allocator_ptr)->hFile);
                 return FILE_ST_ERROR;
             }
-            file_h *header = allocator_get_header(allocator);
+            file_h *header = allocator_get_header(allocator_t);
             if (!header_is_valid(header)) {
                 CloseHandle((*allocator_ptr)->hMap);
                 CloseHandle((*allocator_ptr)->hFile);
@@ -315,23 +322,23 @@ file_status allocator_init(file_settings *settings, allocator **allocator_ptr) {
                     ) {
                 return FILE_ST_ERROR;
             }
-            allocator->liFileSize.QuadPart = new_size;
+            allocator_t->liFileSize.QuadPart = new_size;
             if (!SetEndOfFile((*allocator_ptr)->hFile)) {
                 return FILE_ST_ERROR;
             }
-            allocator->hMap = CreateFileMapping(
-                    allocator->hFile,
+            allocator_t->hMap = CreateFileMapping(
+                    allocator_t->hFile,
                     NULL,
                     PAGE_READWRITE,
                     0,
                     0,
                     NULL);
-            if (0 == allocator->hMap) {
+            if (0 == allocator_t->hMap) {
                 CloseHandle((*allocator_ptr)->hFile);
                 return FILE_ST_ERROR;
             }
-            allocator->header_page = allocator_map_page(allocator, 0);
-            if (allocator->header_page == NULL) {
+            allocator_t->header_page = allocator_map_page(allocator_t, 0);
+            if (allocator_t->header_page == NULL) {
                 CloseHandle((*allocator_ptr)->hMap);
                 CloseHandle((*allocator_ptr)->hFile);
                 return FILE_ST_ERROR;
@@ -340,7 +347,7 @@ file_status allocator_init(file_settings *settings, allocator **allocator_ptr) {
             *header = (file_h) {0};
             header->magic = MAGIC;
             for (offset_t file_offset = PAGE_SIZE; file_offset < new_size; file_offset += PAGE_SIZE) {
-                if (ALLOCATOR_SUCCESS != allocator_return_page(allocator, file_offset)) {
+                if (ALLOCATOR_SUCCESS != allocator_return_page(allocator_t, file_offset)) {
                     return FILE_ST_ERROR;
                 }
             }
@@ -350,36 +357,36 @@ file_status allocator_init(file_settings *settings, allocator **allocator_ptr) {
     return FILE_ST_OK;
 }
 
-file_status allocator_free(allocator *allocator) {
-    if (allocator_unmap_page(allocator, allocator->header_page) != ALLOCATOR_SUCCESS) {
-        allocator_clear_list(allocator);
-        CloseHandle(allocator->hMap);
-        CloseHandle(allocator->hFile);
-        free(allocator);
+file_status allocator_free(allocator_t *allocator_t) {
+    if (allocator_unmap_page(allocator_t, allocator_t->header_page) != ALLOCATOR_SUCCESS) {
+        allocator_clear_list(allocator_t);
+        CloseHandle(allocator_t->hMap);
+        CloseHandle(allocator_t->hFile);
+        free(allocator_t);
         return FILE_ST_UNABLE_RELEASE;
     }
-    if (allocator_clear_list(allocator) != ALLOCATOR_SUCCESS) {
-        CloseHandle(allocator->hMap);
-        CloseHandle(allocator->hFile);
-        free(allocator);
+    if (allocator_clear_list(allocator_t) != ALLOCATOR_SUCCESS) {
+        CloseHandle(allocator_t->hMap);
+        CloseHandle(allocator_t->hFile);
+        free(allocator_t);
         return FILE_ST_UNABLE_RELEASE;
     }
-    if (!CloseHandle(allocator->hMap)) {
-        CloseHandle(allocator->hFile);
-        free(allocator);
+    if (!CloseHandle(allocator_t->hMap)) {
+        CloseHandle(allocator_t->hFile);
+        free(allocator_t);
         return FILE_ST_UNABLE_RELEASE;
     }
-    if (!CloseHandle(allocator->hFile)) {
-        free(allocator);
+    if (!CloseHandle(allocator_t->hFile)) {
+        free(allocator_t);
         return FILE_ST_UNABLE_RELEASE;
     }
-    free(allocator);
+    free(allocator_t);
     return FILE_ST_OK;
 }
 
-static allocator_result clear_mapping(allocator *allocator) {
+static allocator_result clear_mapping(allocator_t *allocator_t) {
     block_list_it it;
-    block_list_iterator(&allocator->block_list, &it);
+    block_list_iterator(&allocator_t->block_list, &it);
     while (!block_list_iterator_is_empty(&it)) {
         block *block = block_list_iterator_get(&it);
         if (!FlushViewOfFile(block->ptr, 0)) {
@@ -392,30 +399,30 @@ static allocator_result clear_mapping(allocator *allocator) {
         it.node->block = NULL;
         block_list_iterator_next(&it);
     }
-    if (!FlushFileBuffers(allocator->hFile)) {
+    if (!FlushFileBuffers(allocator_t->hFile)) {
         return ALLOCATOR_UNABLE_EXTEND;
     }
-    if (!CloseHandle(allocator->hMap)) {
+    if (!CloseHandle(allocator_t->hMap)) {
         return ALLOCATOR_UNABLE_EXTEND;
     }
     return ALLOCATOR_SUCCESS;
 }
 
-static allocator_result fill_mapping(allocator *allocator) {
-    allocator->hMap = CreateFileMapping(
-            allocator->hFile,
+static allocator_result fill_mapping(allocator_t *allocator_t) {
+    allocator_t->hMap = CreateFileMapping(
+            allocator_t->hFile,
             NULL,
             PAGE_READWRITE,
             0,
             0,
             NULL);
-    if (allocator->hMap == INVALID_HANDLE_VALUE) {
+    if (allocator_t->hMap == INVALID_HANDLE_VALUE) {
         return ALLOCATOR_UNABLE_MAP;
     }
     block_list_it it;
-    block_list_iterator(&allocator->block_list, &it);
+    block_list_iterator(&allocator_t->block_list, &it);
     while (!block_list_iterator_is_empty(&it)) {
-        block *block_ptr = map_block(allocator, it.node->file_offset);
+        block *block_ptr = map_block(allocator_t, it.node->file_offset);
         if (block_ptr == NULL) {
             return ALLOCATOR_UNABLE_MAP;
         }
@@ -425,16 +432,16 @@ static allocator_result fill_mapping(allocator *allocator) {
     return ALLOCATOR_SUCCESS;
 }
 
-allocator_result allocator_reserve_pages(allocator *allocator, uint32_t n) {
-    file_h *header = allocator_get_header(allocator);
+allocator_result allocator_reserve_pages(allocator_t *allocator_t, uint32_t n) {
+    file_h *header = allocator_get_header(allocator_t);
     uint32_t count = header->free_pages_count;
     if (count >= n) {
         return ALLOCATOR_SUCCESS;
     }
     uint32_t added = n - count;
-    offset_t old_size = allocator->liFileSize.QuadPart;
+    offset_t old_size = allocator_t->liFileSize.QuadPart;
     offset_t new_size = old_size + (PAGE_SIZE * added);
-    if (clear_mapping(allocator) != ALLOCATOR_SUCCESS) {
+    if (clear_mapping(allocator_t) != ALLOCATOR_SUCCESS) {
         return ALLOCATOR_UNABLE_UNMAP;
     }
     union {
@@ -446,22 +453,22 @@ allocator_result allocator_reserve_pages(allocator *allocator, uint32_t n) {
     } liOffset;
     liOffset.QuadPart = new_size;
     if (SetFilePointer(
-            allocator->hFile,
+            allocator_t->hFile,
             liOffset.u.LowPart,
             &liOffset.u.HighPart,
             FILE_BEGIN
     ) == INVALID_SET_FILE_POINTER) {
         return ALLOCATOR_UNABLE_EXTEND;
     }
-    if (!SetEndOfFile(allocator->hFile)) {
+    if (!SetEndOfFile(allocator_t->hFile)) {
         return ALLOCATOR_UNABLE_EXTEND;
     }
-    if (fill_mapping(allocator) != ALLOCATOR_SUCCESS) {
+    if (fill_mapping(allocator_t) != ALLOCATOR_SUCCESS) {
         return ALLOCATOR_UNABLE_MAP;
     }
-    allocator->liFileSize.QuadPart = new_size;
+    allocator_t->liFileSize.QuadPart = new_size;
     for (offset_t file_offset = old_size; file_offset < new_size; file_offset += PAGE_SIZE) {
-        if (allocator_return_page(allocator, file_offset) != ALLOCATOR_SUCCESS) {
+        if (allocator_return_page(allocator_t, file_offset) != ALLOCATOR_SUCCESS) {
             return ALLOCATOR_UNABLE_EXTEND;
         }
     }
@@ -476,9 +483,9 @@ allocator_result allocator_reserve_pages(allocator *allocator, uint32_t n) {
 #include <fcntl.h>
 #include <sys/param.h>
 
-struct allocator {
+struct allocator_t {
     int fd;
-    page *header_page;
+    page_t *header_page;
     offset_t file_size;
     block_list list;
 };
@@ -494,7 +501,7 @@ static allocator_result unmap_block(block *block) {
     return ALLOCATOR_UNABLE_UNMAP;
 }
 
-static block *map_block(allocator *allocator, offset_t offset) {
+static block *map_block(allocator_t *allocator, offset_t offset) {
     offset_t mapping_size = MIN(block_size(), allocator->file_size - offset);
     void *block_mapping = mmap(NULL,
                                mapping_size,
@@ -515,21 +522,21 @@ static block *map_block(allocator *allocator, offset_t offset) {
     return b;
 }
 
-static block_list *allocator_get_list(allocator *allocator) {
+static block_list *allocator_get_list(allocator_t *allocator) {
     return &(allocator->list);
 }
 
-static file_h *allocator_get_header(allocator *allocator) {
+static file_h *allocator_get_header(allocator_t *allocator) {
     return page_ptr(allocator->header_page);
 }
 
-file_status allocator_init(file_settings *settings, allocator **allocator_ptr) {
+file_status allocator_init(file_settings *settings, allocator_t **allocator_ptr) {
     *allocator_ptr = malloc(PAGE_SIZE);
     if (NULL == allocator_ptr) {
         return FILE_ST_ERROR;
     }
-    **allocator_ptr = (allocator) {0};
-    allocator* allocator = *allocator_ptr;
+    **allocator_ptr = (allocator_t) {0};
+    allocator_t* allocator = *allocator_ptr;
     switch (settings->open_type) {
         case FILE_OPEN_EXIST: {
             allocator->fd = open(settings->path, O_RDWR);
@@ -599,7 +606,7 @@ file_status allocator_init(file_settings *settings, allocator **allocator_ptr) {
     return FILE_ST_OK;
 }
 
-file_status allocator_free(allocator *allocator) {
+file_status allocator_free(allocator_t *allocator) {
     if (ALLOCATOR_SUCCESS != allocator_unmap_page(allocator, allocator->header_page)) {
         allocator_clear_list(allocator);
         close(allocator->fd);
@@ -619,7 +626,7 @@ file_status allocator_free(allocator *allocator) {
     return FILE_ST_OK;
 }
 
-allocator_result allocator_reserve_pages(allocator *allocator, uint32_t n) {
+allocator_result allocator_reserve_pages(allocator_t *allocator, uint32_t n) {
     if (allocator_get_header(allocator)->free_pages_count >= n) {
         return ALLOCATOR_SUCCESS;
     }

@@ -4,7 +4,7 @@
 
 int main(int argc, char *argv[]) {
     file_settings settings = {.path = "test.bin", .open_type = FILE_OPEN_CLEAR};
-    allocator *allocator;
+    allocator_t *allocator;
     int res = allocator_init(&settings, &allocator);
     if (res != FILE_ST_OK) {
         printf("File error %d", res);
@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
         printf("unable extend");
         return -1;
     }
-    page* ref = allocator_get_page(allocator);
+    page_t* ref = allocator_get_page(allocator);
     if (ref == NULL) {
         printf("unable to get block");
         return -1;
