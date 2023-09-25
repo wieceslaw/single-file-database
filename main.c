@@ -11,18 +11,18 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    if (allocator_reserve_blocks(allocator, 100) != ALLOCATOR_SUCCESS) {
+    if (allocator_reserve_pages(allocator, 100) != ALLOCATOR_SUCCESS) {
         printf("unable extend");
         return -1;
     }
-    block_ref* ref = allocator_get_block_ref(allocator);
+    page* ref = allocator_get_page(allocator);
     if (ref == NULL) {
         printf("unable to get block");
         return -1;
     }
-    void *ptr = block_ref_ptr(ref);
+    void *ptr = page_ptr(ref);
     strcpy(ptr, "1234567890");
-    allocator_unmap_block_ref(allocator, ref);
+    allocator_unmap_page(allocator, ref);
 
     allocator_free(allocator);
     return 0;

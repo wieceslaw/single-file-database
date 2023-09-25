@@ -18,14 +18,14 @@
 //        header->head = block_offset(b);
 //    }
 //    if (0 != header->tail) {
-//        list_node_h *last_node = (list_node_h *) allocator_map_block_ref(list->allocator, header->tail);
+//        list_node_h *last_node = (list_node_h *) allocator_map_page(list->allocator, header->tail);
 //        if (NULL == last_node) {
 //            return LIST_OP_ERROR;
 //        }
 //        last_node->next = block_offset(b);
 //        list_node_h *node = (list_node_h *) block_ptr(b);
 //        node->prev = header->tail;
-//        if (allocator_unmap_block_ref(list->allocator, (block *) last_node) != ALLOCATOR_SUCCESS) {
+//        if (allocator_unmap_page(list->allocator, (block *) last_node) != ALLOCATOR_SUCCESS) {
 //            return LIST_OP_ERROR;
 //        }
 //    }
@@ -41,17 +41,17 @@
 //    if (NULL == list) {
 //        return LIST_OP_ERROR;
 //    }
-//    allocator_reserve_blocks(list->allocator, n);
+//    allocator_reserve_pages(list->allocator, n);
 //    for (uint32_t i = 0; i < n; i++) {
 //        block *block = allocator_get_block(list->allocator);
 //        if (NULL == block) {
 //            return LIST_OP_ERROR;
 //        }
 //        if (list_append(list, block) != LIST_OP_SUCCESS) {
-//            allocator_unmap_block_ref(list->allocator, block);
+//            allocator_unmap_page(list->allocator, block);
 //            return LIST_OP_ERROR;
 //        }
-//        if (allocator_unmap_block_ref(list->allocator, block) != ALLOCATOR_SUCCESS) {
+//        if (allocator_unmap_page(list->allocator, block) != ALLOCATOR_SUCCESS) {
 //            return LIST_OP_ERROR;
 //        }
 //    }
@@ -67,7 +67,7 @@
 //            return LIST_OP_ERROR;
 //        }
 //        header->head = list_iterator_get_offset(it);
-//        if (allocator_return_block(list->allocator, node_offset) != LIST_OP_SUCCESS) {
+//        if (allocator_return_page(list->allocator, node_offset) != LIST_OP_SUCCESS) {
 //            return LIST_OP_ERROR;
 //        }
 //    }

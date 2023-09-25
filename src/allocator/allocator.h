@@ -7,7 +7,7 @@
 
 #include <stdint-gcc.h>
 
-#define BLOCK_SIZE 4096
+#define PAGE_SIZE 4096
 #define MAGIC 0xABCD
 
 typedef uint64_t offset_t;
@@ -42,29 +42,29 @@ typedef struct {
 
 typedef struct {
     int32_t magic;
-    uint32_t free_blocks_count;
-    offset_t free_blocks_next;
-    // entry point
+    uint32_t free_pages_count;
+    offset_t free_pages_next;
+    offset_t entry_point_page;
 } file_h;
 
 typedef struct allocator allocator;
 
-typedef struct block_ref block_ref;
+typedef struct page page;
 
-void *block_ref_ptr(block_ref *ref);
+void *page_ptr(page *p);
 
-file_status allocator_init(file_settings *, allocator **);
+file_status allocator_init(file_settings *settings, allocator **allocator_ptr);
 
-file_status allocator_free(allocator *);
+file_status allocator_free(allocator *allocator);
 
-allocator_result allocator_return_block(allocator *, offset_t offset);
+allocator_result allocator_return_page(allocator *allocator, offset_t offset);
 
-block_ref *allocator_get_block_ref(allocator *);
+page *allocator_get_page(allocator * allocator);
 
-allocator_result allocator_reserve_blocks(allocator *, uint32_t n);
+allocator_result allocator_reserve_pages(allocator * allocator, uint32_t n);
 
-block_ref *allocator_map_block_ref(allocator *allocator, offset_t offset);
+page *allocator_map_page(allocator *allocator, offset_t offset);
 
-allocator_result allocator_unmap_block_ref(allocator *allocator, block_ref *ref);
+allocator_result allocator_unmap_page(allocator *allocator, page *p);
 
 #endif //LLP_LAB1_ALLOCATOR_H

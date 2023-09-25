@@ -37,7 +37,7 @@
 //    if (NULL == it) {
 //        return NULL;
 //    }
-//    return allocator_map_block_ref(it->list->allocator, it->node);
+//    return allocator_map_page(it->list->allocator, it->node);
 //}
 //
 //offset_t list_iterator_get_offset(list_it *it) {
@@ -59,7 +59,7 @@
 //        return LIST_OP_ERROR;
 //    }
 //    it->node = node->next;
-//    if (allocator_unmap_block_ref(it->list->allocator, (block *) it->node) != ALLOCATOR_SUCCESS) {
+//    if (allocator_unmap_page(it->list->allocator, (block *) it->node) != ALLOCATOR_SUCCESS) {
 //        return LIST_OP_ERROR;
 //    }
 //    return LIST_OP_SUCCESS;
@@ -76,7 +76,7 @@
 //    if (list_iterator_next(it) != LIST_OP_SUCCESS) {
 //        return LIST_OP_ERROR;
 //    }
-//    if (allocator_return_block(it->list->allocator, node_offset) != ALLOCATOR_SUCCESS) {
+//    if (allocator_return_page(it->list->allocator, node_offset) != ALLOCATOR_SUCCESS) {
 //        return LIST_OP_ERROR;
 //    }
 //    return LIST_OP_SUCCESS;
