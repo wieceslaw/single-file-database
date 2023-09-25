@@ -7,17 +7,17 @@ include_directories(include/)
 
 add_executable(llp_lab1
         main.c
-        include/heap/heap.h
-        include/heap/buffer.h
-        include/heap/list.h
-        include/allocator/allocator.h
+        src/heap/heap.h
+        src/allocator/buffer.h
+        src/heap/list.h
+        src/allocator/allocator.h
         src/heap/list.c
         src/heap/list_iterator.c
-        src/allocator/allocator.c
+        src/allocator/impl/allocator.c
         include/pool.h
         include/table_iterator.h
-        src/heap/heap.c
-        src/pool.c
         include/table.h
         include/query/cursor.h
+        src/allocator/impl/blocklist.c
+        src/allocator/impl/blocklist.h
 )

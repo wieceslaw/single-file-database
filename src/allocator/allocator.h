@@ -7,7 +7,7 @@
 
 #include <stdint-gcc.h>
 
-#define BLOCK_SIZE 65536
+#define BLOCK_SIZE 4096
 #define MAGIC 0xABCD
 
 typedef uint64_t offset_t;
@@ -49,18 +49,9 @@ typedef struct {
 
 typedef struct allocator allocator;
 
-typedef struct block block;
+typedef struct block_ref block_ref;
 
-offset_t block_offset(block *);
-
-void *block_ptr(block *);
-
-typedef struct {
-    block *block;
-    uint16_t offset;
-} block_addr;
-
-void *block_addr_get(block_addr *block_addr);
+void *block_ref_ptr(block_ref *ref);
 
 file_status allocator_init(file_settings *, allocator **);
 
@@ -68,12 +59,12 @@ file_status allocator_free(allocator *);
 
 allocator_result allocator_return_block(allocator *, offset_t offset);
 
-block *allocator_get_block(allocator *);
+block_ref *allocator_get_block_ref(allocator *);
 
 allocator_result allocator_reserve_blocks(allocator *, uint32_t n);
 
-block *allocator_map_block(allocator *, offset_t offset);
+block_ref *allocator_map_block_ref(allocator *allocator, offset_t offset);
 
-allocator_result allocator_unmap_block(allocator *, block *block);
+allocator_result allocator_unmap_block_ref(allocator *allocator, block_ref *ref);
 
 #endif //LLP_LAB1_ALLOCATOR_H

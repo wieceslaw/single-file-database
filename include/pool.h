@@ -6,7 +6,7 @@
 #define LLP_LAB1_POOL_H
 
 #include <stdbool.h>
-#include "heap/buffer.h"
+#include "../src/allocator/buffer.h"
 
 typedef enum {
     POOL_OP_SUCCESS = 0,
