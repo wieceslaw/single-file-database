@@ -12,16 +12,18 @@ struct list_it {
 
 struct list_t {
     allocator_t *allocator;
-    offset_t offset;
-    page_t *header_page;
+    list_h *header;
 };
 
-static list_h *list_header(list_t *list) {
-    return page_ptr(list->header_page) + list->offset;
+offset_t list_iterator_offset(list_it *it) {
+    if (list_iterator_is_empty(it)) {
+        return 0;
+    }
+    return page_offset(it->page);
 }
 
-offset_t list_size() {
-    return sizeof(list_h);
+bool list_is_empty(list_t *list) {
+    return 0 == list->header->head;
 }
 
 list_result list_place(page_t *page, offset_t offset) {
@@ -37,7 +39,7 @@ list_result list_clear(list_t *list) {
     if (NULL == list) {
         return LIST_OP_ERROR;
     }
-    list_it *it = list_get_iterator(list);
+    list_it *it = list_get_head_iterator(list);
     if (NULL == it) {
         return LIST_OP_ERROR;
     }
@@ -46,18 +48,19 @@ list_result list_clear(list_t *list) {
             return LIST_OP_ERROR;
         }
     }
+    *list->header = (list_h) {0};
     return list_iterator_free(it);
 }
 
-list_t *list_init(page_t *page, offset_t offset, allocator_t *allocator) {
-    if (NULL == page || NULL == allocator) {
+list_t *list_init(list_h *header, allocator_t *allocator) {
+    if (NULL == header || NULL == allocator) {
         return NULL;
     }
     list_t *list_ptr = malloc(sizeof(list_t));
     if (NULL == list_ptr) {
         return NULL;
     }
-    *list_ptr = (list_t) {.header_page = page, .offset = offset, .allocator = allocator};
+    *list_ptr = (list_t) {.header = header, .allocator = allocator};
     return list_ptr;
 }
 
@@ -69,24 +72,23 @@ static list_result list_append(list_t *list, page_t *page) {
     if (NULL == list || NULL == page) {
         return LIST_OP_ERROR;
     }
-    list_h *header = list_header(list);
-    if (0 == header->head) {
-        header->head = page_offset(page);
+    if (0 == list->header->head) {
+        list->header->head = page_offset(page);
     }
-    if (0 != header->tail) {
-        page_t *tail_page = allocator_map_page(list->allocator, header->tail);
+    if (0 != list->header->tail) {
+        page_t *tail_page = allocator_map_page(list->allocator, list->header->tail);
         if (NULL == tail_page) {
             return LIST_OP_ERROR;
         }
         list_node_h *tail_node = (list_node_h *) page_ptr(tail_page);
         tail_node->next = page_offset(page);;
         list_node_h *node = (list_node_h *) page_ptr(page);
-        node->prev = header->tail;
+        node->prev = list->header->tail;
         if (allocator_unmap_page(list->allocator, tail_page) != ALLOCATOR_SUCCESS) {
             return LIST_OP_ERROR;
         }
     }
-    header->tail = page_offset(page);
+    list->header->tail = page_offset(page);
     return LIST_OP_SUCCESS;
 }
 
@@ -94,7 +96,9 @@ list_result list_extend(list_t *list, uint32_t n) {
     if (NULL == list) {
         return LIST_OP_ERROR;
     }
-    allocator_reserve_pages(list->allocator, n);
+    if (allocator_reserve_pages(list->allocator, n) != ALLOCATOR_SUCCESS) {
+        return LIST_OP_ERROR;
+    }
     for (uint32_t i = 0; i < n; i++) {
         page_t *free_page = allocator_get_page(list->allocator);
         if (NULL == free_page) {
@@ -111,18 +115,34 @@ list_result list_extend(list_t *list, uint32_t n) {
     return LIST_OP_SUCCESS;
 }
 
-list_it *list_get_iterator(list_t *list) {
+list_it *list_get_head_iterator(list_t *list) {
+    return list_get_iterator(list, list->header->head);
+}
+
+list_it *list_get_tail_iterator(list_t *list) {
+    return list_get_iterator(list, list->header->tail);
+}
+
+list_it *list_get_iterator(list_t * list, offset_t page_offset) {
     list_it *it = malloc(sizeof(list_it));
     if (NULL == it) {
         return NULL;
     }
-    it->page = allocator_map_page(list->allocator, list_header(list)->head);
+    it->list = list;
+    if (0 == page_offset) {
+        it->page = NULL;
+        return it;
+    }
+    it->page = allocator_map_page(list->allocator, page_offset);
     if (NULL == it->page) {
         free(it);
         return NULL;
     }
-    it->list = list;
     return it;
+}
+
+list_it *list_iterator_copy(list_it *it) {
+    return list_get_iterator(it->list, page_offset(it->page));
 }
 
 list_result list_iterator_free(list_it *it) {
@@ -147,10 +167,15 @@ list_result list_iterator_next(list_it *it) {
     if (NULL == node) {
         return LIST_OP_ERROR;
     }
+    offset_t next = node->next;
     if (allocator_unmap_page(it->list->allocator, it->page) != ALLOCATOR_SUCCESS) {
         return LIST_OP_ERROR;
     }
-    it->page = allocator_map_page(it->list->allocator, node->next);
+    if (0 == next) {
+        it->page = NULL;
+        return LIST_OP_SUCCESS;
+    }
+    it->page = allocator_map_page(it->list->allocator, next);
     if (NULL == it->page) {
         return LIST_OP_ERROR;
     }
@@ -193,7 +218,7 @@ list_result list_iterator_delete(list_it *it) {
         }
     }
     if (node->prev == 0) {
-        list_header(it->list)->head = node->next;
+        it->list->header->head = node->next;
         if (node->next != 0) {
             page_t *next_node_page = allocator_map_page(allocator, node->next);
             if (NULL == next_node_page) {
@@ -207,7 +232,7 @@ list_result list_iterator_delete(list_it *it) {
         }
     }
     if (node->next == 0) {
-        list_header(it->list)->tail = node->prev;
+        it->list->header->tail = node->prev;
         if (node->prev != 0) {
             page_t *prev_node_page = allocator_map_page(allocator, node->prev);
             if (NULL == prev_node_page) {

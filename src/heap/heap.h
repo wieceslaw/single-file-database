@@ -10,7 +10,7 @@
 #include "../allocator/buffer.h"
 #include "../allocator/allocator.h"
 
-typedef struct heap heap;
+typedef struct heap_t heap_t;
 
 typedef struct heap_it heap_it;
 
@@ -21,19 +21,21 @@ typedef enum {
 
 heap_result heap_place(page_t *page, offset_t offset, offset_t record_size);
 
-heap_result heap_clear(page_t *page, offset_t page_offset, allocator_t *allocator);
+heap_result heap_clear(heap_t *heap);
 
-heap *heap_init(allocator_t *allocator, offset_t size);
+bool heap_is_empty(heap_t *heap);
 
-void heap_free(heap *heap);
+heap_t *heap_init(page_t *page, offset_t page_offset, allocator_t *allocator);
+
+void heap_free(heap_t *heap);
 
 offset_t heap_size();
 
 heap_result heap_compress(heap_it *heap); // fills records from "freelist" moving last records, after removes empty nodes
 
-heap_result heap_append(heap *heap, buffer *data);
+heap_result heap_append(heap_t *heap, buffer *data);
 
-heap_result heap_iterator(heap *heap, heap_it *it);
+heap_it *heap_iterator(heap_t *heap);
 
 heap_result heap_iterator_free(heap_it *it);
 

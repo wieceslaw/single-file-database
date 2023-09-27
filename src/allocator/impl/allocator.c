@@ -71,15 +71,18 @@ static block_list_node *block_list_find(block_list *list, offset_t offset) {
 }
 
 void *page_ptr(page_t *p) {
+    if (NULL == p) {
+        return NULL;
+    }
     return p->block->ptr + p->offset;
 }
 
 offset_t page_offset(page_t *p) {
-    return p->offset;
+    return p->block->file_offset + p->offset;
 }
 
 page_t* page_copy(allocator_t *allocator, page_t *page) {
-    return allocator_map_page(allocator, page->offset);
+    return allocator_map_page(allocator, page_offset(page));
 }
 
 page_t *allocator_map_page(allocator_t *allocator, offset_t offset) {

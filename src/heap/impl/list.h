@@ -28,25 +28,33 @@ typedef struct list_t list_t;
 
 typedef struct list_it list_it;
 
-offset_t list_size();
+bool list_is_empty(list_t *list);
 
 list_result list_place(page_t *page, offset_t offset);
 
 list_result list_clear(list_t *);
 
-list_t *list_init(page_t *page, offset_t offset, allocator_t *allocator);
+list_t *list_init(list_h *header, allocator_t *allocator);
 
 void list_free(list_t *);
 
 list_result list_extend(list_t *, uint32_t n);
 
-list_it *list_get_iterator(list_t *);
+list_it *list_get_iterator(list_t *, offset_t page_offset);
+
+list_it *list_get_head_iterator(list_t *list);
+
+list_it *list_get_tail_iterator(list_t *list);
+
+list_it *list_iterator_copy(list_it *);
 
 list_result list_iterator_free(list_it *);
 
 bool list_iterator_is_empty(list_it *);
 
 list_result list_iterator_next(list_it *);
+
+offset_t list_iterator_offset(list_it *);
 
 page_t *list_iterator_get(list_it *);
 

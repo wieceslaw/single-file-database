@@ -20,4 +20,15 @@ pool_result pool_clear(allocator_t *, offset_t);
 
 pool_t* pool_init(allocator_t *, offset_t);
 
+// delete
+// 1) (while query) mark row as "to_be_deleted"
+// 2) (after query) iterate over pool, delete "to_be_deleted"
+// 3) (after query) compress heaps
+
+// update
+// 1) (while query) mark row as "to_be_deleted"
+// 2) (while query) append updated row and mark as "updated"
+// 3) (after query) iterate over pool, delete "to_be_deleted", unmark "updated"
+// 4) (after query) compress heaps
+
 #endif //LLP_LAB1_POOL_H
