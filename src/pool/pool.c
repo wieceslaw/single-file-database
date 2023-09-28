@@ -12,17 +12,11 @@ struct pool_t {
     page_t *page;
 };
 
-//typedef struct {
-//    pool_t *pool;
-//    int heap;
-//} pool_heaps_it;
-//
-//bool pool_heaps_it_is_empty();
-//
-//void pool_heaps_it_next();
-//
-//void pool_heaps_it_get();
-//
+typedef struct {
+    pool_t *pool;
+    int heap;
+} pool_heaps_it;
+
 //offset_t pool_create(allocator_t *allocator) {
 //    page_t *page = allocator_get_page(allocator);
 //    if (NULL == page) {
@@ -41,10 +35,3 @@ struct pool_t {
 //    }
 //    return result;
 //}
-//
-////pool_result pool_clear(allocator_t *allocator, offset_t offset) {
-////    page_t *page = allocator_map_page(allocator, offset);
-////    if (NULL == page) {
-////        return POOL_OP_ERROR;
-////    }
-////}
