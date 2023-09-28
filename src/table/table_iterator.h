@@ -6,7 +6,7 @@
 #define LLP_LAB1_TABLE_IT_H
 
 #include <stdbool.h>
-#include "../src/allocator/buffer.h"
+#include "allocator/buffer.h"
 #include "table.h"
 
 table_result table_iterator_free(table_it *it);
