@@ -12,20 +12,13 @@ int main(void) {
         return -1;
     }
 
-    if (allocator_reserve_pages(allocator, 10) != ALLOCATOR_SUCCESS) {
-        printf("unable extend");
-        return -1;
-    }
-
     page_t* page = allocator_get_page(allocator);
     if (page == NULL) {
         printf("unable to get block");
         return -1;
     }
 
-    int size = 5000;
-
-    if (heap_place(page, 0, size) != HEAP_OP_SUCCESS) {
+    if (heap_place(page, 0, 32) != HEAP_OP_SUCCESS) {
         printf("unable to create heap");
         return -1;
     }
@@ -38,7 +31,7 @@ int main(void) {
 
     for (int i = 0; i < 1000; i++) {
         buffer_t bf;
-        buffer_init(&bf, size);
+        buffer_init(&bf, 10);
         memcpy(bf.data, "123456789", 10);
         if (heap_append(heap, &bf) != HEAP_OP_SUCCESS) {
             printf("unable to append data to heap");
@@ -52,7 +45,7 @@ int main(void) {
     while (!heap_iterator_is_empty(it)) {
         count++;
         buffer_t bf;
-        buffer_init(&bf, size);
+        buffer_init(&bf, 10);
         if (heap_iterator_get(it, &bf) != HEAP_OP_SUCCESS) {
             printf("unable to get heap it data");
             return -1;

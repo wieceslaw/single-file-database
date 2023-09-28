@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <malloc.h>
+#include <assert.h>
 #include "allocator/allocator.h"
 #include "blocklist.h"
 
@@ -13,6 +14,7 @@ typedef PACK(struct {
 }) free_page_h;
 
 static bool header_is_valid(file_h *header) {
+    assert(NULL != header);
     return MAGIC == header->magic;
 }
 
@@ -43,6 +45,7 @@ static block_list *allocator_get_list(allocator_t *allocator);
 static file_h *allocator_get_header(allocator_t *allocator);
 
 static allocator_result allocator_clear_list(allocator_t *allocator) {
+    assert(NULL != allocator);
     block_list_it it;
     block_list_iterator(allocator_get_list(allocator), &it);
     while (!block_list_iterator_is_empty(&it)) {
@@ -59,6 +62,7 @@ static allocator_result allocator_clear_list(allocator_t *allocator) {
 }
 
 static block_list_node *block_list_find(block_list *list, offset_t offset) {
+    assert(NULL != list);
     block_list_it it;
     block_list_iterator(list, &it);
     while (!block_list_iterator_is_empty(&it)) {
@@ -70,22 +74,23 @@ static block_list_node *block_list_find(block_list *list, offset_t offset) {
     return NULL;
 }
 
-char *page_ptr(page_t *p) {
-    if (NULL == p) {
-        return NULL;
-    }
-    return p->block->ptr + p->offset;
+char *page_ptr(page_t *page) {
+    assert(NULL != page);
+    return page->block->ptr + page->offset;
 }
 
-offset_t page_offset(page_t *p) {
-    return p->block->file_offset + p->offset;
+offset_t page_offset(page_t *page) {
+    assert(NULL != page);
+    return page->block->file_offset + page->offset;
 }
 
 page_t *page_copy(allocator_t *allocator, page_t *page) {
+    assert(NULL != page && NULL != allocator);
     return allocator_map_page(allocator, page_offset(page));
 }
 
 page_t *allocator_map_page(allocator_t *allocator, offset_t offset) {
+    assert(NULL != allocator);
     block_list *list = allocator_get_list(allocator);
     offset_t fixed_offset = granular_offset(offset);
     block_list_node *node = block_list_find(list, fixed_offset);
@@ -110,48 +115,48 @@ page_t *allocator_map_page(allocator_t *allocator, offset_t offset) {
     return p;
 }
 
-allocator_result allocator_unmap_page(allocator_t *allocator, page_t *p) {
-    if (NULL == allocator || NULL == p) {
-        return ALLOCATOR_UNABLE_UNMAP;
-    }
+allocator_result allocator_unmap_page(allocator_t *allocator, page_t *page) {
+    assert(NULL != page && NULL != allocator);
     block_list *list = allocator_get_list(allocator);
-    block_list_node *node = block_list_find(list, p->block->file_offset);
+    block_list_node *node = block_list_find(list, page->block->file_offset);
     if (NULL == node) {
         return ALLOCATOR_UNABLE_UNMAP;
     }
     node->used -= 1;
     if (0 == node->used) {
-        if (0 != unmap_block(p->block)) {
+        if (0 != unmap_block(page->block)) {
             block_list_delete(list, node);
-            free(p);
+            free(page);
             return ALLOCATOR_UNABLE_UNMAP;
         }
         if (!block_list_delete(list, node)) {
-            free(p);
+            free(page);
             return ALLOCATOR_UNABLE_UNMAP;
         }
     }
-    free(p);
+    free(page);
     return ALLOCATOR_SUCCESS;
 }
 
 allocator_result allocator_return_page(allocator_t *allocator, offset_t offset) {
-    page_t *p = allocator_map_page(allocator, offset);
-    if (NULL == p) {
+    assert(NULL != allocator);
+    page_t *page = allocator_map_page(allocator, offset);
+    if (NULL == page) {
         return ALLOCATOR_UNABLE_MAP;
     }
-    free_page_h *free_page = (free_page_h *) page_ptr(p);
-    file_h *header = allocator_get_header(allocator);
-    free_page->next = header->free_pages_next;
-    header->free_pages_next = offset;
-    if (ALLOCATOR_SUCCESS != allocator_unmap_page(allocator, p)) {
+    free_page_h *free_page_header = (free_page_h *) page_ptr(page);
+    file_h *file_header = allocator_get_header(allocator);
+    free_page_header->next = file_header->free_pages_next;
+    file_header->free_pages_next = offset;
+    if (ALLOCATOR_SUCCESS != allocator_unmap_page(allocator, page)) {
         return ALLOCATOR_UNABLE_UNMAP;
     }
-    header->free_pages_count += 1;
+    file_header->free_pages_count += 1;
     return ALLOCATOR_SUCCESS;
 }
 
 page_t *allocator_get_page(allocator_t *allocator) {
+    assert(NULL != allocator);
     if (allocator_get_header(allocator)->free_pages_count == 0) {
         if (ALLOCATOR_SUCCESS != allocator_reserve_pages(allocator, 1)) {
             return NULL;
@@ -491,11 +496,12 @@ struct allocator_t {
     block_list list;
 };
 
-static offset_t sys_granularity() {
+static offset_t sys_granularity(void) {
     return getpagesize();
 }
 
 static allocator_result unmap_block(block *block) {
+    assert(NULL != block);
     if (munmap(block->ptr, granularity) == 0) {
         return ALLOCATOR_SUCCESS;
     }
@@ -503,6 +509,7 @@ static allocator_result unmap_block(block *block) {
 }
 
 static block *map_block(allocator_t *allocator, offset_t offset) {
+    assert(NULL != allocator);
     offset_t mapping_size = MIN(block_size(), allocator->file_size - offset);
     void *block_mapping = mmap(NULL,
                                mapping_size,
@@ -524,10 +531,12 @@ static block *map_block(allocator_t *allocator, offset_t offset) {
 }
 
 static block_list *allocator_get_list(allocator_t *allocator) {
+    assert(NULL != allocator);
     return &(allocator->list);
 }
 
 static file_h *allocator_get_header(allocator_t *allocator) {
+    assert(NULL != allocator);
     return (file_h *) page_ptr(allocator->header_page);
 }
 
@@ -608,6 +617,7 @@ file_status allocator_init(file_settings *settings, allocator_t **allocator_ptr)
 }
 
 file_status allocator_free(allocator_t *allocator) {
+    assert(NULL != allocator);
     if (ALLOCATOR_SUCCESS != allocator_unmap_page(allocator, allocator->header_page)) {
         allocator_clear_list(allocator);
         close(allocator->fd);
@@ -628,6 +638,7 @@ file_status allocator_free(allocator_t *allocator) {
 }
 
 allocator_result allocator_reserve_pages(allocator_t *allocator, uint32_t n) {
+    assert(NULL != allocator);
     if (allocator_get_header(allocator)->free_pages_count >= n) {
         return ALLOCATOR_SUCCESS;
     }

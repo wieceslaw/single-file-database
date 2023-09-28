@@ -5,18 +5,17 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <malloc.h>
+#include <assert.h>
 #include "allocator/allocator.h"
 #include "blocklist.h"
 
 block_list_node *block_list_append(block_list *list, block *block) {
-    if (NULL == list || NULL == block) {
-        return NULL;
-    }
+    assert(NULL != list && NULL != block);
     block_list_node *node = malloc(sizeof(block_list_node));
     if (NULL == node) {
         return NULL;
     }
-    *node = (block_list_node){ 0 };
+    *node = (block_list_node) {0};
     block->node = node;
     node->block = block;
     node->file_offset = block->file_offset;
@@ -32,9 +31,7 @@ block_list_node *block_list_append(block_list *list, block *block) {
 }
 
 bool block_list_delete(block_list *list, block_list_node *node) {
-    if (NULL == list || NULL == node) {
-        return false;
-    }
+    assert(NULL != list && NULL != node);
     block_list_node *prev = node->prev;
     block_list_node *next = node->next;
     if (NULL != prev && NULL != next) {
@@ -58,15 +55,18 @@ bool block_list_delete(block_list *list, block_list_node *node) {
 }
 
 void block_list_iterator(block_list *list, block_list_it *it) {
+    assert(NULL != list && NULL != it);
     it->list = list;
     it->node = list->head;
 }
 
 bool block_list_iterator_is_empty(block_list_it *it) {
+    assert(NULL != it);
     return NULL == it->node;
 }
 
 void block_list_iterator_next(block_list_it *it) {
+    assert(NULL != it);
     if (block_list_iterator_is_empty(it)) {
         return;
     }
@@ -74,6 +74,7 @@ void block_list_iterator_next(block_list_it *it) {
 }
 
 block *block_list_iterator_get(block_list_it *it) {
+    assert(NULL != it);
     if (block_list_iterator_is_empty(it)) {
         return NULL;
     }

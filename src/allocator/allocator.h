@@ -67,11 +67,11 @@ typedef struct allocator_t allocator_t;
 
 typedef struct page_t page_t;
 
-char *page_ptr(page_t *p);
+char *page_ptr(page_t *page);
 
 page_t* page_copy(allocator_t *allocator, page_t *page);
 
-offset_t page_offset(page_t *p);
+offset_t page_offset(page_t *page);
 
 file_status allocator_init(file_settings *settings, allocator_t **allocator_ptr);
 

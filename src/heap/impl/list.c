@@ -3,6 +3,7 @@
 //
 
 #include <malloc.h>
+#include <assert.h>
 #include "list.h"
 
 struct list_it {
@@ -16,6 +17,7 @@ struct list_t {
 };
 
 offset_t list_iterator_offset(list_it *it) {
+    assert(NULL != it);
     if (list_iterator_is_empty(it)) {
         return 0;
     }
@@ -23,22 +25,19 @@ offset_t list_iterator_offset(list_it *it) {
 }
 
 bool list_is_empty(list_t *list) {
+    assert(NULL != list);
     return 0 == list->header->head;
 }
 
 list_result list_place(page_t *page, offset_t offset) {
-    if (NULL == page) {
-        return LIST_OP_ERROR;
-    }
+    assert(NULL != page);
     list_h *header = (list_h*) page_ptr(page) + offset;
     *header = (list_h) {0};
     return LIST_OP_SUCCESS;
 }
 
 list_result list_clear(list_t *list) {
-    if (NULL == list) {
-        return LIST_OP_ERROR;
-    }
+    assert(NULL != list);
     list_it *it = list_get_head_iterator(list);
     if (NULL == it) {
         return LIST_OP_ERROR;
@@ -53,6 +52,7 @@ list_result list_clear(list_t *list) {
 }
 
 list_t *list_init(list_h *header, allocator_t *allocator) {
+    assert(NULL != header && NULL != allocator);
     if (NULL == header || NULL == allocator) {
         return NULL;
     }
@@ -69,9 +69,7 @@ void list_free(list_t *list) {
 }
 
 static list_result list_append(list_t *list, page_t *page) {
-    if (NULL == list || NULL == page) {
-        return LIST_OP_ERROR;
-    }
+    assert(NULL != list && NULL != page);
     if (0 == list->header->head) {
         list->header->head = page_offset(page);
     }
@@ -93,9 +91,7 @@ static list_result list_append(list_t *list, page_t *page) {
 }
 
 list_result list_extend(list_t *list, uint32_t n) {
-    if (NULL == list) {
-        return LIST_OP_ERROR;
-    }
+    assert(NULL != list);
     if (allocator_reserve_pages(list->allocator, n) != ALLOCATOR_SUCCESS) {
         return LIST_OP_ERROR;
     }
@@ -116,14 +112,17 @@ list_result list_extend(list_t *list, uint32_t n) {
 }
 
 list_it *list_get_head_iterator(list_t *list) {
+    assert(NULL != list);
     return list_get_iterator(list, list->header->head);
 }
 
 list_it *list_get_tail_iterator(list_t *list) {
+    assert(NULL != list);
     return list_get_iterator(list, list->header->tail);
 }
 
 list_it *list_get_iterator(list_t * list, offset_t page_offset) {
+    assert(NULL != list);
     list_it *it = malloc(sizeof(list_it));
     if (NULL == it) {
         return NULL;
@@ -142,10 +141,12 @@ list_it *list_get_iterator(list_t * list, offset_t page_offset) {
 }
 
 list_it *list_iterator_copy(list_it *it) {
+    assert(NULL != it);
     return list_get_iterator(it->list, page_offset(it->page));
 }
 
 list_result list_iterator_free(list_it *it) {
+    assert(NULL != it);
     if (NULL != it->page) {
         if (allocator_unmap_page(it->list->allocator, it->page) != ALLOCATOR_SUCCESS) {
             return LIST_OP_ERROR;
@@ -156,10 +157,12 @@ list_result list_iterator_free(list_it *it) {
 }
 
 bool list_iterator_is_empty(list_it *it) {
+    assert(NULL != it);
     return NULL == it->page;
 }
 
 list_result list_iterator_next(list_it *it) {
+    assert(NULL != it);
     if (list_iterator_is_empty(it)) {
         return LIST_OP_ERROR;
     }
@@ -183,6 +186,7 @@ list_result list_iterator_next(list_it *it) {
 }
 
 page_t *list_iterator_get(list_it *it) {
+    assert(NULL != it);
     if (list_iterator_is_empty(it)) {
         return NULL;
     }
@@ -190,6 +194,7 @@ page_t *list_iterator_get(list_it *it) {
 }
 
 list_result list_iterator_delete(list_it *it) {
+    assert(NULL != it);
     if (list_iterator_is_empty(it)) {
         return LIST_OP_ERROR;
     }

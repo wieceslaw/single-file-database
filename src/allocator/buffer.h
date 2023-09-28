@@ -12,12 +12,10 @@ typedef struct {
     char *data;
 } buffer_t;
 
-void buffer_init(buffer_t *bf, uint64_t size);
+buffer_t* buffer_init(uint64_t size);
 
-void buffer_free(buffer_t *bf);
+void buffer_free(buffer_t *buffer);
 
 void buffer_copy(const buffer_t *from, buffer_t *to);
-
-void buffer_from_string(buffer_t *bf, const char *string);
 
 #endif //LLP_LAB1_BUFFER_H
