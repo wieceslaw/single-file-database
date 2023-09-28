@@ -9,31 +9,20 @@
 #include <stdbool.h>
 #include "allocator/allocator.h"
 
-#ifdef __GNUC__
-#define PACK( __Declaration__ ) __Declaration__ __attribute__((__packed__))
-#endif
-
-#ifdef _MSC_VER
-#define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
-#endif
-
 typedef enum {
     LIST_OP_SUCCESS = 0,
     LIST_OP_ERROR = 1
 } list_result;
 
-PACK (
-typedef struct {
+typedef PACK(struct {
     offset_t head;
     offset_t tail;
-} list_h;
-)
-PACK (
-typedef struct {
+}) list_h;
+
+typedef PACK(struct {
     offset_t next;
     offset_t prev;
-} list_node_h;
-)
+}) list_node_h;
 
 typedef struct list_t list_t;
 

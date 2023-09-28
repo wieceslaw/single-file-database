@@ -8,19 +8,9 @@
 #include "allocator/allocator.h"
 #include "blocklist.h"
 
-#ifdef __GNUC__
-#define PACK( __Declaration__ ) __Declaration__ __attribute__((__packed__))
-#endif
-
-#ifdef _MSC_VER
-#define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
-#endif
-
-PACK (
-    typedef struct {
-        offset_t next;
-    } free_page_h;
-)
+typedef PACK(struct {
+    offset_t next;
+}) free_page_h;
 
 static bool header_is_valid(file_h *header) {
     return MAGIC == header->magic;

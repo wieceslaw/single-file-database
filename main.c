@@ -66,13 +66,20 @@ int main(void) {
     }
     printf("count: %d", count);
 
+    if (heap_iterator_free(it) != HEAP_OP_SUCCESS) {
+        printf("unable to free heap iterator");
+        return -1;
+    }
+
     heap_free(heap);
     if (allocator_unmap_page(allocator, page) != ALLOCATOR_SUCCESS) {
         printf("unable unmap page");
+        return -1;
     }
 
     if (allocator_free(allocator) != FILE_ST_OK) {
         printf("unable free allocator");
+        return -1;
     }
     return 0;
 }

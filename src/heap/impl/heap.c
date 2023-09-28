@@ -7,42 +7,21 @@
 #include "heap/heap.h"
 #include "list.h"
 
-#define PAGE_CAPACITY (PAGE_SIZE - sizeof(list_node_h))
-
-#ifdef _WIN32
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#else
-#include <sys/param.h>
-#endif
-
-#ifdef __GNUC__
-#define PACK( __Declaration__ ) __Declaration__ __attribute__((__packed__))
-#endif
-
-#ifdef _MSC_VER
-#define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
-#endif
-
-PACK (
-typedef struct {
+typedef PACK (struct {
     list_h list_header;
     offset_t record_size;
     offset_t free_record;
     offset_t end;
-} heap_h;
-)
-PACK (
-typedef struct {
-    uint8_t is_free;
-} record_h;
-)
+}) heap_h;
 
-PACK (
-typedef struct {
+typedef PACK(struct {
+    uint8_t is_free;
+}) record_h;
+
+typedef PACK(struct {
     record_h header;
     offset_t next_free;
-} free_record_h;
-)
+}) free_record_h;
 
 struct heap_t {
     allocator_t *allocator;
@@ -281,8 +260,8 @@ heap_result heap_iterator_get(heap_it *it, buffer *data) {
             list_iterator_free(lit);
             return HEAP_OP_ERROR;
         }
-        void* src = page_ptr(page) + offset;
-        void* dst = data->data + read;
+        void *src = page_ptr(page) + offset;
+        void *dst = data->data + read;
         uint16_t cur_read = MIN(size - read, PAGE_SIZE - offset);
         memcpy(dst, src, cur_read);
         read += cur_read;

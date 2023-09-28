@@ -10,6 +10,22 @@
 #define PAGE_SIZE 4096
 #define MAGIC 0xABCD
 
+#define PAGE_CAPACITY (PAGE_SIZE - sizeof(list_node_h))
+
+#ifdef _WIN32
+#define MIN(a, b) (((a)<(b))?(a):(b))
+#else
+#include <sys/param.h>
+#endif
+
+#ifdef __GNUC__
+#define PACK(__Declaration__) __Declaration__ __attribute__((__packed__))
+#endif
+
+#ifdef _MSC_VER
+#define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
+#endif
+
 typedef uint64_t offset_t;
 
 typedef enum {
