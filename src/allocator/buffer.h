@@ -5,14 +5,14 @@
 #ifndef LLP_LAB1_BUFFER_H
 #define LLP_LAB1_BUFFER_H
 
-#include <stdint-gcc.h>
+#include <stdint.h>
 
 typedef struct {
-    int32_t size;
+    uint64_t size;
     char *data;
 } buffer;
 
-void buffer_init(buffer *bf, int32_t size);
+void buffer_init(buffer *bf, uint64_t size);
 
 void buffer_free(buffer *bf);
 

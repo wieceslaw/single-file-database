@@ -29,7 +29,7 @@ heap_t *heap_init(page_t *page, offset_t page_offset, allocator_t *allocator);
 
 void heap_free(heap_t *heap);
 
-offset_t heap_size();
+offset_t heap_size(void);
 
 heap_result heap_compress(heap_it *heap); // fills records from "freelist" moving last records, after removes empty nodes
 

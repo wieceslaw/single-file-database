@@ -3,7 +3,7 @@
 #include "src/allocator/allocator.h"
 #include "heap/heap.h"
 
-int main(int argc, char *argv[]) {
+int main(void) {
     file_settings settings = {.path = "test.bin", .open_type = FILE_OPEN_CLEAR};
     allocator_t *allocator;
     int res = allocator_init(&settings, &allocator);
@@ -16,6 +16,7 @@ int main(int argc, char *argv[]) {
         printf("unable extend");
         return -1;
     }
+
     page_t* page = allocator_get_page(allocator);
     if (page == NULL) {
         printf("unable to get block");
@@ -38,7 +39,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < 1000; i++) {
         buffer bf;
         buffer_init(&bf, size);
-        strcpy(bf.data, "1234567890123456789012345678901234567890");
+        memcpy(bf.data, "123456789", 10);
         if (heap_append(heap, &bf) != HEAP_OP_SUCCESS) {
             printf("unable to append data to heap");
             return -1;
@@ -69,7 +70,8 @@ int main(int argc, char *argv[]) {
     if (allocator_unmap_page(allocator, page) != ALLOCATOR_SUCCESS) {
         printf("unable unmap page");
     }
-    if (allocator_free(allocator) != ALLOCATOR_SUCCESS) {
+
+    if (allocator_free(allocator) != FILE_ST_OK) {
         printf("unable free allocator");
     }
     return 0;

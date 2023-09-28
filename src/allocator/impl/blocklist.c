@@ -13,10 +13,10 @@ block_list_node *block_list_append(block_list *list, block *block) {
         return NULL;
     }
     block_list_node *node = malloc(sizeof(block_list_node));
-    *node = (block_list_node) {0};
     if (NULL == node) {
         return NULL;
     }
+    *node = (block_list_node){ 0 };
     block->node = node;
     node->block = block;
     node->file_offset = block->file_offset;

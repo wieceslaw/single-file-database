@@ -14,7 +14,7 @@ typedef struct page_t page_t;
 typedef struct block block;
 
 struct block {
-    void *ptr;
+    char *ptr;
     offset_t file_offset;
     block_list_node *node;
 };

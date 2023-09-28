@@ -9,23 +9,40 @@
 
 #define PAGE_CAPACITY (PAGE_SIZE - sizeof(list_node_h))
 
+#ifdef _WIN32
 #define MIN(a,b) (((a)<(b))?(a):(b))
+#else
+#include <sys/param.h>
+#endif
 
-typedef struct __attribute__((__packed__)) {
+#ifdef __GNUC__
+#define PACK( __Declaration__ ) __Declaration__ __attribute__((__packed__))
+#endif
+
+#ifdef _MSC_VER
+#define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
+#endif
+
+PACK (
+typedef struct {
     list_h list_header;
     offset_t record_size;
     offset_t free_record;
     offset_t end;
 } heap_h;
-
-typedef struct __attribute__((__packed__)) {
+)
+PACK (
+typedef struct {
     uint8_t is_free;
 } record_h;
+)
 
-typedef struct __attribute__((__packed__)) {
+PACK (
+typedef struct {
     record_h header;
     offset_t next_free;
 } free_record_h;
+)
 
 struct heap_t {
     allocator_t *allocator;
@@ -127,7 +144,7 @@ heap_result heap_place(page_t *page, offset_t offset, offset_t record_size) {
     if (list_place(page, offset) != LIST_OP_SUCCESS) {
         return HEAP_OP_ERROR;
     }
-    heap_h *header = page_ptr(page) + offset;
+    heap_h *header = (heap_h *) page_ptr(page) + offset;
     header->record_size = record_size;
     header->free_record = 0;
     header->end = 0;
@@ -155,7 +172,7 @@ heap_t *heap_init(page_t *page, offset_t offset, allocator_t *allocator) {
         return NULL;
     }
     heap->allocator = allocator;
-    heap->header = page_ptr(page) + offset;
+    heap->header = (heap_h *) page_ptr(page) + offset;
     heap->list = list_init(&(heap->header->list_header), allocator);
     if (NULL == heap->list) {
         free(heap);
@@ -166,6 +183,7 @@ heap_t *heap_init(page_t *page, offset_t offset, allocator_t *allocator) {
 
 void heap_free(heap_t *heap) {
     list_free(heap->list);
+    heap->list = NULL;
     free(heap);
 }
 

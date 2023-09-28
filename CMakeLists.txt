@@ -24,3 +24,14 @@ add_executable(llp_lab1
         src/pool/pool.c
         src/allocator/impl/buffer.c
 )
+
+if (UNIX)
+target_compile_options(llp_lab1 PRIVATE
+        -Werror -Wall -Wextra -pedantic -Wmissing-prototypes -Wstrict-prototypes
+        -Wno-unused-function -Wno-unused-but-set-variable
+#        -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak
+#        -fsanitize=undefined -fsanitize-address-use-after-scope
+)
+endif(UNIX)
+#target_link_directories(llp_lab1 PRIVATE "C:/Program Files/Microsoft Visual Studio/2022/Professional/VC/Tools/Llvm/x64/lib/clang/16/lib/windows")
+#target_link_libraries(llp_lab1 PRIVATE clang_rt.asan_dynamic-x86_64 clang_rt.asan_dynamic_runtime_thunk-x86_64)

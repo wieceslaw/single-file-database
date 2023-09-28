@@ -5,7 +5,7 @@
 #ifndef LLP_LAB1_ALLOCATOR_H
 #define LLP_LAB1_ALLOCATOR_H
 
-#include <stdint-gcc.h>
+#include <stdint.h>
 
 #define PAGE_SIZE 4096
 #define MAGIC 0xABCD
@@ -51,7 +51,7 @@ typedef struct allocator_t allocator_t;
 
 typedef struct page_t page_t;
 
-void *page_ptr(page_t *p);
+char *page_ptr(page_t *p);
 
 page_t* page_copy(allocator_t *allocator, page_t *page);
 
