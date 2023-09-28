@@ -33,7 +33,7 @@ offset_t heap_size(void);
 
 heap_result heap_compress(heap_it *heap); // fills records from "freelist" moving last records, after removes empty nodes
 
-heap_result heap_append(heap_t *heap, buffer *data);
+heap_result heap_append(heap_t *heap, buffer_t *data);
 
 heap_it *heap_iterator(heap_t *heap);
 
@@ -43,10 +43,10 @@ bool heap_iterator_is_empty(heap_it *it);
 
 heap_result heap_iterator_next(heap_it *it);
 
-heap_result heap_iterator_get(heap_it *it, buffer *data);
+heap_result heap_iterator_get(heap_it *it, buffer_t *data);
 
 heap_result heap_iterator_delete(heap_it *it); // marks record as deleted (which will be ignored), add to "freelist"
 
-heap_result heap_iterator_replace(heap_it *it, buffer *data);
+heap_result heap_iterator_replace(heap_it *it, buffer_t *data);
 
 #endif //LLP_LAB1_HEAP_H

@@ -16,6 +16,7 @@ typedef PACK (struct {
 
 typedef PACK(struct {
     uint8_t is_free;
+    uint64_t size;
 }) record_h;
 
 typedef PACK(struct {
@@ -63,7 +64,7 @@ static heap_result heap_reserve(heap_t *heap, offset_t size) {
     return HEAP_OP_SUCCESS;
 }
 
-static offset_t heap_write(heap_t *heap, offset_t offset, buffer *data) {
+static offset_t heap_write(heap_t *heap, offset_t offset, buffer_t *buffer) {
     offset_t page_off;
     page_off = record_page_offset(offset - 1);
     list_it *it = list_get_iterator(heap->list, page_off);
@@ -82,17 +83,18 @@ static offset_t heap_write(heap_t *heap, offset_t offset, buffer *data) {
         offset = page_off + sizeof(list_node_h);
     }
     offset_t start_offset = offset - page_off - sizeof(list_node_h);
-    offset_t written = 0;
     offset_t end_offset = 0;
-    while (written != data->size) {
+    uint64_t written = 0;
+    uint64_t size = MIN(buffer->size, heap->header->record_size);
+    while (written != size) {
         page_t *page = list_iterator_get(it);
         if (NULL == page) {
             list_iterator_free(it);
             return 0;
         }
         void *dest = page_ptr(page) + sizeof(list_node_h) + start_offset;
-        void *src = data->data + written;
-        int current_written = MIN(data->size - written, PAGE_CAPACITY - start_offset);
+        void *src = buffer->data + written;
+        int current_written = MIN(size - written, PAGE_CAPACITY - start_offset);
         end_offset = page_offset(page) + sizeof(list_node_h) + start_offset + current_written;
         memcpy(dest, src, current_written);
         written += current_written;
@@ -111,7 +113,7 @@ static offset_t heap_write(heap_t *heap, offset_t offset, buffer *data) {
     return end_offset;
 }
 
-offset_t heap_size() {
+offset_t heap_size(void) {
     return sizeof(heap_h);
 }
 
@@ -166,7 +168,7 @@ void heap_free(heap_t *heap) {
     free(heap);
 }
 
-heap_result heap_append(heap_t *heap, buffer *data) {
+heap_result heap_append(heap_t *heap, buffer_t *data) {
     offset_t size = heap->header->record_size;
     if (size != data->size) {
         return HEAP_OP_ERROR;
@@ -240,7 +242,7 @@ heap_result heap_iterator_next(heap_it *it) {
     return HEAP_OP_SUCCESS;
 }
 
-heap_result heap_iterator_get(heap_it *it, buffer *data) {
+heap_result heap_iterator_get(heap_it *it, buffer_t *data) {
     if (heap_iterator_is_empty(it)) {
         return HEAP_OP_SUCCESS;
     }
@@ -284,6 +286,6 @@ heap_result heap_iterator_get(heap_it *it, buffer *data) {
 
 heap_result heap_iterator_delete(heap_it *it);
 
-heap_result heap_iterator_replace(heap_it *it, buffer *data);
+heap_result heap_iterator_replace(heap_it *it, buffer_t *data);
 
 heap_result heap_compress(heap_it *heap);

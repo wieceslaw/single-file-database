@@ -9,7 +9,7 @@
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
-void buffer_init(buffer *bf, uint64_t size) {
+void buffer_init(buffer_t *bf, uint64_t size) {
     bf->size = size;
     if (size == 0) {
         bf->data = NULL;
@@ -18,12 +18,12 @@ void buffer_init(buffer *bf, uint64_t size) {
     }
 }
 
-void buffer_free(buffer *bf) {
+void buffer_free(buffer_t *bf) {
     free(bf->data);
     bf->data = NULL;
     bf->size = 0;
 }
 
-void buffer_copy(const buffer *from, buffer *to) {
+void buffer_copy(const buffer_t *from, buffer_t *to) {
     memcpy(to->data, from->data, MIN(from->size, to->size));
 }

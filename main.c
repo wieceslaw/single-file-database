@@ -37,7 +37,7 @@ int main(void) {
     }
 
     for (int i = 0; i < 1000; i++) {
-        buffer bf;
+        buffer_t bf;
         buffer_init(&bf, size);
         memcpy(bf.data, "123456789", 10);
         if (heap_append(heap, &bf) != HEAP_OP_SUCCESS) {
@@ -51,7 +51,7 @@ int main(void) {
     heap_it *it = heap_iterator(heap);
     while (!heap_iterator_is_empty(it)) {
         count++;
-        buffer bf;
+        buffer_t bf;
         buffer_init(&bf, size);
         if (heap_iterator_get(it, &bf) != HEAP_OP_SUCCESS) {
             printf("unable to get heap it data");

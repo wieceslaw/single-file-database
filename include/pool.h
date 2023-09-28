@@ -19,7 +19,7 @@ typedef struct pool_it pool_it;
 
 pool_result pool_iterator(pool *pool, pool_it *it);
 
-pool_result pool_append(pool *pool, buffer *data);
+pool_result pool_append(pool *pool, buffer_t *data);
 
 pool_result pool_flush(pool_it *it); // real deletion and memory optimization
 
@@ -29,7 +29,7 @@ pool_result pool_iterator_free(pool_it *it);
 
 pool_result pool_iterator_next(pool_it *it);
 
-pool_result pool_iterator_get(pool_it *it, buffer *data);
+pool_result pool_iterator_get(pool_it *it, buffer_t *data);
 
 pool_result pool_iterator_get_block_addr();
 
