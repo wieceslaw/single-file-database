@@ -34,7 +34,7 @@ typedef struct list_it list_it;
 
 bool list_is_empty(list_t *list);
 
-list_result list_place(page_t *page, offset_t offset);
+void list_place(page_t *page, offset_t offset);
 
 list_result list_clear(list_t *);
 

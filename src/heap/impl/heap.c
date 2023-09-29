@@ -12,7 +12,6 @@ typedef PACK (
         struct {
             list_h list_header;
             offset_t record_size;
-            offset_t free_record;
             offset_t end;
         }
 ) heap_h;
@@ -250,16 +249,13 @@ bool heap_is_empty(heap_t *heap) {
     return list_is_empty(heap->list);
 }
 
-heap_result heap_place(page_t *page, offset_t offset, offset_t record_size) {
+void heap_place(page_t *page, offset_t offset, offset_t record_size) {
     assert(page != NULL);
-    if (list_place(page, offset) != LIST_OP_SUCCESS) {
-        return HEAP_OP_ERROR;
-    }
+    list_place(page, offset);
     heap_h *header = (heap_h *) page_ptr(page) + offset;
     header->record_size = record_size;
-    header->free_record = 0;
     header->end = 0;
-    return HEAP_OP_SUCCESS;
+    // TODO: should be able to write !!! record_size + sizeof(record_h) !!!
 }
 
 heap_result heap_clear(heap_t *heap) {
@@ -267,7 +263,6 @@ heap_result heap_clear(heap_t *heap) {
     if (list_clear(heap->list) != LIST_OP_SUCCESS) {
         return HEAP_OP_ERROR;
     }
-    heap->header->free_record = 0;
     heap->header->end = 0;
     return HEAP_OP_SUCCESS;
 }
@@ -275,9 +270,6 @@ heap_result heap_clear(heap_t *heap) {
 heap_t *heap_init(page_t *page, offset_t offset, allocator_t *allocator) {
     assert(NULL != page && NULL != allocator);
     if (NULL == page || NULL == allocator) {
-        return NULL;
-    }
-    if (LIST_OP_SUCCESS != list_place(page, offset)) {
         return NULL;
     }
     heap_t *heap = malloc(sizeof(heap_t));
@@ -342,17 +334,6 @@ heap_it *heap_iterator(heap_t *heap) {
                 .record_offset = sizeof(list_node_h),
                 .lit = list_get_head_iterator(heap->list)
         };
-        record_h header;
-        if (0 == heap_get_record_header(heap, heap_iterator_offset(it), &header)) {
-            heap_iterator_free(it);
-            return NULL;
-        }
-        if (record_is_to_be_added(&header)) {
-            if (heap_iterator_next(it) != HEAP_OP_SUCCESS) {
-                heap_iterator_free(it);
-                return NULL;
-            }
-        }
     }
     return it;
 }
@@ -373,35 +354,30 @@ bool heap_iterator_is_empty(heap_it *it) {
 }
 
 heap_result heap_iterator_next(heap_it *it) {
-    // function should skip to_be_added
     // iterator validity is not responsibility of function
     assert(NULL != it);
     if (heap_iterator_is_empty(it)) {
         return HEAP_OP_ERROR;
     }
-    record_h *header;
     buffer_t *buffer = buffer_init(it->heap->header->record_size);
     if (NULL == buffer) {
         return HEAP_OP_ERROR;
     }
-    do {
-        offset_t next = heap_read_forward(it->heap, heap_iterator_offset(it), buffer);
-        if (next == it->heap->header->end) {
-            heap_iterator_move(it, 0);
-            return HEAP_OP_SUCCESS;
-        }
-        if (0 == next) {
-            buffer_free(buffer);
-            return HEAP_OP_ERROR;
-        }
-        heap_iterator_move(it, next);
-        header = (record_h *) buffer->data;
-    } while (has_mask(header->flags, MASK_TO_BE_ADDED));
+    offset_t next = heap_read_forward(it->heap, heap_iterator_offset(it), buffer);
+    if (next == it->heap->header->end) {
+        heap_iterator_move(it, 0);
+        return HEAP_OP_SUCCESS;
+    }
+    if (0 == next) {
+        buffer_free(buffer);
+        return HEAP_OP_ERROR;
+    }
+    heap_iterator_move(it, next);
     buffer_free(buffer);
     return HEAP_OP_SUCCESS;
 }
 
-buffer_t *heap_iterator_get(heap_it *it) {
+record_t *heap_iterator_get(heap_it *it) {
     // function is not responsible for iterator validity
     assert(NULL != it);
     if (heap_iterator_is_empty(it)) {
@@ -413,15 +389,28 @@ buffer_t *heap_iterator_get(heap_it *it) {
         return NULL;
     }
     uint64_t size = header.size;
-    buffer_t *record = buffer_init(size);
-    if (NULL == record) {
+    buffer_t *buffer = buffer_init(size);
+    if (NULL == buffer) {
         return NULL;
     }
-    if (0 == heap_read_forward(it->heap, record_body_offset, record)) {
-        buffer_free(record);
+    if (0 == heap_read_forward(it->heap, record_body_offset, buffer)) {
+        buffer_free(buffer);
         return NULL;
     }
+    record_t *record = malloc(sizeof(record_t));
+    record->buffer = buffer;
+    record->is_flushed = !has_mask(header.flags, MASK_TO_BE_ADDED);
     return record;
+}
+
+void record_free(record_t *record) {
+    if (NULL == record) {
+        return;
+    }
+    if (NULL != record->buffer) {
+        free(record->buffer);
+    }
+    free(record);
 }
 
 heap_result heap_iterator_replace(heap_it *it, buffer_t *buffer) {
@@ -455,19 +444,28 @@ heap_result heap_iterator_delete(heap_it *it) {
     return heap_record_set_flags(it, MASK_TO_BE_DELETED);
 }
 
-static heap_result heap_record_add_to_deleted_list(heap_it *it) {
+static offset_t heap_get_last_record(heap_t *heap, buffer_t *buffer) {
+    assert(NULL != heap);
+    return heap_read_backward(heap, heap->header->end, buffer);
+}
+
+static heap_result heap_record_fill(heap_it *it) {
     assert(NULL != it);
-    record_h header;
-    header.next = it->heap->header->free_record;
-    header.flags = 0;
-    set_mask(header.flags, MASK_IS_DELETED);
-    it->heap->header->free_record = heap_iterator_offset(it);
-    buffer_t record;
-    record.data = (char *) &header;
-    record.size = sizeof(record_h);
-    if (0 == heap_write(it->heap, heap_iterator_offset(it), &record)) {
-        return HEAP_OP_ERROR;
-    }
+    // TODO: fill with last record until find (flag = 0x0 | 0x2) [move end ptr]
+    /*
+    do {
+        last_record = get_last_record(heap_idx)
+        if (last_record == it.record) {
+            // if using offset, garant that they are on the same page
+            break;
+        }
+        if (last_record.flag == MASK_TO_BE_ADDED) {
+            last_record.flag = 0
+        }
+        it.replace(last_record)
+        heap_idx.end = last_record.begin
+    } while(it.header.flag == MASK_TO_BE_DELETED);
+    */
     return HEAP_OP_SUCCESS;
 }
 
@@ -484,7 +482,7 @@ static heap_result heap_unmask(heap_t *heap) {
             return HEAP_OP_ERROR;
         }
         if (record_is_to_be_deleted(&header)) {
-            if (heap_record_add_to_deleted_list(it) != HEAP_OP_SUCCESS) {
+            if (heap_record_fill(it) != HEAP_OP_SUCCESS) {
                 heap_iterator_free(it);
                 return HEAP_OP_ERROR;
             }
@@ -497,39 +495,6 @@ static heap_result heap_unmask(heap_t *heap) {
         if (heap_iterator_next(it) != HEAP_OP_SUCCESS) {
             return HEAP_OP_ERROR;
         }
-    }
-    return HEAP_OP_SUCCESS;
-}
-
-static offset_t heap_get_last_record(heap_t *heap, buffer_t *buffer) {
-    assert(NULL != heap);
-    return heap_read_backward(heap, heap->header->end, buffer);
-}
-
-static heap_result heap_fill_free_records(heap_t *heap) {
-    assert(NULL != heap);
-    while (0 != heap->header->free_record) {
-        offset_t record_offset = heap->header->free_record;
-        record_h record_header;
-        if (0 == heap_get_record_header(heap, record_offset, &record_header)) {
-            return HEAP_OP_ERROR;
-        }
-        heap->header->free_record = record_header.next;
-        buffer_t *last_record = buffer_init(heap->header->record_size);
-        if (NULL == last_record) {
-            return HEAP_OP_ERROR;
-        }
-        offset_t last_record_begin = heap_get_last_record(heap, last_record);
-        if (0 == last_record_begin) {
-            buffer_free(last_record);
-            return HEAP_OP_ERROR;
-        }
-        heap->header->end = last_record_begin;
-        if (0 == heap_write(heap, record_offset, last_record)) {
-            buffer_free(last_record);
-            return HEAP_OP_ERROR;
-        }
-        buffer_free(last_record);
     }
     return HEAP_OP_SUCCESS;
 }
@@ -561,12 +526,9 @@ static heap_result heap_shrink_list(heap_t *heap) {
     return HEAP_OP_SUCCESS;
 }
 
-heap_result heap_compress(heap_t *heap) {
+heap_result heap_flush(heap_t *heap) {
     assert(NULL != heap);
     if (heap_unmask(heap) != HEAP_OP_SUCCESS) {
-        return HEAP_OP_ERROR;
-    }
-    if (heap_fill_free_records(heap) != HEAP_OP_SUCCESS) {
         return HEAP_OP_ERROR;
     }
     if (heap_shrink_list(heap) != HEAP_OP_SUCCESS) {

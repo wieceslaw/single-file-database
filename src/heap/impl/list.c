@@ -29,11 +29,10 @@ bool list_is_empty(list_t *list) {
     return 0 == list->header->head;
 }
 
-list_result list_place(page_t *page, offset_t offset) {
+void list_place(page_t *page, offset_t offset) {
     assert(NULL != page);
     list_h *header = (list_h *) page_ptr(page) + offset;
     *header = (list_h) {0};
-    return LIST_OP_SUCCESS;
 }
 
 list_result list_clear(list_t *list) {

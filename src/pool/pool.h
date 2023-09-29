@@ -24,11 +24,11 @@ pool_result pool_clear(allocator_t *, offset_t); // remove from file memory
 
 pool_t *pool_init(allocator_t *, offset_t);
 
-void pool_free(pool_t *);
+pool_result pool_free(pool_t *);
 
 pool_result pool_append(pool_t *, buffer_t *); // append row and mark as "to_be_added"
 
-pool_result pool_flush(pool_it *); // real deletion of "to_be_deleted" and unmarking "to_be_added", compressing heaps
+pool_result pool_flush(pool_t *); // real deletion of "to_be_deleted" and unmarking "to_be_added", compressing heaps
 
 pool_it *pool_iterator(pool_t *); // "to_be_deleted" won't be ignored by iterator, but "to_be_added" would
 
