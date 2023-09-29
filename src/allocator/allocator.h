@@ -15,7 +15,9 @@
 #ifdef _WIN32
 #define MIN(a, b) (((a)<(b))?(a):(b))
 #else
+
 #include <sys/param.h>
+
 #endif
 
 #ifdef __GNUC__
@@ -56,12 +58,14 @@ typedef struct {
     file_open_type open_type;
 } file_settings;
 
-typedef struct {
-    int32_t magic;
-    uint32_t free_pages_count;
-    offset_t free_pages_next;
-    offset_t entry_point_page;
-} file_h;
+typedef PACK(
+        struct {
+            int32_t magic;
+            uint32_t free_pages_count;
+            offset_t free_pages_next;
+            offset_t entry_point_page;
+        }
+) file_h;
 
 typedef struct allocator_t allocator_t;
 
@@ -69,7 +73,7 @@ typedef struct page_t page_t;
 
 char *page_ptr(page_t *page);
 
-page_t* page_copy(allocator_t *allocator, page_t *page);
+page_t *page_copy(allocator_t *allocator, page_t *page);
 
 offset_t page_offset(page_t *page);
 

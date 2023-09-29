@@ -31,7 +31,7 @@ void heap_free(heap_t *heap);
 
 offset_t heap_size(void);
 
-heap_result heap_compress(heap_it *heap); // fills records from "freelist" moving last records, after removes empty nodes
+heap_result heap_compress(heap_t *heap);
 
 heap_result heap_append(heap_t *heap, buffer_t *buffer);
 
@@ -45,7 +45,7 @@ heap_result heap_iterator_next(heap_it *it);
 
 buffer_t *heap_iterator_get(heap_it *it);
 
-heap_result heap_iterator_delete(heap_it *it); // marks record as deleted (which will be ignored), add to "freelist"
+heap_result heap_iterator_delete(heap_it *it);
 
 heap_result heap_iterator_replace(heap_it *it, buffer_t *data);
 
