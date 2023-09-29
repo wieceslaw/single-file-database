@@ -14,15 +14,19 @@ typedef enum {
     LIST_OP_ERROR = 1
 } list_result;
 
-typedef PACK(struct {
-    offset_t head;
-    offset_t tail;
-}) list_h;
+typedef PACK(
+        struct {
+            offset_t head;
+            offset_t tail;
+        }
+) list_h;
 
-typedef PACK(struct {
-    offset_t next;
-    offset_t prev;
-}) list_node_h;
+typedef PACK(
+        struct {
+            offset_t next;
+            offset_t prev;
+        }
+) list_node_h;
 
 typedef struct list_t list_t;
 

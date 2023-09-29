@@ -31,7 +31,7 @@ bool list_is_empty(list_t *list) {
 
 list_result list_place(page_t *page, offset_t offset) {
     assert(NULL != page);
-    list_h *header = (list_h*) page_ptr(page) + offset;
+    list_h *header = (list_h *) page_ptr(page) + offset;
     *header = (list_h) {0};
     return LIST_OP_SUCCESS;
 }
@@ -122,7 +122,7 @@ list_it *list_get_tail_iterator(list_t *list) {
     return list_get_iterator(list, list->header->tail);
 }
 
-list_it *list_get_iterator(list_t * list, offset_t page_offset) {
+list_it *list_get_iterator(list_t *list, offset_t page_offset) {
     assert(NULL != list);
     list_it *it = malloc(sizeof(list_it));
     if (NULL == it) {
@@ -167,7 +167,7 @@ list_result list_iterator_next(list_it *it) {
     if (list_iterator_is_empty(it)) {
         return LIST_OP_ERROR;
     }
-    list_node_h *node = (list_node_h*) page_ptr(it->page);
+    list_node_h *node = (list_node_h *) page_ptr(it->page);
     if (NULL == node) {
         return LIST_OP_ERROR;
     }
@@ -191,7 +191,7 @@ list_result list_iterator_prev(list_it *it) {
     if (list_iterator_is_empty(it)) {
         return LIST_OP_ERROR;
     }
-    list_node_h *node = (list_node_h*) page_ptr(it->page);
+    list_node_h *node = (list_node_h *) page_ptr(it->page);
     if (NULL == node) {
         return LIST_OP_ERROR;
     }
