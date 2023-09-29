@@ -9,32 +9,13 @@
 #include "allocator/allocator.h"
 #include "blocklist.h"
 
-typedef PACK(struct {
-    offset_t next;
-}) free_page_h;
-
-static bool header_is_valid(file_h *header) {
-    assert(NULL != header);
-    return MAGIC == header->magic;
-}
+typedef PACK(
+        struct {
+            offset_t next;
+        }
+) free_page_h;
 
 static offset_t granularity = 0;
-
-static offset_t sys_granularity(void);
-
-static offset_t block_size(void) {
-    if (granularity == 0) {
-        granularity = sys_granularity();
-    }
-    return granularity;
-}
-
-static offset_t granular_offset(offset_t offset) {
-    if (granularity == 0) {
-        granularity = block_size();
-    }
-    return (offset / granularity) * granularity;
-}
 
 static allocator_result unmap_block(block *block);
 
@@ -43,6 +24,27 @@ static block *map_block(allocator_t *allocator, offset_t file_offset);
 static block_list *allocator_get_list(allocator_t *allocator);
 
 static file_h *allocator_get_header(allocator_t *allocator);
+
+static offset_t sys_granularity(void);
+
+static bool header_is_valid(file_h *header) {
+    assert(NULL != header);
+    return MAGIC == header->magic;
+}
+
+static offset_t block_size(void) {
+    if (0 == granularity) {
+        granularity = sys_granularity();
+    }
+    return granularity;
+}
+
+static offset_t granular_offset(offset_t offset) {
+    if (0 == granularity) {
+        granularity = block_size();
+    }
+    return (offset / granularity) * granularity;
+}
 
 static allocator_result allocator_clear_list(allocator_t *allocator) {
     assert(NULL != allocator);
@@ -200,11 +202,11 @@ static block *map_block(allocator_t *allocator_t, offset_t offset) {
             ulOffset.HighPart,
             ulOffset.LowPart,
             mapping_size);
-    if (ptr == NULL) {
+    if (NULL == ptr) {
         return NULL;
     }
     block *block_ptr = malloc(sizeof(block));
-    if (block_ptr == NULL) {
+    if (NULL == block_ptr) {
         UnmapViewOfFile(ptr);
         return NULL;
     }
@@ -214,7 +216,7 @@ static block *map_block(allocator_t *allocator_t, offset_t offset) {
 }
 
 static allocator_result unmap_block(block *block) {
-    if (block == NULL) {
+    if (NULL == block) {
         return ALLOCATOR_UNABLE_UNMAP;
     }
     if (!UnmapViewOfFile(block->ptr)) {
@@ -235,7 +237,7 @@ static file_h *allocator_get_header(allocator_t *allocator_t) {
 
 file_status allocator_init(file_settings *settings, allocator_t **allocator_ptr) {
     *allocator_ptr = malloc(sizeof(allocator_t));
-    if (*allocator_ptr == NULL) {
+    if (NULL == *allocator_ptr) {
         return FILE_ST_ERROR;
     }
     **allocator_ptr = (allocator_t) {0};
@@ -421,14 +423,14 @@ static allocator_result fill_mapping(allocator_t *allocator_t) {
             0,
             0,
             NULL);
-    if (allocator_t->hMap == INVALID_HANDLE_VALUE) {
+    if (INVALID_HANDLE_VALUE == allocator_t->hMap) {
         return ALLOCATOR_UNABLE_MAP;
     }
     block_list_it it;
     block_list_iterator(&allocator_t->block_list, &it);
     while (!block_list_iterator_is_empty(&it)) {
         block *block_ptr = map_block(allocator_t, it.node->file_offset);
-        if (block_ptr == NULL) {
+        if (NULL == block_ptr) {
             return ALLOCATOR_UNABLE_MAP;
         }
         it.node->block->ptr = block_ptr->ptr;

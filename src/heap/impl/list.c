@@ -43,7 +43,7 @@ list_result list_clear(list_t *list) {
         return LIST_OP_ERROR;
     }
     while (!list_iterator_is_empty(it)) {
-        if (list_iterator_delete(it) != LIST_OP_SUCCESS) {
+        if (list_iterator_delete_goto_next(it) != LIST_OP_SUCCESS) {
             return LIST_OP_ERROR;
         }
     }
@@ -73,6 +73,8 @@ static list_result list_append(list_t *list, page_t *page) {
     if (0 == list->header->head) {
         list->header->head = page_offset(page);
     }
+    list_node_h *node = (list_node_h *) page_ptr(page);
+    *node = (list_node_h) {0};
     if (0 != list->header->tail) {
         page_t *tail_page = allocator_map_page(list->allocator, list->header->tail);
         if (NULL == tail_page) {
@@ -80,7 +82,6 @@ static list_result list_append(list_t *list, page_t *page) {
         }
         list_node_h *tail_node = (list_node_h *) page_ptr(tail_page);
         tail_node->next = page_offset(page);;
-        list_node_h *node = (list_node_h *) page_ptr(page);
         node->prev = list->header->tail;
         if (allocator_unmap_page(list->allocator, tail_page) != ALLOCATOR_SUCCESS) {
             return LIST_OP_ERROR;
@@ -185,6 +186,30 @@ list_result list_iterator_next(list_it *it) {
     return LIST_OP_SUCCESS;
 }
 
+list_result list_iterator_prev(list_it *it) {
+    assert(NULL != it);
+    if (list_iterator_is_empty(it)) {
+        return LIST_OP_ERROR;
+    }
+    list_node_h *node = (list_node_h*) page_ptr(it->page);
+    if (NULL == node) {
+        return LIST_OP_ERROR;
+    }
+    offset_t prev = node->next;
+    if (allocator_unmap_page(it->list->allocator, it->page) != ALLOCATOR_SUCCESS) {
+        return LIST_OP_ERROR;
+    }
+    if (0 == prev) {
+        it->page = NULL;
+        return LIST_OP_SUCCESS;
+    }
+    it->page = allocator_map_page(it->list->allocator, prev);
+    if (NULL == it->page) {
+        return LIST_OP_ERROR;
+    }
+    return LIST_OP_SUCCESS;
+}
+
 page_t *list_iterator_get(list_it *it) {
     assert(NULL != it);
     if (list_iterator_is_empty(it)) {
@@ -193,13 +218,9 @@ page_t *list_iterator_get(list_it *it) {
     return page_copy(it->list->allocator, it->page);
 }
 
-list_result list_iterator_delete(list_it *it) {
-    assert(NULL != it);
-    if (list_iterator_is_empty(it)) {
-        return LIST_OP_ERROR;
-    }
-    allocator_t *allocator = it->list->allocator;
-    page_t *node_page = it->page;
+list_result list_delete_node(list_t *list, page_t *node_page) {
+    assert(NULL != node_page && NULL != list);
+    allocator_t *allocator = list->allocator;
     list_node_h *node = (list_node_h *) page_ptr(node_page);
     if (node->prev != 0 && node->next != 0) {
         page_t *next_node_page = allocator_map_page(allocator, node->next);
@@ -223,7 +244,7 @@ list_result list_iterator_delete(list_it *it) {
         }
     }
     if (node->prev == 0) {
-        it->list->header->head = node->next;
+        list->header->head = node->next;
         if (node->next != 0) {
             page_t *next_node_page = allocator_map_page(allocator, node->next);
             if (NULL == next_node_page) {
@@ -237,7 +258,7 @@ list_result list_iterator_delete(list_it *it) {
         }
     }
     if (node->next == 0) {
-        it->list->header->tail = node->prev;
+        list->header->tail = node->prev;
         if (node->prev != 0) {
             page_t *prev_node_page = allocator_map_page(allocator, node->prev);
             if (NULL == prev_node_page) {
@@ -250,7 +271,25 @@ list_result list_iterator_delete(list_it *it) {
             }
         }
     }
+    return LIST_OP_SUCCESS;
+}
+
+list_result list_iterator_delete_goto_next(list_it *it) {
+    assert(NULL != it);
+    if (list_iterator_is_empty(it)) {
+        return LIST_OP_ERROR;
+    }
+    allocator_t *allocator = it->list->allocator;
+    page_t *node_page = list_iterator_get(it);
+    if (NULL == node_page) {
+        return LIST_OP_ERROR;
+    }
     if (list_iterator_next(it) != LIST_OP_SUCCESS) {
+        allocator_unmap_page(allocator, node_page);
+        return LIST_OP_ERROR;
+    }
+    if (list_delete_node(it->list, node_page) != LIST_OP_SUCCESS) {
+        allocator_unmap_page(allocator, node_page);
         return LIST_OP_ERROR;
     }
     if (allocator_unmap_page(allocator, node_page) != ALLOCATOR_SUCCESS) {

@@ -12,7 +12,7 @@ typedef struct {
     char *data;
 } buffer_t;
 
-buffer_t* buffer_init(uint64_t size);
+buffer_t *buffer_init(uint64_t size);
 
 void buffer_free(buffer_t *buffer);
 

@@ -7,10 +7,9 @@
 #include <string.h>
 #include <assert.h>
 #include "allocator/buffer.h"
+#include "allocator/allocator.h"
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
-
-buffer_t* buffer_init(uint64_t size) {
+buffer_t *buffer_init(uint64_t size) {
     buffer_t *buffer = malloc(sizeof(buffer_t));
     if (NULL == buffer) {
         return NULL;

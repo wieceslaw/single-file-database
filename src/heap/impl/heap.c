@@ -156,15 +156,15 @@ static offset_t heap_write(heap_t *heap, offset_t offset, buffer_t *buffer) {
     return end;
 }
 
-static offset_t heap_read(heap_t *heap, offset_t offset, buffer_t *buffer) {
+static offset_t heap_read_forward(heap_t *heap, offset_t begin_offset, buffer_t *buffer) {
     assert(NULL != heap && NULL != buffer);
-    list_it *lit = list_get_iterator(heap->list, record_page_offset(offset - 1));
+    list_it *lit = list_get_iterator(heap->list, record_page_offset(begin_offset - 1));
     if (NULL == lit) {
         return 0;
     }
     uint64_t size = buffer->size;
     uint64_t full_read = 0;
-    offset_t begin = offset - record_page_offset(offset - 1);
+    offset_t begin = begin_offset - record_page_offset(begin_offset - 1);
     offset_t end = 0;
     while (full_read != size) {
         page_t *page = list_iterator_get(lit);
@@ -195,12 +195,17 @@ static offset_t heap_read(heap_t *heap, offset_t offset, buffer_t *buffer) {
     return end;
 }
 
+static offset_t heap_read_backward(heap_t *heap, offset_t end_offset, buffer_t *buffer) {
+    // TODO: (Implement) accepts end_offset of record and reads it in inverse order
+    return 0;
+}
+
 static offset_t heap_get_record_header(heap_t *heap, offset_t record_offset, record_h *header) {
     assert(heap != NULL && header != NULL);
     buffer_t buffer;
     buffer.size = sizeof(record_h);
     buffer.data = (char *) header;
-    return heap_read(heap, record_offset, &buffer);
+    return heap_read_forward(heap, record_offset, &buffer);
 }
 
 offset_t heap_size(void) {
@@ -347,7 +352,7 @@ heap_result heap_iterator_next(heap_it *it) {
         return HEAP_OP_ERROR;
     }
     do {
-        offset_t next = heap_read(it->heap, heap_iterator_offset(it), buffer);
+        offset_t next = heap_read_forward(it->heap, heap_iterator_offset(it), buffer);
         if (next == it->heap->header->end) {
             heap_iterator_move(it, 0);
             return HEAP_OP_SUCCESS;
@@ -379,7 +384,7 @@ buffer_t *heap_iterator_get(heap_it *it) {
     if (NULL == record) {
         return NULL;
     }
-    if (0 == heap_read(it->heap, record_body_offset, record)) {
+    if (0 == heap_read_forward(it->heap, record_body_offset, record)) {
         buffer_free(record);
         return NULL;
     }
@@ -404,7 +409,7 @@ heap_result heap_iterator_replace(heap_it *it, buffer_t *buffer) {
 static heap_result heap_record_set_flags(heap_it *it, uint8_t flags) {
     assert(NULL != it);
     buffer_t record;
-    record.data = (char*) &flags;
+    record.data = (char *) &flags;
     record.size = sizeof(uint8_t);
     if (0 == heap_write(it->heap, heap_iterator_offset(it), &record)) {
         return HEAP_OP_ERROR;
@@ -463,10 +468,9 @@ static heap_result heap_unmask(heap_t *heap) {
     return HEAP_OP_SUCCESS;
 }
 
-static offset_t heap_get_last_record(heap_t *heap, buffer_t* buffer) {
+static offset_t heap_get_last_record(heap_t *heap, buffer_t *buffer) {
     assert(NULL != heap);
-    // TODO: Implement
-    return 0;
+    return heap_read_backward(heap, heap->header->end, buffer);
 }
 
 static heap_result heap_fill_free_records(heap_t *heap) {
@@ -499,7 +503,28 @@ static heap_result heap_fill_free_records(heap_t *heap) {
 
 static heap_result heap_shrink_list(heap_t *heap) {
     assert(NULL != heap);
-    // TODO: Implement
+    offset_t last_page_offset = record_page_offset(heap->header->end - 1);
+    list_it *lit = list_get_tail_iterator(heap->list);
+    if (NULL == lit) {
+        return HEAP_OP_ERROR;
+    }
+    while (!list_iterator_is_empty(lit) && last_page_offset != list_iterator_offset(lit)) {
+        page_t *page = list_iterator_get(lit);
+        if (NULL == page) {
+            return HEAP_OP_ERROR;
+        }
+        if (list_iterator_prev(lit) != LIST_OP_SUCCESS) {
+            allocator_unmap_page(heap->allocator, page);
+            return HEAP_OP_ERROR;
+        }
+        if (list_delete_node(heap->list, page) != LIST_OP_SUCCESS) {
+            allocator_unmap_page(heap->allocator, page);
+            return HEAP_OP_ERROR;
+        }
+        if (allocator_unmap_page(heap->allocator, page) != ALLOCATOR_SUCCESS) {
+            return HEAP_OP_ERROR;
+        }
+    }
     return HEAP_OP_SUCCESS;
 }
 

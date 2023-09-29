@@ -40,6 +40,8 @@ void list_free(list_t *);
 
 list_result list_extend(list_t *, uint32_t n);
 
+list_result list_delete_node(list_t *list, page_t *page);
+
 list_it *list_get_iterator(list_t *, offset_t page_offset);
 
 list_it *list_get_head_iterator(list_t *list);
@@ -54,10 +56,12 @@ bool list_iterator_is_empty(list_it *);
 
 list_result list_iterator_next(list_it *);
 
+list_result list_iterator_prev(list_it *it);
+
 offset_t list_iterator_offset(list_it *);
 
 page_t *list_iterator_get(list_it *);
 
-list_result list_iterator_delete(list_it *);
+list_result list_iterator_delete_goto_next(list_it *it);
 
 #endif //LLP_LAB1_LIST_H
