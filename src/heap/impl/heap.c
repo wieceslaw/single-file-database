@@ -196,8 +196,41 @@ static offset_t heap_read_forward(heap_t *heap, offset_t begin_offset, buffer_t 
 }
 
 static offset_t heap_read_backward(heap_t *heap, offset_t end_offset, buffer_t *buffer) {
-    // TODO: (Implement) accepts end_offset of record and reads it in inverse order
-    return 0;
+    list_it *lit = list_get_iterator(heap->list, record_page_offset(end_offset - 1));
+    if (NULL == lit) {
+        return 0;
+    }
+    uint64_t size = buffer->size;
+    uint64_t full_read = 0;
+    offset_t end = end_offset - record_page_offset(end_offset - 1);
+    offset_t begin = 0;
+    while (full_read != size) {
+        page_t *page = list_iterator_get(lit);
+        if (NULL == page) {
+            list_iterator_free(lit);
+            return 0;
+        }
+        uint16_t page_read = MIN(size - full_read, end - sizeof(list_node_h));
+        begin = end - page_read;
+        void *src = page_ptr(page) + begin;
+        void *dst = buffer->data + buffer->size - full_read - page_read;
+        memcpy(dst, src, page_read);
+        full_read += page_read;
+        end = PAGE_SIZE;
+        if (list_iterator_prev(lit) != LIST_OP_SUCCESS) {
+            allocator_unmap_page(heap->allocator, page);
+            list_iterator_free(lit);
+            return 0;
+        }
+        if (allocator_unmap_page(heap->allocator, page) != ALLOCATOR_SUCCESS) {
+            list_iterator_free(lit);
+            return 0;
+        }
+    }
+    if (list_iterator_free(lit) != LIST_OP_SUCCESS) {
+        return 0;
+    }
+    return begin;
 }
 
 static offset_t heap_get_record_header(heap_t *heap, offset_t record_offset, record_h *header) {
