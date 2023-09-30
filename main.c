@@ -13,14 +13,14 @@ static void print_heap(heap_t *heap) {
             printf("unable to get heap_idx it buffer");
             return;
         }
-        printf("%s \n", record->data);
+//        printf("%s \n", record->data);
         buffer_free(record);
         if (heap_iterator_next(it) != HEAP_OP_SUCCESS) {
             printf("unable to next heap_idx it");
             return;
         }
     }
-    printf("count: %d", count);
+    printf("count: %d \n", count);
     if (heap_iterator_free(it) != HEAP_OP_SUCCESS) {
         printf("unable to free heap_idx iterator");
         return;
@@ -42,6 +42,9 @@ static void test_heap(allocator_t *allocator) {
         return;
     }
 
+    printf("before append \n");
+    print_heap(heap);
+
     for (int i = 0; i < 300; i++) {
         buffer_t *buffer = buffer_init(10);
         memcpy(buffer->data, "123456789", 10);
@@ -52,21 +55,31 @@ static void test_heap(allocator_t *allocator) {
         buffer_free(buffer);
     }
 
-    heap_flush(heap);
-
+    printf("before append flush \n");
     print_heap(heap);
 
-    heap_it *it = heap_iterator(heap);
-    while (!heap_iterator_is_empty(it)) {
-        heap_iterator_delete(it);
-        heap_iterator_next(it);
+    if (heap_flush(heap) != HEAP_OP_SUCCESS) {
+        printf("unable to flush after append \n");
     }
 
+    printf("after append flush \n");
     print_heap(heap);
 
-    heap_flush(heap);
+//    heap_it *it = heap_iterator(heap);
+//    while (!heap_iterator_is_empty(it)) {
+//        heap_iterator_delete(it);
+//        heap_iterator_next(it);
+//    }
 
-    print_heap(heap);
+//    printf("before delete flush \n");
+//    print_heap(heap);
+//
+//    if (heap_flush(heap) != HEAP_OP_SUCCESS) {
+//        printf("unable to flush after delete \n");
+//    }
+//
+//    printf("after delete flush \n");
+//    print_heap(heap);
 
     heap_free(heap);
     if (allocator_unmap_page(allocator, page) != ALLOCATOR_SUCCESS) {

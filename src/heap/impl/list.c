@@ -194,7 +194,7 @@ list_result list_iterator_prev(list_it *it) {
     if (NULL == node) {
         return LIST_OP_ERROR;
     }
-    offset_t prev = node->next;
+    offset_t prev = node->prev;
     if (allocator_unmap_page(it->list->allocator, it->page) != ALLOCATOR_SUCCESS) {
         return LIST_OP_ERROR;
     }
