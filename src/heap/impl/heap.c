@@ -53,10 +53,6 @@ static uint8_t set_mask(uint8_t value, uint8_t mask) {
     return value | mask;
 }
 
-static uint8_t remove_mask(uint8_t value, uint8_t mask) {
-    return value ^ mask;
-}
-
 static bool record_is_to_be_added(record_h *header) {
     return has_mask(header->flags, MASK_TO_BE_ADDED);
 }
@@ -410,21 +406,6 @@ buffer_t *heap_iterator_get(heap_it *it) {
     return buffer;
 }
 
-heap_result heap_iterator_replace(heap_it *it, buffer_t *buffer) {
-    assert(NULL != it && NULL != buffer);
-    uint64_t heap_size = it->heap->header->record_size;
-    buffer_t *record = buffer_init(heap_size);
-    uint64_t data_size = MIN(heap_size - sizeof(record_h), buffer->size);
-    record_h *record_header = (record_h *) record->data;
-    *record_header = (record_h) {.flags = 0, .size = data_size};
-    memcpy(record->data + sizeof(record_h), buffer->data, data_size);
-    if (0 == heap_write(it->heap, heap_iterator_offset(it), record)) {
-        return HEAP_OP_ERROR;
-    }
-    buffer_free(record);
-    return HEAP_OP_SUCCESS;
-}
-
 static heap_result heap_record_set_flags(heap_it *it, uint8_t flags) {
     assert(NULL != it);
     buffer_t record;
@@ -461,7 +442,9 @@ static heap_result heap_record_fill(heap_it *it) {
             return HEAP_OP_ERROR;
         }
         last_record_header = (record_h *) last_record_buffer->data;
-        last_record_header->flags ^= MASK_TO_BE_ADDED;
+        if (record_is_to_be_added(last_record_header)) {
+            last_record_header->flags ^= MASK_TO_BE_ADDED;
+        }
         if (0 == heap_write(it->heap, cur_record_offset, last_record_buffer)) {
             buffer_free(last_record_buffer);
             return HEAP_OP_ERROR;

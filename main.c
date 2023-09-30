@@ -13,7 +13,7 @@ static void print_heap(heap_t *heap) {
             printf("unable to get heap_idx it buffer");
             return;
         }
-//        printf("%s \n", record->data);
+        printf("%s \n", record->data);
         buffer_free(record);
         if (heap_iterator_next(it) != HEAP_OP_SUCCESS) {
             printf("unable to next heap_idx it");
@@ -46,8 +46,8 @@ static void test_heap(allocator_t *allocator) {
     print_heap(heap);
 
     for (int i = 0; i < 300; i++) {
-        buffer_t *buffer = buffer_init(10);
-        memcpy(buffer->data, "123456789", 10);
+        buffer_t *buffer = buffer_init(32);
+        sprintf(buffer->data, "%d", i);
         if (heap_append(heap, buffer) != HEAP_OP_SUCCESS) {
             printf("unable to append buffer to heap_idx");
             return;
@@ -65,21 +65,27 @@ static void test_heap(allocator_t *allocator) {
     printf("after append flush \n");
     print_heap(heap);
 
-//    heap_it *it = heap_iterator(heap);
-//    while (!heap_iterator_is_empty(it)) {
-//        heap_iterator_delete(it);
-//        heap_iterator_next(it);
-//    }
+    heap_it *it = heap_iterator(heap);
+    while (!heap_iterator_is_empty(it)) {
+        buffer_t *record = heap_iterator_get(it);
+        if (*record->data == '2') {
+            if (heap_iterator_delete(it) != HEAP_OP_SUCCESS) {
+                printf("unable to delete record");
+            }
+        }
+        buffer_free(record);
+        heap_iterator_next(it);
+    }
 
-//    printf("before delete flush \n");
-//    print_heap(heap);
-//
-//    if (heap_flush(heap) != HEAP_OP_SUCCESS) {
-//        printf("unable to flush after delete \n");
-//    }
-//
-//    printf("after delete flush \n");
-//    print_heap(heap);
+    printf("before delete flush \n");
+    print_heap(heap);
+
+    if (heap_flush(heap) != HEAP_OP_SUCCESS) {
+        printf("unable to flush after delete \n");
+    }
+
+    printf("after delete flush \n");
+    print_heap(heap);
 
     heap_free(heap);
     if (allocator_unmap_page(allocator, page) != ALLOCATOR_SUCCESS) {

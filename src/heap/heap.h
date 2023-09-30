@@ -47,6 +47,4 @@ buffer_t *heap_iterator_get(heap_it *it);
 
 heap_result heap_iterator_delete(heap_it *it);
 
-heap_result heap_iterator_replace(heap_it *it, buffer_t *data);
-
 #endif //LLP_LAB1_HEAP_H
