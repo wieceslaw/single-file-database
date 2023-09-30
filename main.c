@@ -8,13 +8,13 @@ static void print_heap(heap_t *heap) {
     heap_it *it = heap_iterator(heap);
     while (!heap_iterator_is_empty(it)) {
         count++;
-        record_t *record = heap_iterator_get(it);
-        if (NULL == record || NULL == record->buffer) {
+        buffer_t *record = heap_iterator_get(it);
+        if (NULL == record) {
             printf("unable to get heap_idx it buffer");
             return;
         }
-        printf("%s - %s \n", record->buffer->data, record->is_flushed ? "true" : "false");
-        record_free(record);
+        printf("%s \n", record->data);
+        buffer_free(record);
         if (heap_iterator_next(it) != HEAP_OP_SUCCESS) {
             printf("unable to next heap_idx it");
             return;

@@ -14,17 +14,10 @@ typedef struct heap_t heap_t;
 
 typedef struct heap_it heap_it;
 
-typedef struct {
-    buffer_t *buffer;
-    bool is_flushed;
-} record_t;
-
 typedef enum {
     HEAP_OP_SUCCESS = 0,
     HEAP_OP_ERROR = 1
 } heap_result;
-
-void record_free(record_t *record);
 
 void heap_place(page_t *page, offset_t offset, offset_t record_size);
 
@@ -50,7 +43,7 @@ bool heap_iterator_is_empty(heap_it *it);
 
 heap_result heap_iterator_next(heap_it *it);
 
-record_t *heap_iterator_get(heap_it *it);
+buffer_t *heap_iterator_get(heap_it *it);
 
 heap_result heap_iterator_delete(heap_it *it);
 
