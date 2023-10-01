@@ -18,7 +18,8 @@ struct pool_t {
 
 struct pool_it {
     pool_t *pool;
-    // TODO: Implement
+    int heap_idx;
+    heap_it* heap_it;
 };
 
 static int pool_is_valid(pool_t *pool) {
@@ -139,6 +140,91 @@ pool_result pool_flush(pool_t *pool) {
 
 pool_it *pool_iterator(pool_t *pool) {
     assert(pool_is_valid(pool));
-    // TODO: skip "to_be_added"??? or remake heap
-    return NULL;
+    pool_it* it = malloc(sizeof(pool_it));
+    if (NULL == it) {
+        return NULL;
+    }
+    it->pool = pool;
+    it->heap_idx = 0;
+    it->heap_it = heap_iterator(pool->heaps[0]);
+    if (NULL == it->heap_it) {
+        free(it);
+        return NULL;
+    }
+    return it;
+}
+
+pool_result pool_iterator_free(pool_it *it) {
+    assert(NULL != it);
+    if (heap_iterator_free(it->heap_it) != HEAP_OP_SUCCESS) {
+        free(it);
+        return POOL_OP_ERROR;
+    }
+    it->heap_it = NULL;
+    it->heap_idx = -1;
+    free(it);
+    return POOL_OP_SUCCESS;
+}
+
+bool pool_iterator_is_empty(pool_it *it) {
+    assert(NULL != it);
+    return -1 == it->heap_idx;
+}
+
+buffer_t * pool_iterator_get(pool_it *it) {
+    assert(NULL != it);
+    if (pool_iterator_is_empty(it)) {
+        return NULL;
+    }
+    return heap_iterator_get(it->heap_it);
+}
+
+pool_result pool_iterator_restart(pool_it *it) {
+    assert(NULL != it);
+    it->heap_idx = 0;
+    if (NULL != it->heap_it) {
+        if (heap_iterator_free(it->heap_it) != HEAP_OP_SUCCESS) {
+            return POOL_OP_ERROR;
+        }
+    }
+    it->heap_it = heap_iterator(it->pool->heaps[0]);
+    if (NULL == it->heap_it) {
+        return POOL_OP_ERROR;
+    }
+    return POOL_OP_SUCCESS;
+}
+
+pool_result pool_iterator_delete(pool_it *it) {
+    assert(NULL != it);
+    if (pool_iterator_is_empty(it)) {
+        return POOL_OP_ERROR;
+    }
+    if (heap_iterator_delete(it->heap_it) != HEAP_OP_SUCCESS) {
+        return POOL_OP_ERROR;
+    }
+    return POOL_OP_SUCCESS;
+}
+
+pool_result pool_iterator_next(pool_it *it) {
+    assert(NULL != it);
+    // TODO: implement (may be empty heaps which should be skipped)
+    // ...........
+    // 0
+    // ...
+    // 0
+    // ..........
+
+//    heap_iterator_next(it->heap_it);
+//    if (heap_iterator_is_empty(it->heap_it)) {
+//        it->heap_idx++;
+//        if (it->heap_idx == POOL_SIZE) {
+//            it->heap_idx = -1;
+//            heap_iterator_free(it->heap_it);
+//            return POOL_OP_SUCCESS;
+//        }
+//        heap_iterator_free(it->heap_it);
+//        it->heap_it = heap_iterator(it->pool->heaps[it->heap_idx]);
+//    }
+
+    return POOL_OP_SUCCESS;
 }

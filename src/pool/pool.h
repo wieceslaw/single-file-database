@@ -26,11 +26,11 @@ pool_t *pool_init(allocator_t *, offset_t);
 
 pool_result pool_free(pool_t *);
 
-pool_result pool_append(pool_t *, buffer_t *); // append row and mark as "to_be_added"
+pool_result pool_append(pool_t *, buffer_t *);
 
-pool_result pool_flush(pool_t *); // real deletion of "to_be_deleted" and unmarking "to_be_added", compressing heaps
+pool_result pool_flush(pool_t *); // all data modifications will only be applied after flush call
 
-pool_it *pool_iterator(pool_t *); // "to_be_deleted" won't be ignored by iterator, but "to_be_added" would
+pool_it *pool_iterator(pool_t *);
 
 pool_result pool_iterator_free(pool_it *);
 
@@ -40,17 +40,8 @@ pool_result pool_iterator_next(pool_it *);
 
 buffer_t * pool_iterator_get(pool_it *);
 
-buffer_t * pool_iterator_restart(pool_it *);
+pool_result pool_iterator_restart(pool_it *);
 
-pool_result pool_iterator_delete(pool_it *); // mark current row as "to_be_deleted"
-
-// delete query
-// 1) iterate over rows, call delete()
-// 2) flush pool
-
-// update query
-// 1) iterate over rows, call delete()
-// 2) call add() with new row
-// 3) flush pool
+pool_result pool_iterator_delete(pool_it *);
 
 #endif //LLP_LAB1_POOL_H
