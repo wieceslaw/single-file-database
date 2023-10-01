@@ -151,16 +151,24 @@ pool_it *pool_iterator(pool_t *pool) {
         free(it);
         return NULL;
     }
+    if (heap_iterator_is_empty(it->heap_it)) {
+        if (pool_iterator_next(it) != POOL_OP_SUCCESS) {
+            free(it);
+            return NULL;
+        }
+    }
     return it;
 }
 
 pool_result pool_iterator_free(pool_it *it) {
     assert(NULL != it);
-    if (heap_iterator_free(it->heap_it) != HEAP_OP_SUCCESS) {
-        free(it);
-        return POOL_OP_ERROR;
+    if (NULL != it->heap_it) {
+        if (heap_iterator_free(it->heap_it) != HEAP_OP_SUCCESS) {
+            free(it);
+            return POOL_OP_ERROR;
+        }
+        it->heap_it = NULL;
     }
-    it->heap_it = NULL;
     it->heap_idx = -1;
     free(it);
     return POOL_OP_SUCCESS;
@@ -207,24 +215,32 @@ pool_result pool_iterator_delete(pool_it *it) {
 
 pool_result pool_iterator_next(pool_it *it) {
     assert(NULL != it);
-    // TODO: implement (may be empty heaps which should be skipped)
-    // ...........
-    // 0
-    // ...
-    // 0
-    // ..........
-
-//    heap_iterator_next(it->heap_it);
-//    if (heap_iterator_is_empty(it->heap_it)) {
-//        it->heap_idx++;
-//        if (it->heap_idx == POOL_SIZE) {
-//            it->heap_idx = -1;
-//            heap_iterator_free(it->heap_it);
-//            return POOL_OP_SUCCESS;
-//        }
-//        heap_iterator_free(it->heap_it);
-//        it->heap_it = heap_iterator(it->pool->heaps[it->heap_idx]);
-//    }
-
+    if (pool_iterator_is_empty(it)) {
+        return POOL_OP_ERROR;
+    }
+    if (heap_iterator_next(it->heap_it) != HEAP_OP_SUCCESS) {
+        return POOL_OP_ERROR;
+    }
+    if (!heap_iterator_is_empty(it->heap_it)) {
+        return POOL_OP_SUCCESS;
+    }
+    while (heap_iterator_is_empty(it->heap_it)) {
+        it->heap_idx++;
+        if (it->heap_idx == POOL_SIZE) {
+            it->heap_idx = -1;
+            if (heap_iterator_free(it->heap_it) != HEAP_OP_SUCCESS) {
+                return POOL_OP_ERROR;
+            }
+            it->heap_it = NULL;
+            return POOL_OP_SUCCESS;
+        }
+        if (heap_iterator_free(it->heap_it) != HEAP_OP_SUCCESS) {
+            return POOL_OP_ERROR;
+        }
+        it->heap_it = heap_iterator(it->pool->heaps[it->heap_idx]);
+        if (NULL == it->heap_it) {
+            return POOL_OP_ERROR;
+        }
+    }
     return POOL_OP_SUCCESS;
 }

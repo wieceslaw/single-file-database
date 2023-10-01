@@ -223,7 +223,7 @@ bool heap_is_empty(heap_t *heap) {
 void heap_place(page_t *page, offset_t offset, offset_t record_size) {
     assert(page != NULL);
     list_place(page, offset);
-    heap_h *header = (heap_h *) page_ptr(page) + offset;
+    heap_h *header = (heap_h *) (page_ptr(page) + offset);
     header->record_size = record_size + sizeof(record_h);
     header->end = 0;
 }
@@ -247,7 +247,7 @@ heap_t *heap_init(page_t *page, offset_t offset, allocator_t *allocator) {
         return NULL;
     }
     heap->allocator = allocator;
-    heap->header = (heap_h *) page_ptr(page) + offset;
+    heap->header = (heap_h *) (page_ptr(page) + offset);
     heap->list = list_init(&(heap->header->list_header), allocator);
     if (NULL == heap->list) {
         free(heap);

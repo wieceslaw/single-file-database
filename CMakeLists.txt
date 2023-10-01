@@ -21,6 +21,7 @@ add_executable(llp_lab1
         src/heap/impl/heap.c
         src/pool/pool.c
         src/allocator/impl/buffer.c
+        test/test_heap.c
 )
 
 if (UNIX)

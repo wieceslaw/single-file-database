@@ -31,7 +31,7 @@ bool list_is_empty(list_t *list) {
 
 void list_place(page_t *page, offset_t offset) {
     assert(NULL != page);
-    list_h *header = (list_h *) page_ptr(page) + offset;
+    list_h *header = (list_h *) (page_ptr(page) + offset);
     *header = (list_h) {0};
 }
 
