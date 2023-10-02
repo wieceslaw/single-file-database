@@ -94,7 +94,7 @@ pool_result pool_free(pool_t *pool) {
         pool->heaps[i] = NULL;
     }
     free(pool);
-    return POOL_OP_SUCCESS;
+    return POOL_OP_OK;
 }
 
 pool_result pool_clear(allocator_t *allocator, offset_t pool_offset) {
@@ -110,13 +110,13 @@ pool_result pool_clear(allocator_t *allocator, offset_t pool_offset) {
             return POOL_OP_ERROR;
         }
     }
-    if (pool_free(pool) != POOL_OP_SUCCESS) {
+    if (pool_free(pool) != POOL_OP_OK) {
         return POOL_OP_ERROR;
     }
     if (allocator_return_page(allocator, pool_offset) != ALLOCATOR_SUCCESS) {
         return POOL_OP_ERROR;
     }
-    return POOL_OP_SUCCESS;
+    return POOL_OP_OK;
 }
 
 pool_result pool_append(pool_t *pool, buffer_t *buffer) {
@@ -125,7 +125,7 @@ pool_result pool_append(pool_t *pool, buffer_t *buffer) {
     if (heap_append(pool->heaps[idx], buffer) != HEAP_OP_SUCCESS) {
         return POOL_OP_ERROR;
     }
-    return POOL_OP_SUCCESS;
+    return POOL_OP_OK;
 }
 
 pool_result pool_flush(pool_t *pool) {
@@ -135,7 +135,7 @@ pool_result pool_flush(pool_t *pool) {
             return POOL_OP_ERROR;
         }
     }
-    return POOL_OP_SUCCESS;
+    return POOL_OP_OK;
 }
 
 pool_it *pool_iterator(pool_t *pool) {
@@ -152,7 +152,7 @@ pool_it *pool_iterator(pool_t *pool) {
         return NULL;
     }
     if (heap_iterator_is_empty(it->heap_it)) {
-        if (pool_iterator_next(it) != POOL_OP_SUCCESS) {
+        if (pool_iterator_next(it) != POOL_OP_OK) {
             free(it);
             return NULL;
         }
@@ -168,7 +168,7 @@ pool_result pool_iterator_free(pool_it *it) {
     }
     it->heap_idx = -1;
     free(it);
-    return POOL_OP_SUCCESS;
+    return POOL_OP_OK;
 }
 
 bool pool_iterator_is_empty(pool_it *it) {
@@ -195,7 +195,7 @@ pool_result pool_iterator_restart(pool_it *it) {
     if (NULL == it->heap_it) {
         return POOL_OP_ERROR;
     }
-    return POOL_OP_SUCCESS;
+    return POOL_OP_OK;
 }
 
 pool_result pool_iterator_delete(pool_it *it) {
@@ -206,7 +206,7 @@ pool_result pool_iterator_delete(pool_it *it) {
     if (heap_iterator_delete(it->heap_it) != HEAP_OP_SUCCESS) {
         return POOL_OP_ERROR;
     }
-    return POOL_OP_SUCCESS;
+    return POOL_OP_OK;
 }
 
 pool_result pool_iterator_next(pool_it *it) {
@@ -218,7 +218,7 @@ pool_result pool_iterator_next(pool_it *it) {
         return POOL_OP_ERROR;
     }
     if (!heap_iterator_is_empty(it->heap_it)) {
-        return POOL_OP_SUCCESS;
+        return POOL_OP_OK;
     }
     while (heap_iterator_is_empty(it->heap_it)) {
         it->heap_idx++;
@@ -226,7 +226,7 @@ pool_result pool_iterator_next(pool_it *it) {
             it->heap_idx = -1;
             heap_iterator_free(it->heap_it);
             it->heap_it = NULL;
-            return POOL_OP_SUCCESS;
+            return POOL_OP_OK;
         }
         heap_iterator_free(it->heap_it);
         it->heap_it = heap_iterator(it->pool->heaps[it->heap_idx]);
@@ -234,5 +234,5 @@ pool_result pool_iterator_next(pool_it *it) {
             return POOL_OP_ERROR;
         }
     }
-    return POOL_OP_SUCCESS;
+    return POOL_OP_OK;
 }

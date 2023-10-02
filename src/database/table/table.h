@@ -9,30 +9,31 @@
 #include "pool/pool.h"
 
 typedef enum column_type {
-    COL_INT = 0,
-    COL_FLOAT = 1,
-    COL_STRING = 2,
-    COL_BOOL = 3
+    TABLE_COLUMN_INT = 0,
+    TABLE_COLUMN_FLOAT = 1,
+    TABLE_COLUMN_STRING = 2,
+    TABLE_COLUMN_BOOL = 3
 } column_type_t;
 
 typedef struct column {
-    char* name;
+    char *name;
     column_type_t type;
 } column_t;
 
-typedef struct schema {
+typedef struct table_schema {
+    char *name;
     uint32_t size;
-    column_t* columns;
-} schema_t;
+    column_t *columns;
+    offset_t pool_offset;
+} table_schema_t;
 
 typedef struct table {
-    char* name;
-    schema_t *schema;
+    table_schema_t *schema;
+    pool_t *data_pool;
 } table_t;
 
-table_t *table_deserialize(buffer_t *buffer);
 
-buffer_t *table_serialize(table_t *table);
+void free_schema(table_schema_t *schema);
 
 void table_free(table_t *table);
 

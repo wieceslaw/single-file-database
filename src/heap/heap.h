@@ -7,7 +7,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include "../allocator/buffer.h"
+#include "buffer/buffer.h"
 #include "../allocator/allocator.h"
 
 typedef struct heap_t heap_t;

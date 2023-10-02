@@ -8,22 +8,28 @@ include_directories(src/)
 add_executable(llp_lab1
         main.c
         src/heap/heap.h
-        src/allocator/buffer.h
+        src/buffer/buffer.h
         src/heap/impl/list.h
         src/allocator/allocator.h
         src/heap/impl/list.c
         src/allocator/impl/allocator.c
-        src/table/table.h
+        src/database/table/table.h
         src/allocator/impl/blocklist.c
         src/allocator/impl/blocklist.h
         src/pool/pool.h
         src/heap/impl/heap.c
         src/pool/pool.c
-        src/allocator/impl/buffer.c
+        src/buffer/buffer.c
         test/test_heap.c
         test/test_pool.c
-        src/table/table.c
+        src/database/table/table.c
         test/test.h
+        src/database/database.c
+        src/database/database.h
+        src/database/table/impl/cursor.h
+        src/database/table/impl/cursor.c
+        src/database/table/impl/joinset.h
+        src/database/table/impl/joinset.c
 )
 
 if (UNIX)

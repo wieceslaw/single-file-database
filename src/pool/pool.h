@@ -7,10 +7,10 @@
 
 #include <stdbool.h>
 #include "allocator/allocator.h"
-#include "allocator/buffer.h"
+#include "buffer/buffer.h"
 
 typedef enum {
-    POOL_OP_SUCCESS = 0,
+    POOL_OP_OK = 0,
     POOL_OP_ERROR = 1
 } pool_result;
 
