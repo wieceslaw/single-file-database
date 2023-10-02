@@ -19,7 +19,7 @@ database_t *database_init(file_settings *settings);
 
 database_result database_free(database_t *database);
 
-database_result database_create_table(database_t *database, const table_schema_t *table_schema);
+database_result database_create_table(database_t *database, table_schema_t *table_schema);
 
 // OK - if table existed and was successfully deleted OR didn't exist
 // ERR - if something went wrong

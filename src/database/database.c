@@ -44,7 +44,7 @@ static uint64_t table_schema_length(const table_schema_t *const table_schema) {
     assert(table_schema != NULL);
     uint64_t size = sizeof(table_schema->pool_offset) + (strlen(table_schema->name) + 1) + sizeof(table_schema->size);
     for (uint32_t i = 0; i < table_schema->size; i++) {
-        column_t col = table_schema->columns[size];
+        column_t col = table_schema->columns[i];
         size += (strlen(col.name) + 1) + sizeof(col.type);
     }
     return size;
@@ -101,18 +101,18 @@ database_t *database_init(file_settings *settings) {
 }
 
 database_result database_free(database_t *database) {
-    if (allocator_free(database->allocator) != ALLOCATOR_SUCCESS) {
-        pool_free(database->table_pool);
+    if (pool_free(database->table_pool) != POOL_OP_OK) {
+        allocator_free(database->allocator);
         return DATABASE_OP_ERR;
     }
-    if (pool_free(database->table_pool) != POOL_OP_OK) {
+    if (allocator_free(database->allocator) != FILE_ST_OK) {
         return DATABASE_OP_ERR;
     }
     free(database);
     return DATABASE_OP_OK;
 }
 
-database_result database_create_table(database_t *database, const table_schema_t *const table_schema) {
+database_result database_create_table(database_t *database, table_schema_t * table_schema) {
     assert(database != NULL && table_schema != NULL);
     pool_it *it = pool_iterator(database->table_pool);
     if (NULL == it) {
@@ -126,6 +126,7 @@ database_result database_create_table(database_t *database, const table_schema_t
         }
         table_schema_t *schema = table_schema_deserialize(buffer);
         if (NULL == schema) {
+            buffer_free(buffer);
             pool_iterator_free(it);
             return DATABASE_OP_ERR;
         }
@@ -133,18 +134,31 @@ database_result database_create_table(database_t *database, const table_schema_t
             pool_iterator_free(it);
             return DATABASE_OP_ERR;
         }
-        free_schema(schema);
+        schema_free(schema);
         buffer_free(buffer);
+        if (pool_iterator_next(it) != POOL_OP_OK) {
+            pool_iterator_free(it);
+            return DATABASE_OP_ERR;
+        }
     }
     if (pool_iterator_free(it) != POOL_OP_OK) {
         return DATABASE_OP_ERR;
     }
     it = NULL;
+    offset_t offset = pool_create(database->allocator);
+    if (0 == offset) {
+        return DATABASE_OP_ERR;
+    }
+    table_schema->pool_offset = offset;
     buffer_t *serialized = table_serialize(table_schema);
     if (NULL == serialized) {
         return DATABASE_OP_ERR;
     }
     if (pool_append(database->table_pool, serialized) != POOL_OP_OK) {
+        buffer_free(serialized);
+        return DATABASE_OP_ERR;
+    }
+    if (pool_flush(database->table_pool) != POOL_OP_OK) {
         buffer_free(serialized);
         return DATABASE_OP_ERR;
     }
@@ -165,18 +179,28 @@ database_result database_delete_table(database_t *database, char *name) {
         }
         table_schema_t *schema = table_schema_deserialize(buffer);
         if (NULL == schema) {
+            buffer_free(buffer);
             pool_iterator_free(it);
             return DATABASE_OP_ERR;
         }
         if (0 == strcmp(schema->name, name)) {
             if (pool_iterator_delete(it) != POOL_OP_OK) {
+                schema_free(schema);
+                buffer_free(buffer);
                 pool_iterator_free(it);
                 return DATABASE_OP_ERR;
             }
+            schema_free(schema);
+            buffer_free(buffer);
+            pool_iterator_free(it);
             return DATABASE_OP_OK;
         }
-        free_schema(schema);
+        schema_free(schema);
         buffer_free(buffer);
+        if (pool_iterator_next(it) != POOL_OP_OK) {
+            pool_iterator_free(it);
+            return DATABASE_OP_ERR;
+        }
     }
     if (pool_iterator_free(it) != POOL_OP_OK) {
         return DATABASE_OP_ERR;
@@ -198,6 +222,7 @@ table_t *database_find_table(database_t *database, char *name) {
         }
         table_schema_t *schema = table_schema_deserialize(buffer);
         if (NULL == schema) {
+            buffer_free(buffer);
             pool_iterator_free(it);
             return NULL;
         }
@@ -207,14 +232,21 @@ table_t *database_find_table(database_t *database, char *name) {
             table->schema = schema;
             table->data_pool = pool_init(database->allocator, schema->pool_offset);
             if (NULL == table->data_pool) {
+                schema_free(schema);
+                buffer_free(buffer);
                 pool_iterator_free(it);
                 free(table);
                 return NULL;
             }
+            buffer_free(buffer);
             return table;
         }
-        free_schema(schema);
+        schema_free(schema);
         buffer_free(buffer);
+        if (pool_iterator_next(it) != POOL_OP_OK) {
+            pool_iterator_free(it);
+            return NULL;
+        }
     }
     if (pool_iterator_free(it) != POOL_OP_OK) {
         return NULL;

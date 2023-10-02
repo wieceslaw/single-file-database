@@ -61,8 +61,8 @@ bool buffer_is_empty(buffer_t *buffer) {
 
 char *buffer_read_string(buffer_t *buffer) {
     assert(buffer != NULL);
-    size_t length = strlen(buffer->data + buffer->rcur);
-    char *string = malloc(length + 1);
+    size_t length = strlen(buffer->data + buffer->rcur) + 1;
+    char *string = malloc(length);
     if (NULL == string) {
         return NULL;
     }

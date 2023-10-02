@@ -8,6 +8,11 @@
 #include <stdint-gcc.h>
 #include "pool/pool.h"
 
+typedef enum {
+    TABLE_OP_OK = 0,
+    TABLE_OP_ERR = 1,
+} table_result;
+
 typedef enum column_type {
     TABLE_COLUMN_INT = 0,
     TABLE_COLUMN_FLOAT = 1,
@@ -33,8 +38,8 @@ typedef struct table {
 } table_t;
 
 
-void free_schema(table_schema_t *schema);
+void schema_free(table_schema_t *schema);
 
-void table_free(table_t *table);
+table_result table_free(table_t *table);
 
 #endif //LLP_LAB1_TABLE_H

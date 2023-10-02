@@ -151,8 +151,16 @@ pool_it *pool_iterator(pool_t *pool) {
         free(it);
         return NULL;
     }
-    if (heap_iterator_is_empty(it->heap_it)) {
-        if (pool_iterator_next(it) != POOL_OP_OK) {
+    while (heap_iterator_is_empty(it->heap_it)) {
+        heap_iterator_free(it->heap_it);
+        it->heap_idx++;
+        if (POOL_SIZE == it->heap_idx) {
+            it->heap_idx = -1;
+            it->heap_it = NULL;
+            break;
+        }
+        it->heap_it = heap_iterator(pool->heaps[it->heap_idx]);
+        if (NULL == it->heap_it) {
             free(it);
             return NULL;
         }

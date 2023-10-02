@@ -23,7 +23,7 @@ void print_heap(heap_t *heap) {
         }
     }
     printf("count: %d \n", count);
-    heap_iterator_free(it)
+    heap_iterator_free(it);
 }
 
 void test_heap(allocator_t *allocator) {
