@@ -1,123 +1,19 @@
 #include <stdio.h>
-#include <string.h>
 #include "src/allocator/allocator.h"
 #include "pool/pool.h"
+#include "table/table.h"
+#include "test/test.h"
 
-static void print_pool(pool_t *pool) {
-    pool_it* it = pool_iterator(pool);
-    if (NULL == it) {
-        printf("unable to get pool iterator \n");
-        return;
-    }
-    int count = 0;
-    while (!pool_iterator_is_empty(it)) {
-        count++;
-        buffer_t *buffer = pool_iterator_get(it);
-        if (NULL == buffer) {
-            printf("unable to get pool \n");
-            return;
-        }
-        printf("%s \n", buffer->data);
-        buffer_free(buffer);
-        if (pool_iterator_next(it) != POOL_OP_SUCCESS) {
-            printf("unable to go next \n");
-            return;
-        }
-    }
-    printf("count: %d \n", count);
-
-    if (pool_iterator_free(it) != POOL_OP_SUCCESS) {
-        printf("unable to free pool iterator \n");
-        return;
-    }
-}
-
-static void test_pool(allocator_t *allocator) {
-    offset_t entry_point = pool_create(allocator);
-    if (0 == entry_point) {
-        printf("unable to create pool \n");
-        return;
-    }
-    pool_t *pool = pool_init(allocator, entry_point);
-    if (NULL == pool) {
-        printf("unable to init pool \n");
-        return;
-    }
-
-    for (int i = 1; i < 500000; i++) {
-        buffer_t *buffer = buffer_init(64);
-        if (NULL == buffer) {
-            printf("unable to create buffer");
-        }
-        sprintf(buffer->data, "%d", i);
-        if (pool_append(pool, buffer) != POOL_OP_SUCCESS) {
-            printf("unable to append to pool \n");
-        }
-    }
-
-    printf("before add flush \n");
-    print_pool(pool);
-
-    if (pool_flush(pool) != POOL_OP_SUCCESS) {
-        printf("unable to flush pool");
-        return;
-    }
-
-    printf("after add flush \n");
-    print_pool(pool);
-
-
-    pool_it* it = pool_iterator(pool);
-    if (NULL == it) {
-        printf("unable to get pool iterator \n");
-        return;
-    }
-    int count = 0;
-    while (!pool_iterator_is_empty(it)) {
-        count++;
-        buffer_t *buffer = pool_iterator_get(it);
-        if (NULL == buffer) {
-            printf("unable to get pool \n");
-            return;
-        }
-
-        if (*buffer->data == '2') {
-            if (pool_iterator_delete(it) != POOL_OP_SUCCESS) {
-                printf("unable to delete from pool");
-                return;
-            }
-        }
-
-        buffer_free(buffer);
-        if (pool_iterator_next(it) != POOL_OP_SUCCESS) {
-            printf("unable to go next \n");
-            return;
-        }
-    }
-    printf("%d \n", count);
-
-    if (pool_iterator_free(it) != POOL_OP_SUCCESS) {
-        printf("unable to free pool iterator \n");
-        return;
-    }
-
-    printf("before delete flush");
-    print_pool(pool);
-
-    if (pool_flush(pool) != POOL_OP_SUCCESS) {
-        printf("unable to flush pool");
-        return;
-    }
-
-    printf("after delete flush \n");
-    print_pool(pool);
-
-    if (pool_free(pool) != POOL_OP_SUCCESS) {
-        printf("unable to free pool \n");
-    }
-}
 
 int main(void) {
+//    column_t columns[4] = {
+//            {.name = "id", .type = COL_INT},
+//            {.name = "name", .type = COL_STRING},
+//            {.name = "age", .type = COL_INT}
+//    };
+//    schema_t schema = {.size = 4, .columns = columns};
+//    table_t table = {.name = "user", .schema = &schema};
+
     file_settings settings = {.path = "test.bin", .open_type = FILE_OPEN_CLEAR};
     allocator_t *allocator;
     int res = allocator_init(&settings, &allocator);
@@ -126,7 +22,20 @@ int main(void) {
         return -1;
     }
 
-    test_pool(allocator);
+    test_heap(allocator);
+
+//    if (settings.open_type == FILE_OPEN_CLEAR || settings.open_type == FILE_OPEN_CREATE) {
+//        offset_t offset = pool_create(allocator);
+//        if (0 == offset) {
+//            return -1;
+//        }
+//        allocator_set_entrypoint(allocator, offset);
+//    }
+//
+//    pool_t *pool = pool_init(allocator, allocator_get_entrypoint(allocator));
+//    if (NULL == pool) {
+//        return -1;
+//    }
 
     if (allocator_free(allocator) != FILE_ST_OK) {
         printf("unable free allocator");

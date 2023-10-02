@@ -55,7 +55,7 @@ typedef PACK(
             int32_t magic;
             uint32_t free_pages_count;
             offset_t free_pages_next;
-            offset_t entry_point_page;
+            offset_t entrypoint;
         }
 ) file_h;
 
@@ -72,6 +72,10 @@ offset_t page_offset(page_t *page);
 file_status allocator_init(file_settings *settings, allocator_t **allocator_ptr);
 
 file_status allocator_free(allocator_t *allocator);
+
+void allocator_set_entrypoint(allocator_t* allocator, offset_t entrypoint);
+
+offset_t allocator_get_entrypoint(allocator_t *allocator);
 
 allocator_result allocator_return_page(allocator_t *allocator, offset_t offset);
 

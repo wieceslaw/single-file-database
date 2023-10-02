@@ -13,7 +13,6 @@ add_executable(llp_lab1
         src/allocator/allocator.h
         src/heap/impl/list.c
         src/allocator/impl/allocator.c
-        src/table/table_iterator.h
         src/table/table.h
         src/allocator/impl/blocklist.c
         src/allocator/impl/blocklist.h
@@ -22,6 +21,9 @@ add_executable(llp_lab1
         src/pool/pool.c
         src/allocator/impl/buffer.c
         test/test_heap.c
+        test/test_pool.c
+        src/table/table.c
+        test/test.h
 )
 
 if (UNIX)

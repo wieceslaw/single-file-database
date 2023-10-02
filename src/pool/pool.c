@@ -163,10 +163,7 @@ pool_it *pool_iterator(pool_t *pool) {
 pool_result pool_iterator_free(pool_it *it) {
     assert(NULL != it);
     if (NULL != it->heap_it) {
-        if (heap_iterator_free(it->heap_it) != HEAP_OP_SUCCESS) {
-            free(it);
-            return POOL_OP_ERROR;
-        }
+        heap_iterator_free(it->heap_it);
         it->heap_it = NULL;
     }
     it->heap_idx = -1;
@@ -191,9 +188,8 @@ pool_result pool_iterator_restart(pool_it *it) {
     assert(NULL != it);
     it->heap_idx = 0;
     if (NULL != it->heap_it) {
-        if (heap_iterator_free(it->heap_it) != HEAP_OP_SUCCESS) {
-            return POOL_OP_ERROR;
-        }
+        heap_iterator_free(it->heap_it);
+        it->heap_it = NULL;
     }
     it->heap_it = heap_iterator(it->pool->heaps[0]);
     if (NULL == it->heap_it) {
@@ -228,15 +224,11 @@ pool_result pool_iterator_next(pool_it *it) {
         it->heap_idx++;
         if (it->heap_idx == POOL_SIZE) {
             it->heap_idx = -1;
-            if (heap_iterator_free(it->heap_it) != HEAP_OP_SUCCESS) {
-                return POOL_OP_ERROR;
-            }
+            heap_iterator_free(it->heap_it);
             it->heap_it = NULL;
             return POOL_OP_SUCCESS;
         }
-        if (heap_iterator_free(it->heap_it) != HEAP_OP_SUCCESS) {
-            return POOL_OP_ERROR;
-        }
+        heap_iterator_free(it->heap_it);
         it->heap_it = heap_iterator(it->pool->heaps[it->heap_idx]);
         if (NULL == it->heap_it) {
             return POOL_OP_ERROR;

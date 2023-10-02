@@ -5,19 +5,35 @@
 #ifndef LLP_LAB1_TABLE_H
 #define LLP_LAB1_TABLE_H
 
-typedef struct table table;
+#include <stdint-gcc.h>
+#include "pool/pool.h"
 
-typedef struct table_it table_it;
+typedef enum column_type {
+    COL_INT = 0,
+    COL_FLOAT = 1,
+    COL_STRING = 2,
+    COL_BOOL = 3
+} column_type_t;
 
-typedef enum table_result {
-    TABLE_OP_SUCCESS = 0,
-    TABLE_OP_ERROR = 1,
-} table_result;
+typedef struct column {
+    char* name;
+    column_type_t type;
+} column_t;
 
-table_result table_append(table*);
+typedef struct schema {
+    uint32_t size;
+    column_t* columns;
+} schema_t;
 
-table_result table_flush(table*);
+typedef struct table {
+    char* name;
+    schema_t *schema;
+} table_t;
 
-table_it* table_get_iterator(table*);
+table_t *table_deserialize(buffer_t *buffer);
+
+buffer_t *table_serialize(table_t *table);
+
+void table_free(table_t *table);
 
 #endif //LLP_LAB1_TABLE_H

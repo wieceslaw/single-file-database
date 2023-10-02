@@ -37,7 +37,7 @@ heap_result heap_append(heap_t *heap, buffer_t *buffer);
 
 heap_it *heap_iterator(heap_t *heap);
 
-heap_result heap_iterator_free(heap_it *it);
+void heap_iterator_free(heap_it *it);
 
 bool heap_iterator_is_empty(heap_it *it);
 

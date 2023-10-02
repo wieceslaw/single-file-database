@@ -3,9 +3,9 @@
 //
 
 #include <stdio.h>
-#include "heap/heap.h"
+#include "test.h"
 
-static void print_heap(heap_t *heap) {
+void print_heap(heap_t *heap) {
     int count = 0;
     heap_it *it = heap_iterator(heap);
     while (!heap_iterator_is_empty(it)) {
@@ -23,13 +23,10 @@ static void print_heap(heap_t *heap) {
         }
     }
     printf("count: %d \n", count);
-    if (heap_iterator_free(it) != HEAP_OP_SUCCESS) {
-        printf("unable to free heap_idx iterator");
-        return;
-    }
+    heap_iterator_free(it)
 }
 
-static void test_heap(allocator_t *allocator) {
+void test_heap(allocator_t *allocator) {
     page_t *page = allocator_get_page(allocator);
     if (page == NULL) {
         printf("unable to get block");

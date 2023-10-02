@@ -76,6 +76,16 @@ static block_list_node *block_list_find(block_list *list, offset_t offset) {
     return NULL;
 }
 
+void allocator_set_entrypoint(allocator_t* allocator, offset_t entrypoint) {
+    assert(NULL != allocator && NULL != allocator_get_header(allocator));
+    allocator_get_header(allocator)->entrypoint = entrypoint;
+}
+
+offset_t allocator_get_entrypoint(allocator_t *allocator) {
+    assert(NULL != allocator && NULL != allocator_get_header(allocator));
+    return allocator_get_header(allocator)->entrypoint;
+}
+
 char *page_ptr(page_t *page) {
     assert(NULL != page);
     return page->block->ptr + page->offset;

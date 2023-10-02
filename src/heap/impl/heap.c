@@ -13,22 +13,20 @@ typedef PACK (
             list_h list_header;
             offset_t record_size;
             offset_t end;
+            offset_t append_begin;
+            uint8_t has_deleted;
         }
 ) heap_h;
 
 typedef enum {
     MASK_TO_BE_DELETED = 0x1,
     MASK_TO_BE_ADDED = 0x2,
-    MASK_IS_DELETED = 0x4,
 } RECORD_FLAG_MASK;
 
 typedef PACK(
         struct {
             uint8_t flags;
-            union {
-                uint64_t size;
-                offset_t next;
-            };
+            uint64_t size;
         }
 ) record_h;
 
@@ -47,10 +45,6 @@ struct heap_it {
 
 static uint8_t has_mask(uint8_t value, uint8_t mask) {
     return value & mask;
-}
-
-static uint8_t set_mask(uint8_t value, uint8_t mask) {
-    return value | mask;
 }
 
 static bool record_is_to_be_added(record_h *header) {
@@ -226,6 +220,8 @@ void heap_place(page_t *page, offset_t offset, offset_t record_size) {
     heap_h *header = (heap_h *) (page_ptr(page) + offset);
     header->record_size = record_size + sizeof(record_h);
     header->end = 0;
+    header->append_begin = 0;
+    header->has_deleted = 0;
 }
 
 heap_result heap_clear(heap_t *heap) {
@@ -234,6 +230,8 @@ heap_result heap_clear(heap_t *heap) {
         return HEAP_OP_ERROR;
     }
     heap->header->end = 0;
+    heap->header->append_begin = 0;
+    heap->header->has_deleted = 0;
     return HEAP_OP_SUCCESS;
 }
 
@@ -265,15 +263,14 @@ void heap_free(heap_t *heap) {
 
 heap_result heap_append(heap_t *heap, buffer_t *buffer) {
     assert(NULL != heap && NULL != buffer);
-
     uint64_t heap_size = heap->header->record_size;
     buffer_t *record = buffer_init(heap_size);
     uint64_t data_size = MIN(heap_size - sizeof(record_h), buffer->size);
     record_h *record_header = (record_h *) record->data;
-    *record_header = (record_h) {.flags = 0, .size = data_size};
-    record_header->flags = set_mask(record_header->flags, MASK_TO_BE_ADDED);
+    *record_header = (record_h) {0};
+    *record_header = (record_h) {.size = data_size};
+    record_header->flags = record_header->flags | MASK_TO_BE_ADDED;
     memcpy(record->data + sizeof(record_h), buffer->data, data_size);
-
     if (HEAP_OP_SUCCESS != heap_reserve(heap, record->size)) {
         return HEAP_OP_ERROR;
     }
@@ -281,12 +278,15 @@ heap_result heap_append(heap_t *heap, buffer_t *buffer) {
     if (0 == end_offset) {
         return HEAP_OP_ERROR;
     }
+    if (0 == heap->header->append_begin) {
+        heap->header->append_begin = heap->header->end;
+    }
     heap->header->end = end_offset;
     buffer_free(record);
     return HEAP_OP_SUCCESS;
 }
 
-heap_it *heap_iterator(heap_t *heap) {
+static heap_it *heap_iterator_at(heap_t *heap, offset_t offset) {
     assert(NULL != heap);
     heap_it *it = malloc(sizeof(heap_it));
     if (NULL == it) {
@@ -302,7 +302,7 @@ heap_it *heap_iterator(heap_t *heap) {
     } else {
         *it = (heap_it) {
                 .heap = heap,
-                .record_begin = sizeof(list_node_h) + heap->header->list_header.head,
+                .record_begin = offset,
                 .record_end = 0,
                 .record = NULL
         };
@@ -323,7 +323,12 @@ heap_it *heap_iterator(heap_t *heap) {
     return it;
 }
 
-heap_result heap_iterator_free(heap_it *it) {
+heap_it *heap_iterator(heap_t *heap) {
+    assert(NULL != heap);
+    return heap_iterator_at(heap, sizeof(list_node_h) + heap->header->list_header.head);
+}
+
+void heap_iterator_free(heap_it *it) {
     assert(NULL != it);
     if (it->record != NULL) {
         buffer_free(it->record);
@@ -332,7 +337,6 @@ heap_result heap_iterator_free(heap_it *it) {
     it->record_begin = 0;
     it->record_end = 0;
     free(it);
-    return HEAP_OP_SUCCESS;
 }
 
 static bool heap_iterator_is_empty_no_skip(heap_it *it) {
@@ -419,6 +423,7 @@ static heap_result heap_record_set_flags(heap_it *it, uint8_t flags) {
 
 heap_result heap_iterator_delete(heap_it *it) {
     assert(NULL != it);
+    it->heap->header->has_deleted = 1;
     return heap_record_set_flags(it, MASK_TO_BE_DELETED);
 }
 
@@ -442,24 +447,25 @@ static heap_result heap_record_fill(heap_it *it) {
             return HEAP_OP_ERROR;
         }
         last_record_header = (record_h *) last_record_buffer->data;
-        if (record_is_to_be_added(last_record_header)) {
-            last_record_header->flags ^= MASK_TO_BE_ADDED;
-        }
-        if (0 == heap_write(it->heap, cur_record_offset, last_record_buffer)) {
-            buffer_free(last_record_buffer);
-            return HEAP_OP_ERROR;
-        }
+        assert(!record_is_to_be_added(last_record_header));
         it->heap->header->end = last_record_offset;
         if (last_record_offset == cur_record_offset) {
             buffer_free(last_record_buffer);
             return HEAP_OP_SUCCESS;
+        }
+        if (record_is_to_be_deleted(last_record_header)) {
+            continue;
+        }
+        if (0 == heap_write(it->heap, cur_record_offset, last_record_buffer)) {
+            buffer_free(last_record_buffer);
+            return HEAP_OP_ERROR;
         }
     } while (record_is_to_be_deleted(last_record_header));
     buffer_free(last_record_buffer);
     return HEAP_OP_SUCCESS;
 }
 
-static heap_result heap_unmask(heap_t *heap) {
+static heap_result heap_flush_delete(heap_t *heap) {
     assert(NULL != heap);
     heap_it *it = heap_iterator(heap);
     if (NULL == it) {
@@ -472,16 +478,40 @@ static heap_result heap_unmask(heap_t *heap) {
                 heap_iterator_free(it);
                 return HEAP_OP_ERROR;
             }
-        } else if (record_is_to_be_added(header)) {
+        }
+        if (heap_iterator_next_no_skip(it) != HEAP_OP_SUCCESS) {
+            return HEAP_OP_ERROR;
+        }
+    }
+    heap_iterator_free(it);
+    heap->header->has_deleted = 0;
+    return HEAP_OP_SUCCESS;
+}
+
+static heap_result heap_flush_append(heap_t *heap) {
+    assert(NULL != heap);
+    if (0 == heap->header->append_begin) {
+        return HEAP_OP_SUCCESS;
+    }
+    heap_it *it = heap_iterator_at(heap, heap->header->append_begin);
+    if (NULL == it) {
+        return HEAP_OP_ERROR;
+    }
+    while (!heap_iterator_is_empty_no_skip(it)) {
+        record_h *header = (record_h *) it->record->data;
+        if (record_is_to_be_added(header)) {
             if (heap_record_set_flags(it, header->flags ^ MASK_TO_BE_ADDED) != HEAP_OP_SUCCESS) {
                 heap_iterator_free(it);
                 return HEAP_OP_ERROR;
             }
         }
         if (heap_iterator_next_no_skip(it) != HEAP_OP_SUCCESS) {
+            heap_iterator_free(it);
             return HEAP_OP_ERROR;
         }
     }
+    heap_iterator_free(it);
+    heap->header->append_begin = 0;
     return HEAP_OP_SUCCESS;
 }
 
@@ -533,8 +563,13 @@ static heap_result heap_shrink_list(heap_t *heap) {
 
 heap_result heap_flush(heap_t *heap) {
     assert(NULL != heap);
-    if (heap_unmask(heap) != HEAP_OP_SUCCESS) {
+    if (heap_flush_append(heap) != HEAP_OP_SUCCESS) {
         return HEAP_OP_ERROR;
+    }
+    if (heap->header->has_deleted) {
+        if (heap_flush_delete(heap) != HEAP_OP_SUCCESS) {
+            return HEAP_OP_ERROR;
+        }
     }
     if (heap_shrink_list(heap) != HEAP_OP_SUCCESS) {
         return HEAP_OP_ERROR;
