@@ -9,15 +9,15 @@ add_executable(llp_lab1
         main.c
         src/heap/heap.h
         src/buffer/buffer.h
-        src/heap/impl/list.h
+        src/heap/private/pagelist.h
         src/allocator/allocator.h
-        src/heap/impl/list.c
-        src/allocator/impl/allocator.c
+        src/heap/private/pagelist.c
+        src/allocator/private/allocator.c
         src/database/table/table.h
-        src/allocator/impl/blocklist.c
-        src/allocator/impl/blocklist.h
+        src/allocator/private/blocklist.c
+        src/allocator/private/blocklist.h
         src/pool/pool.h
-        src/heap/impl/heap.c
+        src/heap/private/heap.c
         src/pool/pool.c
         src/buffer/buffer.c
         test/test_heap.c
@@ -26,10 +26,12 @@ add_executable(llp_lab1
         test/test.h
         src/database/database.c
         src/database/database.h
-        src/database/table/impl/cursor.h
-        src/database/table/impl/cursor.c
-        src/database/table/impl/joinset.h
-        src/database/table/impl/joinset.c
+        src/database/cursor/cursor.h
+        src/database/cursor/cursor.c
+        src/database/query/query.h
+        src/database/query/query.c
+        src/database/table/row.h
+        src/database/table/row.c
 )
 
 if (UNIX)

@@ -22,12 +22,13 @@ typedef union u32 {
 } b32_t;
 
 typedef union u64 {
-    int32_t i64;
-    uint32_t ui64;
+    int64_t i64;
+    uint64_t ui64;
     double f64;
 } b64_t;
 
 typedef union u8 {
+    int8_t i8;
     uint8_t ui8;
 } b8_t;
 
@@ -39,22 +40,22 @@ buffer_t *buffer_copy(const buffer_t *buffer);
 
 void buffer_reset(buffer_t *buffer);
 
-bool buffer_is_empty(buffer_t *buffer);
+bool buffer_is_empty(const buffer_t *buffer);
 
-char* buffer_read_string(buffer_t *buffer);
+char *buffer_read_string(buffer_t *buffer);
 
-b64_t buffer_read_u64(buffer_t *buffer);
+b64_t buffer_read_b64(buffer_t *buffer);
 
-b32_t buffer_read_u32(buffer_t *buffer);
+b32_t buffer_read_b32(buffer_t *buffer);
 
-b8_t buffer_read_u8(buffer_t *buffer);
+b8_t buffer_read_b8(buffer_t *buffer);
 
-void buffer_write_string(buffer_t *buffer, char* string);
+void buffer_write_string(buffer_t *buffer, const char *string);
 
-void buffer_write_u64(buffer_t *buffer, b64_t num);
+void buffer_write_b64(buffer_t *buffer, b64_t num);
 
-void buffer_write_u32(buffer_t *buffer, b32_t u32);
+void buffer_write_b32(buffer_t *buffer, b32_t num);
 
-void buffer_write_u8(buffer_t *buffer, b8_t u8);
+void buffer_write_b8(buffer_t *buffer, b8_t num);
 
 #endif //LLP_LAB1_BUFFER_H

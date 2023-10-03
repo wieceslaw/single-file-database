@@ -73,7 +73,7 @@ file_status allocator_init(file_settings *settings, allocator_t **allocator_ptr)
 
 file_status allocator_free(allocator_t *allocator);
 
-void allocator_set_entrypoint(allocator_t* allocator, offset_t entrypoint);
+void allocator_set_entrypoint(allocator_t *allocator, offset_t entrypoint);
 
 offset_t allocator_get_entrypoint(allocator_t *allocator);
 

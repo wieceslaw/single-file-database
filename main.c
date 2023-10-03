@@ -3,7 +3,7 @@
 #include "allocator/allocator.h"
 #include "database/database.h"
 
-static char *col_type_string(column_type_t type) {
+static char *col_type_string(column_type type) {
     switch (type) {
         case TABLE_COLUMN_INT:
             return "INT";
@@ -16,23 +16,23 @@ static char *col_type_string(column_type_t type) {
     }
 }
 
-static void print_table(table_schema_t *schema) {
+static void print_table(scheme_t *schema) {
     printf("====== %s ====== \n", schema->name);
     for (int i = 0; i < schema->size; i++) {
-        column_t col = schema->columns[i];
+        scheme_column_t col = schema->columns[i];
         printf("| %s - %s \n", col.name, col_type_string(col.type));
     }
     printf("================== \n");
 }
 
 int main(void) {
-    column_t columns[4] = {
+    scheme_column_t columns[4] = {
             {.name = "id", .type = TABLE_COLUMN_INT},
             {.name = "name", .type = TABLE_COLUMN_STRING},
             {.name = "age", .type = TABLE_COLUMN_INT},
             {.name = "password", .type = TABLE_COLUMN_STRING}
     };
-    table_schema_t schema = {.name = "user", .size = sizeof(columns) / sizeof(columns[0]), .columns = columns};
+    scheme_t scheme = {.name = "user", .size = sizeof(columns) / sizeof(columns[0]), .columns = columns};
 
     file_settings settings = {.path = "test.bin", .open_type = FILE_OPEN_EXIST};
     database_t *db = database_init(&settings);
@@ -40,7 +40,7 @@ int main(void) {
         printf("unable to init database");
         return -1;
     }
-//    if (database_create_table(db, &schema) != DATABASE_OP_OK) {
+//    if (database_create_table(db, &scheme_t) != DATABASE_OP_OK) {
 //        printf("unable to create table");
 //        database_free(db);
 //        return -1;
@@ -52,7 +52,7 @@ int main(void) {
         return -1;
     }
 
-    print_table(table->schema);
+    print_table(table->scheme);
 
     if (table_free(table) != TABLE_OP_OK) {
         printf("unable to free table");

@@ -4,31 +4,32 @@
 
 #include <malloc.h>
 #include <assert.h>
-#include "buffer/buffer.h"
+#include <string.h>
 #include "table.h"
 
-static void free_column(column_t *column) {
+static void free_column(scheme_column_t *column) {
+    assert(column != NULL);
     free(column->name);
     column->name = NULL;
 }
 
-void schema_free(table_schema_t *schema) {
-    assert(schema != NULL);
-    for (uint32_t i = 0; i < schema->size; i++) {
-        free_column(&schema->columns[i]);
+void scheme_free(scheme_t *scheme) {
+    assert(scheme != NULL);
+    for (uint32_t i = 0; i < scheme->size; i++) {
+        free_column(&scheme->columns[i]);
     }
-    free(schema->columns);
-    schema->columns = NULL;
-    free(schema);
+    free(scheme->columns);
+    scheme->columns = NULL;
+    free(scheme);
 }
 
-table_result table_free(table_t *table) {
+table_result_type table_free(table_t *table) {
     assert(table != NULL);
     if (pool_free(table->data_pool) != POOL_OP_OK) {
         return TABLE_OP_ERR;
     }
-    schema_free(table->schema);
-    table->schema = NULL;
+    scheme_free(table->scheme);
+    table->scheme = NULL;
     free(table);
     return TABLE_OP_OK;
 }

@@ -6,7 +6,7 @@
 #include <string.h>
 #include <assert.h>
 #include "heap/heap.h"
-#include "list.h"
+#include "pagelist.h"
 
 typedef PACK (
         struct {

@@ -6,10 +6,6 @@
 #include <stddef.h>
 #include "cursor.h"
 
-typedef struct predicate predicate_t;
-
-typedef struct updater updater_t;
-
 //bool cursor_is_empty(cursor_t *cur) {
 //    assert(cur != NULL);
 //    switch (cur->type) {

@@ -11,35 +11,41 @@
 typedef enum {
     TABLE_OP_OK = 0,
     TABLE_OP_ERR = 1,
-} table_result;
+} table_result_type;
 
-typedef enum column_type {
-    TABLE_COLUMN_INT = 0,
-    TABLE_COLUMN_FLOAT = 1,
-    TABLE_COLUMN_STRING = 2,
-    TABLE_COLUMN_BOOL = 3
-} column_type_t;
+typedef enum {
+    TYPE_INT = 0,
+    TYPE_FLOAT = 1,
+    TYPE_STRING = 2,
+    TYPE_BOOL = 3
+} column_type;
 
-typedef struct column {
+typedef struct result_set_t result_set_t;
+
+typedef struct {
+    table_result_type type;
+    result_set_t *result;
+} table_result_t;
+
+typedef struct {
     char *name;
-    column_type_t type;
-} column_t;
+    column_type type;
+} scheme_column_t;
 
-typedef struct table_schema {
+typedef struct {
     char *name;
     uint32_t size;
-    column_t *columns;
+    scheme_column_t *columns;
     offset_t pool_offset;
-} table_schema_t;
+} scheme_t;
 
-typedef struct table {
-    table_schema_t *schema;
+typedef struct {
+    scheme_t *scheme;
     pool_t *data_pool;
 } table_t;
 
+void scheme_free(scheme_t *scheme);
 
-void schema_free(table_schema_t *schema);
-
-table_result table_free(table_t *table);
+table_result_type table_free(table_t *table);
 
 #endif //LLP_LAB1_TABLE_H

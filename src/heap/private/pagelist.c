@@ -4,7 +4,7 @@
 
 #include <malloc.h>
 #include <assert.h>
-#include "list.h"
+#include "pagelist.h"
 
 struct list_it {
     list_t *list;

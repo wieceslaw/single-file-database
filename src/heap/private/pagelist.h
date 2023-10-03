@@ -2,8 +2,8 @@
 // Created by vyach on 13.09.2023.
 //
 
-#ifndef LLP_LAB1_LIST_H
-#define LLP_LAB1_LIST_H
+#ifndef LLP_LAB1_PAGELIST_H
+#define LLP_LAB1_PAGELIST_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -68,4 +68,4 @@ page_t *list_iterator_get(list_it *);
 
 list_result list_iterator_delete_goto_next(list_it *it);
 
-#endif //LLP_LAB1_LIST_H
+#endif //LLP_LAB1_PAGELIST_H
