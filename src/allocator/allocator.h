@@ -6,19 +6,11 @@
 #define LLP_LAB1_ALLOCATOR_H
 
 #include <stdint.h>
+#include "util/defines.h"
 
 #define PAGE_SIZE 4096
 #define PAGE_CAPACITY (PAGE_SIZE - sizeof(list_node_h))
 #define MAGIC 0xABCD
-#define MIN(a, b) (((a)<(b))?(a):(b))
-
-#ifdef __GNUC__
-#define PACK(__Declaration__) __Declaration__ __attribute__((__packed__))
-#endif
-
-#ifdef _MSC_VER
-#define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
-#endif
 
 typedef uint64_t offset_t;
 

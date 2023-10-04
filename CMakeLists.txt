@@ -32,6 +32,15 @@ add_executable(llp_lab1
         src/database/query/query.c
         src/database/table/row.h
         src/database/table/row.c
+        src/util/vector/vector.h
+        src/util/vector/vector.c
+        src/util/defines.h
+        src/util/map/map.h
+        src/util/map/map.c
+        src/util/list/list.h
+        src/util/list/list.c
+        src/util/map/map_impl.h
+        src/util/map/map_impl.c
 )
 
 if (UNIX)
