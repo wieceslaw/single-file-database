@@ -113,11 +113,11 @@ do {\
 //
 // The condition and the block can access
 //    the `exception` variable to find
-//    the value of the most recently RAISE'd exception.
+//    the val of the most recently RAISE'd exception.
 //
 // The block will be run if
 //  * no prior CATCH block's `condition` matches the exception
-//  * this `condition` evaluates to a non-zero value
+//  * this `condition` evaluates to a non-zero val
 //
 // If the CATCH block raises an exception, it will be
 //    passed to the next TRY/CATCH/FINALLY block up the
@@ -149,13 +149,13 @@ block \
 if (__TRY_CATCH_LIB__reraise) { \
     RAISE(__TRY_CATCH_LIB__reraise); \
 } \
-} while(0)
+} while(0); \
 
 // Convenience method to allocate nbytes.
 // returns a pointer to the allocated memory,
 // RAISE's a MALLOC_EXCEPTION if the memory is
 // not allocated, so it is not necessary to check
-// the return value.
+// the return val.
 void *rmalloc(size_t nbytes);  // malloc(nbytes) || RAISE(MALLOC_EXCEPTION)
 
 #endif //LLP_LAB1_EXCEPTIONS_H

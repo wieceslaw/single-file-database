@@ -8,9 +8,22 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdint-gcc.h>
+#include "util/list/list.h"
 
 #define MAP_START_CAPACITY 8
 #define MAP_EXTENSION_RATIO 2
+#define MAP_LOAD_FACTOR 0.75
+
+// TODO: Remake for generic
+#define FOR_MAP(M, E, CODE) { \
+    map_it __it = map_get_iterator(M); \
+    while (!map_it_is_empty(__it)) { \
+        map_entry_t E = map_it_get_entry(__it); \
+        CODE                      \
+        map_it_next(__it); \
+    } \
+    map_it_free(&__it); \
+} \
 
 typedef size_t (*hash_f)(void *);
 
@@ -24,13 +37,22 @@ typedef void *map_key;
 
 typedef void *map_value;
 
-#define MAP_PUT_SIGNATURE(M, K, V, name) bool(*name)(M, K, V)
+typedef struct map_entry {
+    map_key key;
+    map_value val;
+} *map_entry_t;
+
+typedef struct map_iterator *map_it;
+
+#define MAP_PUT_SIGNATURE(M, K, V, name) void(*name)(M, K, V)
 
 #define MAP_GET_SIGNATURE(M, K, V, name) V(*name)(M, K)
 
 #define MAP_EXISTS_SIGNATURE(M, K, V, name) bool(*name)(M, K)
 
 #define MAP_REMOVE_SIGNATURE(M, K, V, name) void(*name)(M, K)
+
+// TODO: Implement generic iterator functions
 
 typedef struct generic_map {
     MAP_PUT_SIGNATURE(struct generic_map*, map_key, map_value, put);
@@ -41,7 +63,7 @@ typedef struct generic_map {
 
     MAP_REMOVE_SIGNATURE(struct generic_map*, map_key, map_value, remove);
 
-    map_key *array;
+    list_t *buckets;
     size_t capacity;
     size_t size;
     hash_f key_hash;
@@ -51,24 +73,38 @@ typedef struct generic_map {
     copy_f val_copy;
     free_f val_free;
 
-} *generic_map_t;
+} *map_t;
 
-generic_map_t generic_map_init(size_t capacity, hash_f key_hash, equals_f key_equals,
-                               copy_f key_copy, free_f key_free, copy_f val_copy, free_f val_free);
+// THROWS: [MALLOC_EXCEPTION]
+map_t map_init(size_t capacity, hash_f key_hash, equals_f key_equals,
+               copy_f key_copy, free_f key_free, copy_f val_copy, free_f val_free);
 
-void generic_map_free(generic_map_t map);
+void map_free(map_t *map);
 
-size_t generic_map_size(generic_map_t map);
+size_t generic_map_size(map_t map);
 
-bool generic_map_is_empty(generic_map_t map);
+bool map_is_empty(map_t map);
 
-void generic_map_remove(generic_map_t map, map_key key);
+void map_remove(map_t map, map_key key);
 
-bool generic_map_put(generic_map_t map, map_key key, map_value value);
+// THROWS: [MALLOC_EXCEPTION]
+void map_put(map_t map, map_key key, map_value value);
 
-map_value generic_map_get(generic_map_t map, map_key key);
+map_value map_get(map_t map, map_key key);
 
-bool generic_map_exists(generic_map_t map, map_key key);
+bool map_exists(map_t map, map_key key);
+
+// THROWS: [MALLOC_EXCEPTION]
+map_it map_get_iterator(map_t map);
+
+void map_it_free(map_it *it);
+
+bool map_it_is_empty(map_it it);
+
+void map_it_next(map_it it);
+
+// THROWS: [MALLOC_EXCEPTION]
+map_entry_t map_it_get_entry(map_it it);
 
 #define DECLARE_MAP(K, V, T) typedef struct T##_s {    \
     MAP_PUT_SIGNATURE(struct T##_s*, K, V, put);       \
@@ -83,12 +119,13 @@ bool generic_map_exists(generic_map_t map, map_key key);
 #define MAP_NEW(T, CAPACITY, HASH_F, EQUALS_F, KEY_COPY, KEY_FREE, VAL_COPY, VAL_FREE)        \
     ((T)generic_map_init(CAPACITY, HASH_F, EQUALS_F, KEY_COPY, KEY_FREE, VAL_COPY, VAL_FREE)) \
 
-#define MAP_FREE(m) (generic_map_free(m))
+#define MAP_FREE(m) (generic_map_free(&m))
 
 #define MAP_IS_EMPTY(m) (generic_map_is_empty(m))
 
 #define MAP_SIZE(m) (generic_map_size(m))
 
+// THROWS: [MALLOC_EXCEPTION]
 #define MAP_PUT(m, k, v) (m->put(m, k, v))
 
 #define MAP_GET(m, k) (m->get(m, k))

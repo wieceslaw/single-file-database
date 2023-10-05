@@ -8,13 +8,22 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#define FOR_LIST(L, I, CODE)  {\
+    list_it I = list_head_iterator(L); \
+while (!list_it_is_empty(I)) { \
+ CODE \
+list_it_next(I); \
+} \
+list_it_free(&I); }\
+
 typedef struct list *list_t;
 
 typedef struct list_iterator *list_it;
 
 typedef void *list_value;
 
-list_t list_init(void); // throws: [MALLOC_EXCEPTION]
+// THROWS: [MALLOC_EXCEPTION]
+list_t list_init(void);
 
 void list_free(list_t *list_ptr);
 
@@ -24,9 +33,11 @@ size_t list_size(list_t list);
 
 bool list_is_empty(list_t list);
 
-void list_append_head(list_t list, list_value value); // throws: [MALLOC_EXCEPTION]
+// THROWS: [MALLOC_EXCEPTION]
+void list_append_head(list_t list, list_value value);
 
-void list_append_tail(list_t list, list_value value); // throws: [MALLOC_EXCEPTION]
+// THROWS: [MALLOC_EXCEPTION]
+void list_append_tail(list_t list, list_value value);
 
 void list_remove_head(list_t list);
 
@@ -40,7 +51,7 @@ list_it list_head_iterator(list_t list);
 
 list_it list_tail_iterator(list_t list);
 
-void list_it_free(list_it it);
+void list_it_free(list_it *it);
 
 list_value list_it_get(list_it it);
 

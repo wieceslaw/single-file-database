@@ -21,7 +21,8 @@ struct list_iterator {
     list_node_t node;
 };
 
-static list_node_t list_node_init(list_value value) { // throws: [MALLOC_EXCEPTION]
+// throws: [MALLOC_EXCEPTION]
+static list_node_t list_node_init(list_value value) {
     list_node_t node = rmalloc(sizeof(struct list_node));
     *node = (struct list_node) {.value = value, .next = NULL, .prev = NULL};
     return node;
@@ -34,7 +35,8 @@ static void list_node_free(list_node_t *node_ptr) {
     free(*node_ptr);
 }
 
-list_t list_init(void) { // throws: [MALLOC_EXCEPTION]
+// throws: [MALLOC_EXCEPTION]
+list_t list_init(void) {
     list_t list = rmalloc(sizeof(struct list));
     *list = (struct list) {.size = 0, .head = NULL, .tail = NULL};
     return list;
@@ -50,7 +52,8 @@ bool list_is_empty(list_t list) {
     return 0 == list_size(list);
 }
 
-void list_append_head(list_t list, list_value value) { // throws: [MALLOC_EXCEPTION]
+// throws: [MALLOC_EXCEPTION]
+void list_append_head(list_t list, list_value value) {
     assert(list != NULL);
     list_node_t node = list_node_init(value);
     if (NULL == list->head) {
@@ -59,6 +62,7 @@ void list_append_head(list_t list, list_value value) { // throws: [MALLOC_EXCEPT
     } else {
         list->head->prev = node;
         node->next = list->head;
+        list->head = node;
     }
     list->size++;
 }
@@ -72,6 +76,7 @@ void list_append_tail(list_t list, list_value value) {
     } else {
         list->tail->next = node;
         node->prev = list->tail;
+        list->tail = node;
     }
     list->size++;
 }
@@ -155,13 +160,14 @@ list_value list_it_get(list_it it) {
     return it->node->value;
 }
 
-void list_it_free(list_it it) {
+void list_it_free(list_it *it) {
     if (NULL == it) {
         return;
     }
-    it->list = NULL;
-    it->node = NULL;
-    free(it);
+    (*it)->list = NULL;
+    (*it)->node = NULL;
+    free(*it);
+    it = NULL;
 }
 
 void list_it_next(list_it it) {
@@ -216,7 +222,7 @@ void list_clear(list_t list) {
     while (!list_it_is_empty(it)) {
         list_it_delete(it);
     }
-    list_it_free(it);
+    list_it_free(&it);
 }
 
 void list_free(list_t *list_ptr) {
