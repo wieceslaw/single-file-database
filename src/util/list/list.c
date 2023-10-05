@@ -6,24 +6,38 @@
 #include "list.h"
 #include "util/exceptions/exceptions.h"
 
-struct list_node {
+typedef struct list_node {
     void *value;
     struct list_node *next, *prev;
-};
+} *list_node_t;
 
 struct list {
     list_node_t head, tail;
     size_t size;
 };
 
+struct list_iterator {
+    list_t list;
+    list_node_t node;
+};
+
+static list_node_t list_node_init(list_value value) { // throws: [MALLOC_EXCEPTION]
+    list_node_t node = rmalloc(sizeof(struct list_node));
+    *node = (struct list_node) {.value = value, .next = NULL, .prev = NULL};
+    return node;
+}
+
+static void list_node_free(list_node_t *node_ptr) {
+    (*node_ptr)->prev = NULL;
+    (*node_ptr)->next = NULL;
+    (*node_ptr)->value = NULL;
+    free(*node_ptr);
+}
+
 list_t list_init(void) { // throws: [MALLOC_EXCEPTION]
     list_t list = rmalloc(sizeof(struct list));
     *list = (struct list) {.size = 0, .head = NULL, .tail = NULL};
     return list;
-}
-
-void list_free(list_t list) {
-    free(list);
 }
 
 size_t list_size(list_t list) {
@@ -36,13 +50,8 @@ bool list_is_empty(list_t list) {
     return 0 == list_size(list);
 }
 
-static list_node_t list_node_init(list_value value) { // throws: [MALLOC_EXCEPTION]
-    list_node_t node = rmalloc(sizeof(struct list_node));
-    *node = (struct list_node) {.value = value, .next = NULL, .prev = NULL};
-    return node;
-}
-
 void list_append_head(list_t list, list_value value) { // throws: [MALLOC_EXCEPTION]
+    assert(list != NULL);
     list_node_t node = list_node_init(value);
     if (NULL == list->head) {
         list->head = node;
@@ -55,6 +64,7 @@ void list_append_head(list_t list, list_value value) { // throws: [MALLOC_EXCEPT
 }
 
 void list_append_tail(list_t list, list_value value) {
+    assert(list != NULL);
     list_node_t node = list_node_init(value);
     if (NULL == list->head) {
         list->head = node;
@@ -67,38 +77,41 @@ void list_append_tail(list_t list, list_value value) {
 }
 
 void list_remove_head(list_t list) {
+    assert(list != NULL);
     if (list_is_empty(list)) {
         return;
     }
     list_node_t head = list->head;
     if (1 == list->size) {
-        free(head);
+        list_node_free(&head);
         list->head = NULL;
         list->tail = NULL;
     } else {
         head->next->prev = NULL;
-        free(head);
+        list_node_free(&head);
     }
     list->size--;
 }
 
 void list_remove_tail(list_t list) {
+    assert(list != NULL);
     if (list_is_empty(list)) {
         return;
     }
     list_node_t tail = list->tail;
     if (1 == list->size) {
-        free(tail);
+        list_node_free(&tail);
         list->head = NULL;
         list->tail = NULL;
     } else {
         tail->prev->next = NULL;
-        free(list->head);
+        list_node_free(&tail);
     }
     list->size--;
 }
 
 list_value list_get_head(list_t list) {
+    assert(list != NULL);
     if (list_is_empty(list)) {
         return NULL;
     }
@@ -106,6 +119,7 @@ list_value list_get_head(list_t list) {
 }
 
 list_value list_get_tail(list_t list) {
+    assert(list != NULL);
     if (list_is_empty(list)) {
         return NULL;
     }
@@ -113,52 +127,104 @@ list_value list_get_tail(list_t list) {
 }
 
 list_it list_head_iterator(list_t list) {
-    list_it it = rmalloc(sizeof(list_node_t));
-    *it = list->head;
+    assert(list != NULL);
+    list_it it = rmalloc(sizeof(struct list_iterator));
+    it->node = list->head;
+    it->list = list;
     return it;
 }
 
 list_it list_tail_iterator(list_t list) {
-    list_it it = rmalloc(sizeof(list_node_t));
-    *it = list->tail;
+    assert(list != NULL);
+    list_it it = rmalloc(sizeof(struct list_iterator));
+    it->node = list->tail;
+    it->list = list;
     return it;
 }
 
+bool list_it_is_empty(list_it it) {
+    assert(it != NULL);
+    return NULL == it->node;
+}
+
 list_value list_it_get(list_it it) {
+    assert(it != NULL);
     if (list_it_is_empty(it)) {
         return NULL;
     }
-    return (*it)->value;
-}
-
-bool list_it_is_empty(list_it it) {
-    return NULL == *it;
+    return it->node->value;
 }
 
 void list_it_free(list_it it) {
     if (NULL == it) {
         return;
     }
-    *it = NULL;
+    it->list = NULL;
+    it->node = NULL;
     free(it);
 }
 
 void list_it_next(list_it it) {
+    assert(it != NULL);
     if (list_it_is_empty(it)) {
         return;
     }
-    *it = (*it)->next;
+    it->node = it->node->next;
 }
 
 void list_it_prev(list_it it) {
+    assert(it != NULL);
     if (list_it_is_empty(it)) {
         return;
     }
-    *it = (*it)->prev;
+    it->node = it->node->prev;
 }
 
-// TODO: Implement
+void list_it_delete(list_it it) {
+    assert(it != NULL && it->list != NULL);
+    if (list_it_is_empty(it)) {
+        return;
+    }
+    list_t list = it->list;
+    list_node_t cur = it->node;
+    list_node_t next = cur->next;
+    list_node_t prev = cur->prev;
+    list_it_next(it);
+    if (prev != NULL && next != NULL) {
+        prev->next = next;
+        next->prev = prev;
+    }
+    if (NULL == prev) {
+        list->head = next;
+        if (NULL != next) {
+            next->prev = NULL;
+        }
+    }
+    if (NULL == next) {
+        list->tail = prev;
+        if (NULL != prev) {
+            prev->next = NULL;
+        }
+    }
+    list_node_free(&cur);
+    list->size--;
+}
 
-void list_it_delete(list_it it);
+void list_clear(list_t list) {
+    assert(list != NULL);
+    list_it it = list_head_iterator(list);
+    while (!list_it_is_empty(it)) {
+        list_it_delete(it);
+    }
+    list_it_free(it);
+}
 
-void list_clear(list_t list);
+void list_free(list_t *list_ptr) {
+    assert(list_ptr != NULL);
+    if (*list_ptr == NULL) {
+        return;
+    }
+    list_clear(*list_ptr);
+    free(*list_ptr);
+    list_ptr = NULL;
+}

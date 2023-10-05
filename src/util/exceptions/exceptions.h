@@ -13,7 +13,7 @@ extern jmp_buf *__TRY_CATCH_LIB__raise_env;
 // used by macros for RETRY
 extern jmp_buf *__TRY_CATCH_LIB__retry_env;
 
-// list of predefined exception codes
+// page_list of predefined exception codes
 enum {
     MALLOC_EXCEPTION = 0x8000000,// RAISE'd when malloc() == NULL in rmalloc()
     RETRY_EXCEPTION               // RAISE'd when RETRY not within a CATCH block

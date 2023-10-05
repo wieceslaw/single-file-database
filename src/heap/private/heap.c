@@ -32,7 +32,7 @@ typedef PACK(
 
 struct heap_t {
     allocator_t *allocator;
-    list_t *list;
+    page_list_t *list;
     heap_h *header;
 };
 
@@ -81,18 +81,18 @@ static heap_result heap_reserve(heap_t *heap, offset_t size) {
     }
     offset_t diff = size - capacity;
     offset_t extra_pages = (diff / PAGE_CAPACITY) + (diff % PAGE_CAPACITY == 0 ? 0 : 1);
-    if (list_extend(heap->list, extra_pages) != LIST_OP_SUCCESS) {
+    if (page_list_extend(heap->list, extra_pages) != LIST_OP_SUCCESS) {
         return HEAP_OP_ERROR;
     }
     if (is_empty) {
-        heap->header->end = heap->header->list_header.head + sizeof(list_node_h);
+        heap->header->end = heap->header->list_header.head + sizeof(page_list_node_h);
     }
     return HEAP_OP_SUCCESS;
 }
 
 static offset_t heap_write(heap_t *heap, offset_t offset, buffer_t *buffer) {
     assert(NULL != heap && NULL != buffer);
-    list_it *lit = list_get_iterator(heap->list, record_page_offset(offset - 1));
+    page_list_it *lit = page_list_get_iterator(heap->list, record_page_offset(offset - 1));
     if (NULL == lit) {
         return 0;
     }
@@ -101,9 +101,9 @@ static offset_t heap_write(heap_t *heap, offset_t offset, buffer_t *buffer) {
     offset_t begin = offset - record_page_offset(offset - 1);
     offset_t end = 0;
     while (full_written != size) {
-        page_t *page = list_iterator_get(lit);
+        page_t *page = page_list_iterator_get(lit);
         if (NULL == page) {
-            list_iterator_free(lit);
+            page_list_iterator_free(lit);
             return 0;
         }
         void *dst = page_ptr(page) + begin;
@@ -112,17 +112,17 @@ static offset_t heap_write(heap_t *heap, offset_t offset, buffer_t *buffer) {
         end = page_offset(page) + begin + page_written;
         memcpy(dst, src, page_written);
         full_written += page_written;
-        begin = sizeof(list_node_h);
-        if (list_iterator_next(lit) != LIST_OP_SUCCESS) {
+        begin = sizeof(page_list_node_h);
+        if (page_list_iterator_next(lit) != LIST_OP_SUCCESS) {
             allocator_unmap_page(heap->allocator, page);
-            list_iterator_free(lit);
+            page_list_iterator_free(lit);
             return 0;
         }
         if (allocator_unmap_page(heap->allocator, page) != ALLOCATOR_SUCCESS) {
             return 0;
         }
     }
-    if (list_iterator_free(lit) != LIST_OP_SUCCESS) {
+    if (page_list_iterator_free(lit) != LIST_OP_SUCCESS) {
         return 0;
     }
     return end;
@@ -130,7 +130,7 @@ static offset_t heap_write(heap_t *heap, offset_t offset, buffer_t *buffer) {
 
 static offset_t heap_read_forward(heap_t *heap, offset_t begin_offset, buffer_t *buffer) {
     assert(NULL != heap && NULL != buffer);
-    list_it *lit = list_get_iterator(heap->list, record_page_offset(begin_offset - 1));
+    page_list_it *lit = page_list_get_iterator(heap->list, record_page_offset(begin_offset - 1));
     if (NULL == lit) {
         return 0;
     }
@@ -139,9 +139,9 @@ static offset_t heap_read_forward(heap_t *heap, offset_t begin_offset, buffer_t 
     offset_t begin = begin_offset - record_page_offset(begin_offset - 1);
     offset_t end = 0;
     while (full_read != size) {
-        page_t *page = list_iterator_get(lit);
+        page_t *page = page_list_iterator_get(lit);
         if (NULL == page) {
-            list_iterator_free(lit);
+            page_list_iterator_free(lit);
             return 0;
         }
         void *src = page_ptr(page) + begin;
@@ -150,25 +150,25 @@ static offset_t heap_read_forward(heap_t *heap, offset_t begin_offset, buffer_t 
         end = page_read + begin + page_offset(page);
         memcpy(dst, src, page_read);
         full_read += page_read;
-        begin = sizeof(list_node_h);
-        if (list_iterator_next(lit) != LIST_OP_SUCCESS) {
+        begin = sizeof(page_list_node_h);
+        if (page_list_iterator_next(lit) != LIST_OP_SUCCESS) {
             allocator_unmap_page(heap->allocator, page);
-            list_iterator_free(lit);
+            page_list_iterator_free(lit);
             return 0;
         }
         if (allocator_unmap_page(heap->allocator, page) != ALLOCATOR_SUCCESS) {
-            list_iterator_free(lit);
+            page_list_iterator_free(lit);
             return 0;
         }
     }
-    if (list_iterator_free(lit) != LIST_OP_SUCCESS) {
+    if (page_list_iterator_free(lit) != LIST_OP_SUCCESS) {
         return 0;
     }
     return end;
 }
 
 static offset_t heap_read_backward(heap_t *heap, offset_t end_offset, buffer_t *buffer) {
-    list_it *lit = list_get_iterator(heap->list, record_page_offset(end_offset - 1));
+    page_list_it *lit = page_list_get_iterator(heap->list, record_page_offset(end_offset - 1));
     if (NULL == lit) {
         return 0;
     }
@@ -177,29 +177,29 @@ static offset_t heap_read_backward(heap_t *heap, offset_t end_offset, buffer_t *
     offset_t end = end_offset - record_page_offset(end_offset - 1);
     offset_t begin = 0;
     while (full_read != size) {
-        page_t *page = list_iterator_get(lit);
+        page_t *page = page_list_iterator_get(lit);
         if (NULL == page) {
-            list_iterator_free(lit);
+            page_list_iterator_free(lit);
             return 0;
         }
-        uint16_t page_read = MIN(size - full_read, end - sizeof(list_node_h));
+        uint16_t page_read = MIN(size - full_read, end - sizeof(page_list_node_h));
         begin = page_offset(page) + end - page_read;
         void *src = page_ptr(page) + end - page_read;
         void *dst = buffer->data + buffer->size - full_read - page_read;
         memcpy(dst, src, page_read);
         full_read += page_read;
         end = PAGE_SIZE;
-        if (list_iterator_prev(lit) != LIST_OP_SUCCESS) {
+        if (page_list_iterator_prev(lit) != LIST_OP_SUCCESS) {
             allocator_unmap_page(heap->allocator, page);
-            list_iterator_free(lit);
+            page_list_iterator_free(lit);
             return 0;
         }
         if (allocator_unmap_page(heap->allocator, page) != ALLOCATOR_SUCCESS) {
-            list_iterator_free(lit);
+            page_list_iterator_free(lit);
             return 0;
         }
     }
-    if (list_iterator_free(lit) != LIST_OP_SUCCESS) {
+    if (page_list_iterator_free(lit) != LIST_OP_SUCCESS) {
         return 0;
     }
     return begin;
@@ -211,12 +211,12 @@ offset_t heap_size(void) {
 
 bool heap_is_empty(heap_t *heap) {
     assert(heap != NULL);
-    return list_is_empty(heap->list);
+    return page_list_is_empty(heap->list);
 }
 
 void heap_place(page_t *page, offset_t offset, offset_t record_size) {
     assert(page != NULL);
-    list_place(page, offset);
+    page_list_place(page, offset);
     heap_h *header = (heap_h *) (page_ptr(page) + offset);
     header->record_size = record_size + sizeof(record_h);
     header->end = 0;
@@ -226,7 +226,7 @@ void heap_place(page_t *page, offset_t offset, offset_t record_size) {
 
 heap_result heap_clear(heap_t *heap) {
     assert(NULL != heap);
-    if (list_clear(heap->list) != LIST_OP_SUCCESS) {
+    if (page_list_clear(heap->list) != LIST_OP_SUCCESS) {
         return HEAP_OP_ERROR;
     }
     heap->header->end = 0;
@@ -246,7 +246,7 @@ heap_t *heap_init(page_t *page, offset_t offset, allocator_t *allocator) {
     }
     heap->allocator = allocator;
     heap->header = (heap_h *) (page_ptr(page) + offset);
-    heap->list = list_init(&(heap->header->list_header), allocator);
+    heap->list = page_list_init(&(heap->header->list_header), allocator);
     if (NULL == heap->list) {
         free(heap);
         return NULL;
@@ -256,7 +256,7 @@ heap_t *heap_init(page_t *page, offset_t offset, allocator_t *allocator) {
 
 void heap_free(heap_t *heap) {
     assert(NULL != heap);
-    list_free(heap->list);
+    page_list_free(heap->list);
     heap->list = NULL;
     free(heap);
 }
@@ -325,7 +325,7 @@ static heap_it *heap_iterator_at(heap_t *heap, offset_t offset) {
 
 heap_it *heap_iterator(heap_t *heap) {
     assert(NULL != heap);
-    return heap_iterator_at(heap, sizeof(list_node_h) + heap->header->list_header.head);
+    return heap_iterator_at(heap, sizeof(page_list_node_h) + heap->header->list_header.head);
 }
 
 void heap_iterator_free(heap_it *it) {
@@ -518,19 +518,19 @@ static heap_result heap_flush_append(heap_t *heap) {
 static heap_result heap_shrink_list(heap_t *heap) {
     assert(NULL != heap);
     offset_t last_page_offset = record_page_offset(heap->header->end - 1);
-    list_it *lit = list_get_tail_iterator(heap->list);
+    page_list_it *lit = page_list_get_tail_iterator(heap->list);
     if (NULL == lit) {
         return HEAP_OP_ERROR;
     }
-    if (last_page_offset + sizeof(list_node_h) == heap->header->end) {
+    if (last_page_offset + sizeof(page_list_node_h) == heap->header->end) {
         if (last_page_offset == heap->header->list_header.head) {
             heap->header->end = 0;
         } else {
-            page_t *page = list_iterator_get(lit);
+            page_t *page = page_list_iterator_get(lit);
             if (NULL == page) {
                 return HEAP_OP_ERROR;
             }
-            list_node_h *node = (list_node_h *) page_ptr(page);
+            page_list_node_h *node = (page_list_node_h *) page_ptr(page);
             heap->header->end = node->prev + PAGE_SIZE;
             if (allocator_unmap_page(heap->allocator, page) != ALLOCATOR_SUCCESS) {
                 return HEAP_OP_ERROR;
@@ -538,16 +538,16 @@ static heap_result heap_shrink_list(heap_t *heap) {
         }
     }
     last_page_offset = record_page_offset(heap->header->end - 1);
-    while (!list_iterator_is_empty(lit) && last_page_offset != list_iterator_offset(lit)) {
-        page_t *page = list_iterator_get(lit);
+    while (!page_list_iterator_is_empty(lit) && last_page_offset != page_list_iterator_offset(lit)) {
+        page_t *page = page_list_iterator_get(lit);
         if (NULL == page) {
             return HEAP_OP_ERROR;
         }
-        if (list_iterator_prev(lit) != LIST_OP_SUCCESS) {
+        if (page_list_iterator_prev(lit) != LIST_OP_SUCCESS) {
             allocator_unmap_page(heap->allocator, page);
             return HEAP_OP_ERROR;
         }
-        if (list_delete_node(heap->list, page) != LIST_OP_SUCCESS) {
+        if (page_list_delete_node(heap->list, page) != LIST_OP_SUCCESS) {
             allocator_unmap_page(heap->allocator, page);
             return HEAP_OP_ERROR;
         }
@@ -555,7 +555,7 @@ static heap_result heap_shrink_list(heap_t *heap) {
             return HEAP_OP_ERROR;
         }
     }
-    if (list_iterator_free(lit) != LIST_OP_SUCCESS) {
+    if (page_list_iterator_free(lit) != LIST_OP_SUCCESS) {
         return HEAP_OP_ERROR;
     }
     return HEAP_OP_SUCCESS;

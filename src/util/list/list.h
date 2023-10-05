@@ -10,15 +10,13 @@
 
 typedef struct list *list_t;
 
-typedef struct list_node *list_node_t;
-
-typedef list_node_t *list_it;
+typedef struct list_iterator *list_it;
 
 typedef void *list_value;
 
 list_t list_init(void); // throws: [MALLOC_EXCEPTION]
 
-void list_free(list_t list);
+void list_free(list_t *list_ptr);
 
 void list_clear(list_t list);
 

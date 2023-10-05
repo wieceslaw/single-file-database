@@ -12,7 +12,7 @@
 typedef enum {
     LIST_OP_SUCCESS = 0,
     LIST_OP_ERROR = 1
-} list_result;
+} page_list_result;
 
 typedef PACK(
         struct {
@@ -26,46 +26,46 @@ typedef PACK(
             offset_t next;
             offset_t prev;
         }
-) list_node_h;
+) page_list_node_h;
 
-typedef struct list_t list_t;
+typedef struct page_list_t page_list_t;
 
-typedef struct list_it list_it;
+typedef struct page_list_it page_list_it;
 
-bool list_is_empty(list_t *list);
+bool page_list_is_empty(page_list_t *list);
 
-void list_place(page_t *page, offset_t offset);
+void page_list_place(page_t *page, offset_t offset);
 
-list_result list_clear(list_t *);
+page_list_result page_list_clear(page_list_t *list);
 
-list_t *list_init(list_h *header, allocator_t *allocator);
+page_list_t *page_list_init(list_h *header, allocator_t *allocator);
 
-void list_free(list_t *);
+void page_list_free(page_list_t *list);
 
-list_result list_extend(list_t *, uint32_t n);
+page_list_result page_list_extend(page_list_t *list, uint32_t n);
 
-list_result list_delete_node(list_t *list, page_t *page);
+page_list_result page_list_delete_node(page_list_t *list, page_t *node_page);
 
-list_it *list_get_iterator(list_t *, offset_t page_offset);
+page_list_it *page_list_get_iterator(page_list_t *list, offset_t page_offset);
 
-list_it *list_get_head_iterator(list_t *list);
+page_list_it *page_list_get_head_iterator(page_list_t *list);
 
-list_it *list_get_tail_iterator(list_t *list);
+page_list_it *page_list_get_tail_iterator(page_list_t *list);
 
-list_it *list_iterator_copy(list_it *);
+page_list_it *page_list_iterator_copy(page_list_it *it);
 
-list_result list_iterator_free(list_it *);
+page_list_result page_list_iterator_free(page_list_it *it);
 
-bool list_iterator_is_empty(list_it *);
+bool page_list_iterator_is_empty(page_list_it *it);
 
-list_result list_iterator_next(list_it *);
+page_list_result page_list_iterator_next(page_list_it *it);
 
-list_result list_iterator_prev(list_it *it);
+page_list_result page_list_iterator_prev(page_list_it *it);
 
-offset_t list_iterator_offset(list_it *);
+offset_t page_list_iterator_offset(page_list_it *it);
 
-page_t *list_iterator_get(list_it *);
+page_t *page_list_iterator_get(page_list_it *it);
 
-list_result list_iterator_delete_goto_next(list_it *it);
+page_list_result page_list_iterator_delete_goto_next(page_list_it *it);
 
 #endif //LLP_LAB1_PAGELIST_H
