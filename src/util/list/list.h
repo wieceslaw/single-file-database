@@ -10,12 +10,13 @@
 
 typedef struct list *list_t;
 
-struct list_iterator;
-typedef struct list_node *list_it;
+typedef struct list_node *list_node_t;
+
+typedef list_node_t *list_it;
 
 typedef void *list_value;
 
-list_t list_init(void);
+list_t list_init(void); // throws: [MALLOC_EXCEPTION]
 
 void list_free(list_t list);
 
@@ -23,9 +24,11 @@ void list_clear(list_t list);
 
 size_t list_size(list_t list);
 
-bool list_append_head(list_t list, list_value value);
+bool list_is_empty(list_t list);
 
-bool list_append_tail(list_t list, list_value value);
+void list_append_head(list_t list, list_value value); // throws: [MALLOC_EXCEPTION]
+
+void list_append_tail(list_t list, list_value value); // throws: [MALLOC_EXCEPTION]
 
 void list_remove_head(list_t list);
 
@@ -48,5 +51,7 @@ bool list_it_is_empty(list_it it);
 void list_it_next(list_it it);
 
 void list_it_prev(list_it it);
+
+void list_it_delete(list_it it);
 
 #endif //LLP_LAB1_LIST_H

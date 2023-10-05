@@ -41,6 +41,8 @@ add_executable(llp_lab1
         src/util/list/list.c
         src/util/map/map_impl.h
         src/util/map/map_impl.c
+        src/util/exceptions/exceptions.c
+        src/util/exceptions/exceptions.h
 )
 
 if (UNIX)
