@@ -5,6 +5,7 @@
 #ifndef LLP_LAB1_WHERE_H
 #define LLP_LAB1_WHERE_H
 #include "util/defines.h"
+#include "row_set.h"
 
 typedef enum {
     QUERY_INFO_FROM = 0,

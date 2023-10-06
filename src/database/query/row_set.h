@@ -6,13 +6,14 @@
 #define LLP_LAB1_ROW_SET_H
 
 #include "util/map/map.h"
+#include "util/map/map_impl.h"
 #include "database/table/row.h"
 
 typedef struct selector *selector_t;
 
 typedef struct table_row {
     row_value row;
-    table_scheme scheme;
+    table_scheme *scheme;
 } *table_row_t;
 
 // STR_ROW doesn't own data

@@ -18,10 +18,16 @@ cursor_t cursor_type_from(table_t table, char* alias) {
 }
 
 // THROWS: [MALLOC_EXCEPTION]
-cursor_t cursor_type_join(cursor_t left, cursor_t right, join_condition condition, join_type type);
+cursor_t cursor_type_join(cursor_t left, cursor_t right, join_condition condition, join_type type) {
+    // TODO: Implement
+    return NULL;
+}
 
 // THROWS: [MALLOC_EXCEPTION]
-cursor_t cursor_type_where(cursor_t base, where_condition condition);
+cursor_t cursor_type_where(cursor_t base, where_condition condition) {
+    // TODO: Implement
+    return NULL;
+}
 
 bool cursor_is_empty(cursor_t cur) {
     assert(cur != NULL);

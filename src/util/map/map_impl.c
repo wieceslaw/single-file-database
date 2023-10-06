@@ -20,7 +20,7 @@ static size_t hash_start(void) {
 
 size_t int_hash(const void *p) {
     assert(p != NULL);
-    int* i = (int*) p;
+    int *i = (int *) p;
     size_t x = *i ^ hash_start();
     x = ((x >> 16) ^ x) * 0x45d9f3b;
     x = ((x >> 16) ^ x) * 0x45d9f3b;
@@ -30,7 +30,7 @@ size_t int_hash(const void *p) {
 
 size_t str_hash(const void *p) {
     assert(p != NULL);
-    char* s = (char*) p;
+    char *s = (char *) p;
     size_t hash = hash_start();
     char c;
     while ((c = *s++))
@@ -40,15 +40,15 @@ size_t str_hash(const void *p) {
 
 bool int_equals(const void *p1, const void *p2) {
     assert(p1 != NULL && p2 != NULL);
-    int* i1 = (int*) p1;
-    int* i2 = (int*) p2;
+    int *i1 = (int *) p1;
+    int *i2 = (int *) p2;
     return *i1 == *i2;
 }
 
 bool str_equals(const void *p1, const void *p2) {
     assert(p1 != NULL && p2 != NULL);
-    char* s1 = (char*) p1;
-    char* s2 = (char*) p2;
+    char *s1 = (char *) p1;
+    char *s2 = (char *) p2;
     return 0 == strcmp(s1, s2);
 }
 
@@ -56,7 +56,7 @@ void *int_copy(const void *p) {
     if (NULL == p) {
         return NULL;
     }
-    int* i = (int*) p;
+    int *i = (int *) p;
     int *res = malloc(sizeof(i));
     if (NULL == res) {
         return NULL;
@@ -69,7 +69,7 @@ void *str_copy(const void *p) {
     if (NULL == p) {
         return NULL;
     }
-    char* s = (char*) p;
+    char *s = (char *) p;
     size_t length = strlen(s) + 1;
     char *res = malloc(sizeof(char) * length);
     if (NULL == res) {
@@ -91,4 +91,11 @@ void str_free(void *p) {
         return;
     }
     free(p);
+}
+
+void skip_free(void *x) {
+}
+
+void *skip_copy(const void *x) {
+    return (void *) x;
 }

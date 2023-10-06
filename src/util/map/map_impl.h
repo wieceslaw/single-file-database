@@ -26,7 +26,7 @@ void str_free(void *x);
 
 void skip_free(void *x);
 
-void* skip_copy(void *x);
+void* skip_copy(const void *x);
 
 // INT_STR
 DECLARE_MAP(int*, char*, int_str_map_t)

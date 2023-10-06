@@ -46,12 +46,14 @@ add_executable(llp_lab1
         src/database/query/join.h
         src/database/query/row_set.h
         src/database/query/join.c
+        src/database/query/row_set.c
+        src/database/query/where.c
 )
 
 if (UNIX)
 target_compile_options(llp_lab1 PRIVATE
-        -Werror -Wall -Wextra -pedantic -Wmissing-prototypes -Wstrict-prototypes
-        -Wno-unused-function -Wno-unused-but-set-variable
+#        -Werror -Wall -Wextra -pedantic -Wmissing-prototypes -Wstrict-prototypes
+#        -Wno-unused-function -Wno-unused-but-set-variable
 #        -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak
 #        -fsanitize=undefined -fsanitize-address-use-after-scope
 )

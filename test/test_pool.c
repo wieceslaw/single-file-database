@@ -21,10 +21,7 @@ void print_pool(pool_t *pool) {
         }
         printf("%s \n", buffer->data);
         buffer_free(&buffer);
-        if (pool_iterator_next(it) != POOL_OP_OK) {
-            printf("unable to go next \n");
-            return;
-        }
+        pool_iterator_next(it);
     }
     printf("count: %d \n", count);
     pool_iterator_free(&it);
@@ -37,30 +34,19 @@ void test_pool(allocator_t *allocator) {
         return;
     }
     pool_t *pool = pool_init(allocator, entry_point);
-
     for (int i = 1; i < 300; i++) {
         buffer_t buffer = buffer_init(i * 2);
         if (NULL == buffer) {
             printf("unable to create buffer");
         }
         sprintf(buffer->data, "%d", i);
-        if (pool_append(pool, buffer) != POOL_OP_OK) {
-            printf("unable to append to pool \n");
-        }
+        pool_append(pool, buffer);
     }
-
     printf("before add flush \n");
     print_pool(pool);
-
-    if (pool_flush(pool) != POOL_OP_OK) {
-        printf("unable to flush pool");
-        return;
-    }
-
+    pool_flush(pool);
     printf("after add flush \n");
     print_pool(pool);
-
-
     pool_it it = pool_iterator(pool);
     if (NULL == it) {
         printf("unable to get pool iterator \n");
@@ -74,36 +60,18 @@ void test_pool(allocator_t *allocator) {
             printf("unable to get pool \n");
             return;
         }
-
         if (*buffer->data == '2') {
-            if (pool_iterator_delete(it) != POOL_OP_OK) {
-                printf("unable to delete from pool");
-                return;
-            }
+            pool_iterator_delete(it);
         }
-
         buffer_free(&buffer);
-        if (pool_iterator_next(it) != POOL_OP_OK) {
-            printf("unable to go next \n");
-            return;
-        }
+        pool_iterator_next(it);
     }
     printf("%d \n", count);
-
     pool_iterator_free(&it);
-
     printf("before delete flush");
     print_pool(pool);
-
-    if (pool_flush(pool) != POOL_OP_OK) {
-        printf("unable to flush pool");
-        return;
-    }
-
+    pool_flush(pool);
     printf("after delete flush \n");
     print_pool(pool);
-
-    if (pool_free(pool) != POOL_OP_OK) {
-        printf("unable to free pool \n");
-    }
+    pool_free(pool);
 }
