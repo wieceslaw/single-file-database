@@ -29,12 +29,6 @@ void test_map(int n) {
         free(value);
     }
     printf("checked \n");
-    FOR_MAP(map, e, {
-            free(e->val);
-            free(e->key);
-            free(e);
-    })
-    printf("removed \n");
     MAP_FREE(map);
 }
 

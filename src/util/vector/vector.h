@@ -17,7 +17,7 @@ typedef struct vector *vector_t;
 
 vector_t vector_init(size_t capacity);
 
-void vector_free(vector_t vec);
+void vector_free(vector_t *vec);
 
 bool vector_is_empty(vector_t vec);
 

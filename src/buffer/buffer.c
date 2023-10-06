@@ -7,12 +7,11 @@
 #include <string.h>
 #include <assert.h>
 #include "buffer/buffer.h"
+#include "util/exceptions/exceptions.h"
 
+// THROWS: [MALLOC_EXCEPTION]
 buffer_t *buffer_init(uint64_t size) {
-    buffer_t *buffer = malloc(sizeof(buffer_t));
-    if (NULL == buffer) {
-        return NULL;
-    }
+    buffer_t *buffer = rmalloc(sizeof(buffer_t));
     buffer->size = size;
     buffer->rcur = 0;
     buffer->wcur = 0;
@@ -38,12 +37,10 @@ void buffer_free(buffer_t *buffer) {
     free(buffer);
 }
 
+// THROWS: [MALLOC_EXCEPTION]
 buffer_t *buffer_copy(const buffer_t *const buffer) {
     assert(buffer != NULL);
     buffer_t *result = buffer_init(buffer->size);
-    if (NULL == buffer) {
-        return NULL;
-    }
     memcpy(result->data, buffer->data, buffer->size);
     return result;
 }
@@ -66,10 +63,7 @@ char *buffer_read_string(buffer_t *const buffer) {
     if (moved > buffer->size) {
         return NULL;
     }
-    char *string = malloc(length);
-    if (NULL == string) {
-        return NULL;
-    }
+    char *string = rmalloc(length);
     memcpy(string, buffer->data + buffer->rcur, length);
     buffer->rcur = moved;
     return string;

@@ -44,6 +44,9 @@ add_executable(llp_lab1
         src/util/exceptions/exceptions.c
         src/util/exceptions/exceptions.h
         test/test_map.c
+        src/database/query/join.h
+        src/database/query/where.h
+        src/database/query/row_set.h
 )
 
 if (UNIX)

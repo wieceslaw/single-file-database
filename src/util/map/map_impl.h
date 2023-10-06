@@ -6,6 +6,7 @@
 #define LLP_LAB1_MAP_IMPL_H
 
 #include "map.h"
+#include "database/table/row.h"
 
 size_t int_hash(const void *x);
 
@@ -22,6 +23,10 @@ void *str_copy(const void *x);
 void int_free(void *x);
 
 void str_free(void *x);
+
+void skip_free(void *x);
+
+void* skip_copy(void *x);
 
 // INT_STR
 DECLARE_MAP(int*, char*, int_str_map_t)

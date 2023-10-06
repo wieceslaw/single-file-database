@@ -174,7 +174,7 @@ static bool map_should_resize(map_t map) {
 // THROWS: [MALLOC_EXCEPTION]
 static void map_resize(map_t map) {
     assert(map != NULL);
-    size_t capacity = map->capacity * MAP_EXTENSION_RATIO;
+    size_t capacity = (size_t) map->capacity * MAP_EXTENSION_RATIO;
     list_t *buckets;
     TRY ({
         buckets = buckets_init(capacity);

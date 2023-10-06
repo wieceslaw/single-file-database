@@ -7,12 +7,6 @@
 #include "util/defines.h"
 
 typedef enum {
-    JOIN_TYPE_INNER = 0,
-    JOIN_TYPE_LEFT = 1,
-    JOIN_TYPE_RIGHT = 2,
-} join_type;
-
-typedef enum {
     QUERY_INFO_FROM = 0,
     QUERY_INFO_JOIN = 1,
     QUERY_INFO_WHERE = 2,

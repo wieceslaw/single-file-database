@@ -14,15 +14,15 @@ typedef union {
     int32_t val_int;
     uint8_t val_bool;
     char *val_string;
-} column_t;
+} column;
 
-typedef struct {
-    column_t *columns;
+typedef struct row {
+    column *columns;
     uint32_t size;
-} row_t;
+} *row_t;
 
-buffer_t *row_serialize(const scheme_t *scheme, const row_t *row);
+buffer_t *row_serialize(const table_scheme *scheme, row_t row);
 
-row_t *row_deserialize(const scheme_t *scheme, buffer_t *buffer);
+row_t row_deserialize(const table_scheme *scheme, buffer_t *buffer);
 
 #endif //LLP_LAB1_ROW_H

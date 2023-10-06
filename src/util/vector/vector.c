@@ -31,13 +31,14 @@ vector_t vector_init(size_t capacity) {
     return vector;
 }
 
-void vector_free(vector_t vec) {
-    if (NULL == vec) {
+void vector_free(vector_t *vec) {
+    if (NULL == *vec) {
         return;
     }
-    free(vec->array);
-    vec->array = NULL;
-    free(vec);
+    free((*vec)->array);
+    (*vec)->array = NULL;
+    free(*vec);
+    *vec = NULL;
 }
 
 size_t vector_size(vector_t vec) {
@@ -64,6 +65,7 @@ vector_value *vector_get(vector_t vec, size_t idx) {
 }
 
 static bool vector_expand(vector_t vec, size_t size) {
+    assert(vec != NULL);
     if (vec->capacity >= size) {
         return true;
     }
