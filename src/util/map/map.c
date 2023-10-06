@@ -59,10 +59,10 @@ map_t map_init(size_t capacity, hash_f key_hash, equals_f key_equals,
     TRY({
         buckets = buckets_init(capacity);
         map = rmalloc(sizeof(*map));
-    }) CATCH(MALLOC_EXCEPTION, {
+    }) CATCH(exception == MALLOC_EXCEPTION, {
         buckets_free(buckets, capacity);
         free(map);
-        RAISE(MALLOC_EXCEPTION);
+        RAISE(exception);
     }) FINALLY()
     map->buckets = buckets;
     map->capacity = capacity;
@@ -187,9 +187,9 @@ static void map_resize(map_t map) {
         array_free(map);
         map->capacity = capacity;
         map->buckets = buckets;
-    }) CATCH(MALLOC_EXCEPTION, {
+    }) CATCH(exception == MALLOC_EXCEPTION, {
         buckets_free(buckets, capacity);
-        RAISE(MALLOC_EXCEPTION);
+        RAISE(exception);
     }) FINALLY ()
 }
 

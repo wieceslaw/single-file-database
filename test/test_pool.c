@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 void print_pool(pool_t *pool) {
-    pool_it* it = pool_iterator(pool);
+    pool_it it = pool_iterator(pool);
     if (NULL == it) {
         printf("unable to get pool iterator \n");
         return;
@@ -27,11 +27,7 @@ void print_pool(pool_t *pool) {
         }
     }
     printf("count: %d \n", count);
-
-    if (pool_iterator_free(it) != POOL_OP_OK) {
-        printf("unable to free pool iterator \n");
-        return;
-    }
+    pool_iterator_free(&it);
 }
 
 void test_pool(allocator_t *allocator) {
@@ -41,10 +37,6 @@ void test_pool(allocator_t *allocator) {
         return;
     }
     pool_t *pool = pool_init(allocator, entry_point);
-    if (NULL == pool) {
-        printf("unable to init pool \n");
-        return;
-    }
 
     for (int i = 1; i < 300; i++) {
         buffer_t buffer = buffer_init(i * 2);
@@ -69,7 +61,7 @@ void test_pool(allocator_t *allocator) {
     print_pool(pool);
 
 
-    pool_it* it = pool_iterator(pool);
+    pool_it it = pool_iterator(pool);
     if (NULL == it) {
         printf("unable to get pool iterator \n");
         return;
@@ -98,10 +90,7 @@ void test_pool(allocator_t *allocator) {
     }
     printf("%d \n", count);
 
-    if (pool_iterator_free(it) != POOL_OP_OK) {
-        printf("unable to free pool iterator \n");
-        return;
-    }
+    pool_iterator_free(&it);
 
     printf("before delete flush");
     print_pool(pool);

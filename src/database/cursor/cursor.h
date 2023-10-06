@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include "database/table/table.h"
 #include "database/query/join.h"
-#include "database/query/query.h"
+#include "database/query/where.h"
 
 typedef enum {
     CURSOR_FROM = 0,
@@ -23,7 +23,7 @@ struct cursor {
     union {
         struct {
             table_t table;
-            pool_it *it;
+            pool_it it;
             char* alias;
         } from;
         struct {
@@ -39,11 +39,11 @@ struct cursor {
     };
 };
 
-cursor_t cursor_table(table_t);
+cursor_t cursor_type_from(table_t, char* alias);
 
-cursor_t cursor_join();
+cursor_t cursor_type_join(cursor_t left, cursor_t right, join_condition condition, join_type type);
 
-cursor_t cursor_where(cursor_t base, where_condition condition);
+cursor_t cursor_type_where(cursor_t base, where_condition condition);
 
 bool cursor_is_empty(cursor_t cur);
 
@@ -55,6 +55,7 @@ row_set_t cursor_get(cursor_t cur);
 
 void cursor_delete(cursor_t cur, char *alias);
 
+// TODO: Implement
 //void cursor_update(cursor_t *cur, char *alias, updater *updater);
 
 #endif //LLP_LAB1_CURSOR_H

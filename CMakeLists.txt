@@ -28,7 +28,7 @@ add_executable(llp_lab1
         src/database/database.h
         src/database/cursor/cursor.h
         src/database/cursor/cursor.c
-        src/database/query/query.h
+        src/database/query/where.h
         src/database/table/row.h
         src/database/table/row.c
         src/util/vector/vector.h
@@ -44,8 +44,8 @@ add_executable(llp_lab1
         src/util/exceptions/exceptions.h
         test/test_map.c
         src/database/query/join.h
-        src/database/query/where.h
         src/database/query/row_set.h
+        src/database/query/join.c
 )
 
 if (UNIX)

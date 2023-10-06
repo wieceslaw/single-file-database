@@ -6,6 +6,7 @@
 #include <malloc.h>
 #include "pool.h"
 #include "heap/heap.h"
+#include "util/exceptions/exceptions.h"
 
 #define POOL_SIZE  57
 #define POOL_START 64
@@ -36,11 +37,12 @@ static int suitable_heap_idx(uint64_t size) {
     return count;
 }
 
+/// THROWS: [POOL_EXCEPTION]
 offset_t pool_create(allocator_t *allocator) {
     assert(NULL != allocator);
     page_t *page = allocator_get_page(allocator);
     if (NULL == page) {
-        return 0;
+        RAISE(POOL_EXCEPTION);
     }
     uint64_t acc = POOL_START;
     offset_t offset = 0;
@@ -51,41 +53,40 @@ offset_t pool_create(allocator_t *allocator) {
     }
     offset_t pool_offset = page_offset(page);
     if (allocator_unmap_page(allocator, page) != ALLOCATOR_SUCCESS) {
-        return 0;
+        RAISE(POOL_EXCEPTION);
     }
     return pool_offset;
 }
 
+/// THROWS: [MALLOC_EXCEPTION, POOL_EXCEPTION]
 pool_t *pool_init(allocator_t *allocator, offset_t pool_offset) {
     assert(NULL != allocator);
-    pool_t *pool = malloc(sizeof(pool_t));
-    if (NULL == pool) {
-        return NULL;
-    }
+    pool_t *pool = rmalloc(sizeof(pool_t));
     pool->page = allocator_map_page(allocator, pool_offset);
     if (NULL == pool->page) {
         free(pool);
-        return NULL;
+        RAISE(POOL_EXCEPTION);
     }
     pool->allocator = allocator;
     for (int i = 0; i < POOL_SIZE; i++) {
         heap_t *heap = heap_init(pool->page, heap_size() * i, pool->allocator);
         if (NULL == heap) {
             free(pool);
-            return NULL;
+            RAISE(POOL_EXCEPTION);
         }
         pool->heaps[i] = heap;
     }
     return pool;
 }
 
-pool_result pool_free(pool_t *pool) {
+/// THROWS: [POOL_EXCEPTION]
+void pool_free(pool_t *pool) {
     assert(pool_is_valid(pool));
     if (allocator_unmap_page(pool->allocator, pool->page) != ALLOCATOR_SUCCESS) {
         pool->page = NULL;
         pool->allocator = NULL;
         free(pool);
-        return POOL_OP_ERROR;
+        RAISE(POOL_EXCEPTION);
     }
     pool->page = NULL;
     pool->allocator = NULL;
@@ -94,62 +95,54 @@ pool_result pool_free(pool_t *pool) {
         pool->heaps[i] = NULL;
     }
     free(pool);
-    return POOL_OP_OK;
 }
 
-pool_result pool_clear(allocator_t *allocator, offset_t pool_offset) {
+/// THROWS: [POOL_EXCEPTION]
+void pool_clear(allocator_t *allocator, offset_t pool_offset) {
     assert(NULL != allocator);
     pool_t *pool = pool_init(allocator, pool_offset);
-    if (NULL == pool) {
-        return POOL_OP_ERROR;
-    }
     for (int i = 0; i < POOL_SIZE; i++) {
         heap_t *heap = pool->heaps[i];
         if (heap_clear(heap) != HEAP_OP_SUCCESS) {
             pool_free(pool);
-            return POOL_OP_ERROR;
+            RAISE(POOL_EXCEPTION);
         }
     }
-    if (pool_free(pool) != POOL_OP_OK) {
-        return POOL_OP_ERROR;
-    }
+    pool_free(pool);
     if (allocator_return_page(allocator, pool_offset) != ALLOCATOR_SUCCESS) {
-        return POOL_OP_ERROR;
+        RAISE(POOL_EXCEPTION);
     }
-    return POOL_OP_OK;
 }
 
-pool_result pool_append(pool_t *pool, buffer_t buffer) {
+/// THROWS: [POOL_EXCEPTION]
+void pool_append(pool_t *pool, buffer_t buffer) {
     assert(pool_is_valid(pool));
     int idx = suitable_heap_idx(buffer->size);
     if (heap_append(pool->heaps[idx], buffer) != HEAP_OP_SUCCESS) {
-        return POOL_OP_ERROR;
+        RAISE(POOL_EXCEPTION);
     }
-    return POOL_OP_OK;
 }
 
-pool_result pool_flush(pool_t *pool) {
+/// THROWS: [POOL_EXCEPTION]
+void pool_flush(pool_t *pool) {
     assert(pool_is_valid(pool));
     for (int i = 0; i < POOL_SIZE; i++) {
         if (heap_flush(pool->heaps[i]) != HEAP_OP_SUCCESS) {
-            return POOL_OP_ERROR;
+            RAISE(POOL_EXCEPTION);
         }
     }
-    return POOL_OP_OK;
 }
 
-pool_it *pool_iterator(pool_t *pool) {
+/// THROWS: [MALLOC_EXCEPTION, POOL_EXCEPTION]
+pool_it pool_iterator(pool_t *pool) {
     assert(pool_is_valid(pool));
-    pool_it* it = malloc(sizeof(pool_it));
-    if (NULL == it) {
-        return NULL;
-    }
+    pool_it it = rmalloc(sizeof(struct pool_it));
     it->pool = pool;
     it->heap_idx = 0;
     it->heap_it = heap_iterator(pool->heaps[0]);
     if (NULL == it->heap_it) {
         free(it);
-        return NULL;
+        RAISE(POOL_EXCEPTION);
     }
     while (heap_iterator_is_empty(it->heap_it)) {
         heap_iterator_free(it->heap_it);
@@ -162,29 +155,31 @@ pool_it *pool_iterator(pool_t *pool) {
         it->heap_it = heap_iterator(pool->heaps[it->heap_idx]);
         if (NULL == it->heap_it) {
             free(it);
-            return NULL;
+            RAISE(POOL_EXCEPTION);
         }
     }
     return it;
 }
 
-pool_result pool_iterator_free(pool_it *it) {
-    assert(NULL != it);
-    if (NULL != it->heap_it) {
-        heap_iterator_free(it->heap_it);
-        it->heap_it = NULL;
+void pool_iterator_free(pool_it *it_ptr) {
+    assert(NULL != it_ptr);
+    pool_it it = *it_ptr;
+    if (NULL == it) {
+        return;
     }
-    it->heap_idx = -1;
+    heap_iterator_free(it->heap_it);
+    it->heap_it = NULL;
+    it->heap_idx = 0;
     free(it);
-    return POOL_OP_OK;
+    *it_ptr = NULL;
 }
 
-bool pool_iterator_is_empty(pool_it *it) {
+bool pool_iterator_is_empty(pool_it it) {
     assert(NULL != it);
     return -1 == it->heap_idx;
 }
 
-buffer_t pool_iterator_get(pool_it *it) {
+buffer_t pool_iterator_get(pool_it it) {
     assert(NULL != it);
     if (pool_iterator_is_empty(it)) {
         return NULL;
@@ -192,41 +187,28 @@ buffer_t pool_iterator_get(pool_it *it) {
     return heap_iterator_get(it->heap_it);
 }
 
-pool_result pool_iterator_restart(pool_it *it) {
-    assert(NULL != it);
-    it->heap_idx = 0;
-    if (NULL != it->heap_it) {
-        heap_iterator_free(it->heap_it);
-        it->heap_it = NULL;
-    }
-    it->heap_it = heap_iterator(it->pool->heaps[0]);
-    if (NULL == it->heap_it) {
-        return POOL_OP_ERROR;
-    }
-    return POOL_OP_OK;
-}
-
-pool_result pool_iterator_delete(pool_it *it) {
+/// THROWS: [POOL_EXCEPTION]
+void pool_iterator_delete(pool_it it) {
     assert(NULL != it);
     if (pool_iterator_is_empty(it)) {
-        return POOL_OP_ERROR;
+        RAISE(POOL_EXCEPTION);
     }
     if (heap_iterator_delete(it->heap_it) != HEAP_OP_SUCCESS) {
-        return POOL_OP_ERROR;
+        RAISE(POOL_EXCEPTION);
     }
-    return POOL_OP_OK;
 }
 
-pool_result pool_iterator_next(pool_it *it) {
+/// THROWS: [POOL_EXCEPTION]
+void pool_iterator_next(pool_it it) {
     assert(NULL != it);
     if (pool_iterator_is_empty(it)) {
-        return POOL_OP_ERROR;
+        RAISE(POOL_EXCEPTION);
     }
     if (heap_iterator_next(it->heap_it) != HEAP_OP_SUCCESS) {
-        return POOL_OP_ERROR;
+        RAISE(POOL_EXCEPTION);
     }
     if (!heap_iterator_is_empty(it->heap_it)) {
-        return POOL_OP_OK;
+        return;
     }
     while (heap_iterator_is_empty(it->heap_it)) {
         it->heap_idx++;
@@ -234,13 +216,12 @@ pool_result pool_iterator_next(pool_it *it) {
             it->heap_idx = -1;
             heap_iterator_free(it->heap_it);
             it->heap_it = NULL;
-            return POOL_OP_OK;
+            return;
         }
         heap_iterator_free(it->heap_it);
         it->heap_it = heap_iterator(it->pool->heaps[it->heap_idx]);
         if (NULL == it->heap_it) {
-            return POOL_OP_ERROR;
+            RAISE(NULL_PTR_EXCEPTION);
         }
     }
-    return POOL_OP_OK;
 }

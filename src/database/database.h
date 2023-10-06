@@ -19,7 +19,7 @@ void database_create_table(database_t database, table_scheme *table_schema);
 
 void database_delete_table(database_t database, const char *table_name);
 
-void database_insert_row(database_t database, const char *table_name, row_t row);
+void database_insert_row(database_t database, const char *table_name, row_value row);
 
 // TODO: implement add (join, where)
 // result_set_t database_select(database_t database, ...);

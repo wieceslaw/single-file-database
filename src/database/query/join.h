@@ -37,6 +37,6 @@ typedef struct join_info {
     join_condition condition;
 } join_info;
 
-bool join_condition_check(join_info info, row_set_t row);
+bool join_condition_check(join_info info, row_set_t set);
 
 #endif //LLP_LAB1_JOIN_H

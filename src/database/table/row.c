@@ -7,7 +7,7 @@
 #include "row.h"
 #include "util/exceptions/exceptions.h"
 
-static uint64_t row_size(const table_scheme *const scheme, row_t row) {
+static uint64_t row_size(const table_scheme *const scheme, row_value row) {
     assert(scheme != NULL && row != NULL);
     uint64_t size = sizeof(row->size);
     for (uint32_t i = 0; i < scheme->size; i++) {
@@ -20,7 +20,7 @@ static uint64_t row_size(const table_scheme *const scheme, row_t row) {
                 size += sizeof(b32_t);
                 break;
             case TYPE_STRING:
-                size += strlen(row->columns[i].val_string);
+                size += strlen(row->values[i].val_string);
                 break;
             case TYPE_BOOL:
                 size += sizeof(b8_t);
@@ -31,12 +31,12 @@ static uint64_t row_size(const table_scheme *const scheme, row_t row) {
 }
 
 // THROWS: [MALLOC_EXCEPTION]
-buffer_t row_serialize(const table_scheme *const scheme, row_t row) {
+buffer_t row_serialize(const table_scheme *const scheme, row_value row) {
     assert(scheme != NULL && row != NULL && row->size == scheme->size);
     buffer_t buffer = buffer_init(row_size(scheme, row));
     for (uint32_t i = 0; i < scheme->size; i++) {
         table_scheme_column scheme_col = scheme->columns[i];
-        column col = row->columns[i];
+        column_value col = row->values[i];
         switch (scheme_col.type) {
             case TYPE_INT:
                 buffer_write_b32(buffer, (b32_t) {.i32 = col.val_int});
@@ -56,12 +56,12 @@ buffer_t row_serialize(const table_scheme *const scheme, row_t row) {
 }
 
 // THROWS: [MALLOC_EXCEPTION]
-row_t row_deserialize(const table_scheme *const scheme, buffer_t buffer) {
+row_value row_deserialize(const table_scheme *const scheme, buffer_t buffer) {
     assert(scheme != NULL && buffer != NULL);
-    row_t row = rmalloc(sizeof(column) * scheme->size);
+    row_value row = rmalloc(sizeof(column_value) * scheme->size);
     for (uint32_t i = 0; i < scheme->size; i++) {
         table_scheme_column scheme_col = scheme->columns[i];
-        column *col = &(row->columns[i]);
+        column_value *col = &(row->values[i]);
         switch (scheme_col.type) {
             case TYPE_INT:
                 col->val_int = buffer_read_b32(buffer).i32;

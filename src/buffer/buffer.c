@@ -22,9 +22,9 @@ buffer_t buffer_init(uint64_t size) {
         } else {
             buffer->data = rmalloc(size);
         }
-    }) CATCH(MALLOC_EXCEPTION, {
+    }) CATCH(exception >= EXCEPTION, {
         free(buffer);
-        RAISE(MALLOC_EXCEPTION);
+        RAISE(exception);
     }) FINALLY()
     return buffer;
 }

@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <string.h>
 #include "table.h"
+#include "util/exceptions/exceptions.h"
 
 static void free_column(table_scheme_column *column) {
     assert(column != NULL);
@@ -23,18 +24,19 @@ void scheme_free(table_scheme *scheme) {
     free(scheme);
 }
 
+/// THROWS: [POOL_EXCEPTION]
 void table_free(table_t *table_ptr) {
     assert(table_ptr != NULL);
     table_t table = *table_ptr;
     if (NULL == table) {
         return;
     }
-    if (pool_free(table->data_pool) != POOL_OP_OK) {
-        // TODO: Raise exception
-        return;
-    }
-    scheme_free(table->scheme);
-    table->scheme = NULL;
-    free(table);
-    *table_ptr = NULL;
+    TRY ({
+        pool_free(table->data_pool);
+    }) FINALLY({
+        scheme_free(table->scheme);
+        table->scheme = NULL;
+        free(table);
+        *table_ptr = NULL;
+    })
 }

@@ -15,8 +15,13 @@ extern jmp_buf *__TRY_CATCH_LIB__retry_env;
 
 // page_list of predefined exception codes
 enum {
+    EXCEPTION,
     MALLOC_EXCEPTION = 0x8000000,// RAISE'd when malloc() == NULL in rmalloc()
-    RETRY_EXCEPTION               // RAISE'd when RETRY not within a CATCH block
+    RETRY_EXCEPTION,               // RAISE'd when RETRY not within a CATCH block
+    NULL_PTR_EXCEPTION,
+    POOL_EXCEPTION,
+    DATABASE_EXCEPTION,
+    TABLE_ALREADY_EXISTS,
 };
 
 // When below a TRY block in the call stack
