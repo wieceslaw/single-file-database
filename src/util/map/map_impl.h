@@ -7,28 +7,28 @@
 
 #include "map.h"
 
-size_t int_hash(const int *i);
+size_t int_hash(const void *x);
 
-size_t str_hash(const char *s);
+size_t str_hash(const void *p);
 
-bool int_equals(const int *i1, const int *i2);
+bool int_equals(const void *x1, const void *x2);
 
-bool str_equals(const char *s1, const char *s2);
+bool str_equals(const void *x1, const void *x2);
 
-int *int_copy(const int *i);
+void *int_copy(const void *x);
 
-char *str_copy(const char *s);
+void *str_copy(const void *x);
 
-void int_free(int *i);
+void int_free(void *x);
 
-void str_free(char *s);
+void str_free(void *x);
 
 // INT_STR
-DECLARE_MAP(int, char*, int_str_map_t)
+DECLARE_MAP(int*, char*, int_str_map_t)
 #define MAP_NEW_INT_STR(C) MAP_NEW(int_str_map_t, C, int_hash, int_equals, int_copy, int_free, str_copy, str_free)
 
 // INT_INT
-DECLARE_MAP(int, int, int_int_map_t)
+DECLARE_MAP(int*, int*, int_int_map_t)
 #define MAP_NEW_INT_INT(C) MAP_NEW(int_int_map_t, C, int_hash, int_equals, int_copy, int_free, int_copy, int_free)
 
 // STR_STR

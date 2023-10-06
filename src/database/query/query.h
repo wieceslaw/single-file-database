@@ -4,8 +4,7 @@
 
 #ifndef LLP_LAB1_QUERY_H
 #define LLP_LAB1_QUERY_H
-
-#include <stdint-gcc.h>
+#include "util/defines.h"
 
 typedef enum {
     JOIN_TYPE_INNER = 0,

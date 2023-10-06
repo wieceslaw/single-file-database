@@ -7,7 +7,7 @@
 
 #include <stddef.h>
 #include <stdbool.h>
-#include <stdint-gcc.h>
+#include "util/defines.h"
 #include "util/list/list.h"
 
 #define MAP_START_CAPACITY 8
@@ -16,7 +16,7 @@
 
 // TODO: Remake for generic
 #define FOR_MAP(M, E, CODE) { \
-    map_it __it = map_get_iterator(M); \
+    map_it __it = map_get_iterator((map_t)M); \
     while (!map_it_is_empty(__it)) { \
         map_entry_t E = map_it_get_entry(__it); \
         CODE                      \
@@ -25,13 +25,13 @@
     map_it_free(&__it); \
 } \
 
-typedef size_t (*hash_f)(void *);
+typedef size_t (*hash_f)(const void *);
 
-typedef bool (*equals_f)(void *, void *);
+typedef bool (*equals_f)(const void *, const void *);
+
+typedef void *(*copy_f)(const void *);
 
 typedef void (*free_f)(void *);
-
-typedef void *(*copy_f)(void *);
 
 typedef void *map_key;
 
@@ -117,13 +117,13 @@ map_entry_t map_it_get_entry(map_it it);
     } *T;                                              \
 
 #define MAP_NEW(T, CAPACITY, HASH_F, EQUALS_F, KEY_COPY, KEY_FREE, VAL_COPY, VAL_FREE)        \
-    ((T)generic_map_init(CAPACITY, HASH_F, EQUALS_F, KEY_COPY, KEY_FREE, VAL_COPY, VAL_FREE)) \
+    ((T)map_init(CAPACITY, HASH_F, EQUALS_F, KEY_COPY, KEY_FREE, VAL_COPY, VAL_FREE)) \
 
-#define MAP_FREE(m) (generic_map_free(&m))
+#define MAP_FREE(m) (map_free((map_t*)&m))
 
-#define MAP_IS_EMPTY(m) (generic_map_is_empty(m))
+#define MAP_IS_EMPTY(m) (map_is_empty((map_t)m))
 
-#define MAP_SIZE(m) (generic_map_size(m))
+#define MAP_SIZE(m) (map_size((map_t)m))
 
 // THROWS: [MALLOC_EXCEPTION]
 #define MAP_PUT(m, k, v) (m->put(m, k, v))

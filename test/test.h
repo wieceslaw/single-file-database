@@ -16,4 +16,6 @@ void print_pool(pool_t *pool);
 
 void test_pool(allocator_t *allocator);
 
+void test_map(int n);
+
 #endif //LLP_LAB1_TEST_H

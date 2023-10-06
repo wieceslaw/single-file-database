@@ -5,7 +5,7 @@
 #ifndef LLP_LAB1_ROW_H
 #define LLP_LAB1_ROW_H
 
-#include <stdint-gcc.h>
+#include "util/defines.h"
 #include "buffer/buffer.h"
 #include "table.h"
 

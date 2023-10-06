@@ -9,7 +9,7 @@
 #include "util/defines.h"
 
 #define PAGE_SIZE 4096
-#define PAGE_CAPACITY (PAGE_SIZE - sizeof(list_node_h))
+#define PAGE_CAPACITY (PAGE_SIZE - sizeof(page_list_node_h))
 #define MAGIC 0xABCD
 
 typedef uint64_t offset_t;

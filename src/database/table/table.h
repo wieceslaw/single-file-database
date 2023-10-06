@@ -5,7 +5,7 @@
 #ifndef LLP_LAB1_TABLE_H
 #define LLP_LAB1_TABLE_H
 
-#include <stdint-gcc.h>
+#include "util/defines.h"
 #include "pool/pool.h"
 
 typedef enum {

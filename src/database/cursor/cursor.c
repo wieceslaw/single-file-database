@@ -81,7 +81,7 @@
 //        }
 //    }
 //}
-
-cursor_result cursor_delete(cursor_t *, char *alias);
-
-cursor_result cursor_update(cursor_t *, char *alias, updater_t *updater);
+//
+//cursor_result cursor_delete(cursor_t *, char *alias);
+//
+//cursor_result cursor_update(cursor_t *, char *alias, updater_t *updater);

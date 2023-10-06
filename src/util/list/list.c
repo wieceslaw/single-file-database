@@ -29,10 +29,15 @@ static list_node_t list_node_init(list_value value) {
 }
 
 static void list_node_free(list_node_t *node_ptr) {
+    assert(node_ptr != NULL);
+    if (NULL == *node_ptr) {
+        return;
+    }
     (*node_ptr)->prev = NULL;
     (*node_ptr)->next = NULL;
     (*node_ptr)->value = NULL;
     free(*node_ptr);
+    *node_ptr = NULL;
 }
 
 // throws: [MALLOC_EXCEPTION]
@@ -92,6 +97,7 @@ void list_remove_head(list_t list) {
         list->head = NULL;
         list->tail = NULL;
     } else {
+        list->head = head->next;
         head->next->prev = NULL;
         list_node_free(&head);
     }
@@ -109,6 +115,7 @@ void list_remove_tail(list_t list) {
         list->head = NULL;
         list->tail = NULL;
     } else {
+        list->tail = tail->prev;
         tail->prev->next = NULL;
         list_node_free(&tail);
     }
@@ -161,13 +168,14 @@ list_value list_it_get(list_it it) {
 }
 
 void list_it_free(list_it *it) {
-    if (NULL == it) {
+    assert(it != NULL);
+    if (NULL == *it) {
         return;
     }
     (*it)->list = NULL;
     (*it)->node = NULL;
     free(*it);
-    it = NULL;
+    *it = NULL;
 }
 
 void list_it_next(list_it it) {
@@ -226,11 +234,11 @@ void list_clear(list_t list) {
 }
 
 void list_free(list_t *list_ptr) {
-    assert(list_ptr != NULL);
-    if (*list_ptr == NULL) {
+    assert(NULL != list_ptr);
+    if (NULL == *list_ptr) {
         return;
     }
     list_clear(*list_ptr);
     free(*list_ptr);
-    list_ptr = NULL;
+    *list_ptr = NULL;
 }
