@@ -14,13 +14,13 @@ void print_pool(pool_t *pool) {
     int count = 0;
     while (!pool_iterator_is_empty(it)) {
         count++;
-        buffer_t *buffer = pool_iterator_get(it);
+        buffer_t buffer = pool_iterator_get(it);
         if (NULL == buffer) {
             printf("unable to get pool \n");
             return;
         }
         printf("%s \n", buffer->data);
-        buffer_free(buffer);
+        buffer_free(&buffer);
         if (pool_iterator_next(it) != POOL_OP_OK) {
             printf("unable to go next \n");
             return;
@@ -47,7 +47,7 @@ void test_pool(allocator_t *allocator) {
     }
 
     for (int i = 1; i < 300; i++) {
-        buffer_t *buffer = buffer_init(i * 2);
+        buffer_t buffer = buffer_init(i * 2);
         if (NULL == buffer) {
             printf("unable to create buffer");
         }
@@ -77,7 +77,7 @@ void test_pool(allocator_t *allocator) {
     int count = 0;
     while (!pool_iterator_is_empty(it)) {
         count++;
-        buffer_t *buffer = pool_iterator_get(it);
+        buffer_t buffer = pool_iterator_get(it);
         if (NULL == buffer) {
             printf("unable to get pool \n");
             return;
@@ -90,7 +90,7 @@ void test_pool(allocator_t *allocator) {
             }
         }
 
-        buffer_free(buffer);
+        buffer_free(&buffer);
         if (pool_iterator_next(it) != POOL_OP_OK) {
             printf("unable to go next \n");
             return;

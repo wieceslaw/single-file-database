@@ -18,7 +18,7 @@ struct database {
     pool_t *table_pool;
 };
 
-static void read_columns(table_scheme *schema, buffer_t *buffer) {
+static void read_columns(table_scheme *schema, buffer_t buffer) {
     for (uint32_t i = 0; i < schema->size; i++) {
         column_type col_type = buffer_read_b32(buffer).ui32;
         char *col_name = buffer_read_string(buffer);
@@ -26,7 +26,7 @@ static void read_columns(table_scheme *schema, buffer_t *buffer) {
     }
 }
 
-static table_scheme *table_schema_deserialize(buffer_t *buffer) {
+static table_scheme *table_schema_deserialize(buffer_t buffer) {
     assert(buffer != NULL);
     // table[offset_t pool_offset, name*, table_scheme[size, columns[type, name*]*]*]*
     buffer_reset(buffer);
@@ -52,10 +52,10 @@ static uint64_t table_schema_length(const table_scheme *const table_schema) {
     return size;
 }
 
-static buffer_t *table_serialize(const table_scheme *const table_schema) {
+static buffer_t table_serialize(const table_scheme *const table_schema) {
     assert(table_schema != NULL);
     uint64_t size = table_schema_length(table_schema);
-    buffer_t *buffer = buffer_init(size);
+    buffer_t buffer = buffer_init(size);
     buffer_reset(buffer);
     if (NULL == buffer) {
         return NULL;
@@ -121,7 +121,7 @@ void database_create_table(database_t database, table_scheme *table_schema) {
         return;
     }
     while (!pool_iterator_is_empty(it)) {
-        buffer_t *buffer = pool_iterator_get(it);
+        buffer_t buffer = pool_iterator_get(it);
         if (NULL == buffer) {
             pool_iterator_free(it);
             // TODO: Raise exception
@@ -129,7 +129,7 @@ void database_create_table(database_t database, table_scheme *table_schema) {
         }
         table_scheme *schema = table_schema_deserialize(buffer);
         if (NULL == schema) {
-            buffer_free(buffer);
+            buffer_free(&buffer);
             pool_iterator_free(it);
             // TODO: Raise exception
             return;
@@ -140,7 +140,7 @@ void database_create_table(database_t database, table_scheme *table_schema) {
             return;
         }
         scheme_free(schema);
-        buffer_free(buffer);
+        buffer_free(&buffer);
         if (pool_iterator_next(it) != POOL_OP_OK) {
             pool_iterator_free(it);
             // TODO: Raise exception
@@ -158,22 +158,22 @@ void database_create_table(database_t database, table_scheme *table_schema) {
         return;
     }
     table_schema->pool_offset = offset;
-    buffer_t *serialized = table_serialize(table_schema);
+    buffer_t serialized = table_serialize(table_schema);
     if (NULL == serialized) {
         // TODO: Raise exception
         return;
     }
     if (pool_append(database->table_pool, serialized) != POOL_OP_OK) {
-        buffer_free(serialized);
+        buffer_free(&serialized);
         // TODO: Raise exception
         return;
     }
     if (pool_flush(database->table_pool) != POOL_OP_OK) {
-        buffer_free(serialized);
+        buffer_free(&serialized);
         // TODO: Raise exception
         return;
     }
-    buffer_free(serialized);
+    buffer_free(&serialized);
 }
 
 void database_delete_table(database_t database, const char *const name) {

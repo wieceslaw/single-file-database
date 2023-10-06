@@ -29,7 +29,6 @@ add_executable(llp_lab1
         src/database/cursor/cursor.h
         src/database/cursor/cursor.c
         src/database/query/query.h
-        src/database/query/query.c
         src/database/table/row.h
         src/database/table/row.c
         src/util/vector/vector.h

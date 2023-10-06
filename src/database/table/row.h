@@ -21,8 +21,8 @@ typedef struct row {
     uint32_t size;
 } *row_t;
 
-buffer_t *row_serialize(const table_scheme *scheme, row_t row);
+buffer_t row_serialize(const table_scheme *scheme, row_t row);
 
-row_t row_deserialize(const table_scheme *scheme, buffer_t *buffer);
+row_t row_deserialize(const table_scheme *scheme, buffer_t buffer);
 
 #endif //LLP_LAB1_ROW_H

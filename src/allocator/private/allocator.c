@@ -186,7 +186,7 @@ page_t *allocator_get_page(allocator_t *allocator) {
 
 #ifdef _WIN32
 
-#include "windows.h"
+#include "Windows.h"
 
 struct allocator_t {
     HANDLE hFile;

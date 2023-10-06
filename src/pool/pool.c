@@ -119,7 +119,7 @@ pool_result pool_clear(allocator_t *allocator, offset_t pool_offset) {
     return POOL_OP_OK;
 }
 
-pool_result pool_append(pool_t *pool, buffer_t *buffer) {
+pool_result pool_append(pool_t *pool, buffer_t buffer) {
     assert(pool_is_valid(pool));
     int idx = suitable_heap_idx(buffer->size);
     if (heap_append(pool->heaps[idx], buffer) != HEAP_OP_SUCCESS) {
@@ -184,7 +184,7 @@ bool pool_iterator_is_empty(pool_it *it) {
     return -1 == it->heap_idx;
 }
 
-buffer_t * pool_iterator_get(pool_it *it) {
+buffer_t pool_iterator_get(pool_it *it) {
     assert(NULL != it);
     if (pool_iterator_is_empty(it)) {
         return NULL;

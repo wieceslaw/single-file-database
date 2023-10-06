@@ -26,7 +26,7 @@ pool_t *pool_init(allocator_t *, offset_t);
 
 pool_result pool_free(pool_t *);
 
-pool_result pool_append(pool_t *, buffer_t *);
+pool_result pool_append(pool_t *, buffer_t);
 
 pool_result pool_flush(pool_t *); // all data modifications will only be applied after flush call
 
@@ -38,7 +38,7 @@ bool pool_iterator_is_empty(pool_it *);
 
 pool_result pool_iterator_next(pool_it *);
 
-buffer_t * pool_iterator_get(pool_it *);
+buffer_t pool_iterator_get(pool_it *);
 
 pool_result pool_iterator_restart(pool_it *);
 

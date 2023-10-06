@@ -3,9 +3,7 @@
 //
 
 #include <assert.h>
-#include <stddef.h>
 #include <string.h>
-#include <malloc.h>
 #include "row.h"
 #include "util/exceptions/exceptions.h"
 
@@ -33,9 +31,9 @@ static uint64_t row_size(const table_scheme *const scheme, row_t row) {
 }
 
 // THROWS: [MALLOC_EXCEPTION]
-buffer_t *row_serialize(const table_scheme *const scheme, row_t row) {
+buffer_t row_serialize(const table_scheme *const scheme, row_t row) {
     assert(scheme != NULL && row != NULL && row->size == scheme->size);
-    buffer_t *buffer = buffer_init(row_size(scheme, row));
+    buffer_t buffer = buffer_init(row_size(scheme, row));
     for (uint32_t i = 0; i < scheme->size; i++) {
         table_scheme_column scheme_col = scheme->columns[i];
         column col = row->columns[i];
@@ -58,7 +56,7 @@ buffer_t *row_serialize(const table_scheme *const scheme, row_t row) {
 }
 
 // THROWS: [MALLOC_EXCEPTION]
-row_t row_deserialize(const table_scheme *const scheme, buffer_t *const buffer) {
+row_t row_deserialize(const table_scheme *const scheme, buffer_t buffer) {
     assert(scheme != NULL && buffer != NULL);
     row_t row = rmalloc(sizeof(column) * scheme->size);
     for (uint32_t i = 0; i < scheme->size; i++) {

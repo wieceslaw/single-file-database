@@ -34,28 +34,10 @@ typedef enum {
     OPERAND_COL = 1,
 } operand_type;
 
-typedef enum {
-    TYPE_INT = 0,
-    TYPE_FLOAT = 1,
-    TYPE_STRING = 2,
-    TYPE_BOOL = 3
-} column_type;
-
 typedef struct {
     const char *table_alias;
     const char *column_name;
 } column_alias;
-
-typedef struct {
-    column_alias *first, *second;
-} join_condition;
-
-typedef union {
-    float val_float;
-    int32_t val_int;
-    uint8_t val_bool;
-    char *val_string;
-} column_value;
 
 typedef struct {
     operand_type type;
@@ -98,39 +80,5 @@ struct where_condition {
     // bool: ==, !=
     // string: ==, !=
 };
-
-typedef struct query_info query_info;
-
-struct query_info {
-    query_info_type type;
-    union {
-        struct {
-            const char *table_name;
-            const char *alias;
-        } from;
-        struct {
-            query_info *first;
-            query_info *second;
-            join_type type;
-            join_condition *condition;
-        } join;
-        struct {
-            query_info *base;
-            where_condition *condition;
-        } where;
-    };
-};
-
-void query_info_free(query_info *);
-
-query_info *FROM(char *table_name, char *alias);
-
-column_alias *COL(const char *column_name, const char *table_alias);
-
-join_condition *ON(column_alias *first, column_alias *second);
-
-query_info *JOIN(query_info *first, query_info *second, join_type type, join_condition *condition);
-
-query_info *WHERE(query_info *base, where_condition* condition);
 
 #endif //LLP_LAB1_QUERY_H

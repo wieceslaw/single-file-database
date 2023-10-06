@@ -10,13 +10,13 @@ void print_heap(heap_t *heap) {
     heap_it *it = heap_iterator(heap);
     while (!heap_iterator_is_empty(it)) {
         count++;
-        buffer_t *record = heap_iterator_get(it);
+        buffer_t record = heap_iterator_get(it);
         if (NULL == record) {
             printf("unable to get heap_idx it buffer");
             return;
         }
         printf("%s \n", record->data);
-        buffer_free(record);
+        buffer_free(&record);
         if (heap_iterator_next(it) != HEAP_OP_SUCCESS) {
             printf("unable to next heap_idx it");
             return;
@@ -45,13 +45,13 @@ void test_heap(allocator_t *allocator) {
     print_heap(heap);
 
     for (int i = 0; i < 300; i++) {
-        buffer_t *buffer = buffer_init(32);
+        buffer_t buffer = buffer_init(32);
         sprintf(buffer->data, "%d", i);
         if (heap_append(heap, buffer) != HEAP_OP_SUCCESS) {
             printf("unable to append buffer to heap_idx");
             return;
         }
-        buffer_free(buffer);
+        buffer_free(&buffer);
     }
 
     printf("before append flush \n");
@@ -66,13 +66,13 @@ void test_heap(allocator_t *allocator) {
 
     heap_it *it = heap_iterator(heap);
     while (!heap_iterator_is_empty(it)) {
-        buffer_t *record = heap_iterator_get(it);
+        buffer_t record = heap_iterator_get(it);
         if (*record->data == '2') {
             if (heap_iterator_delete(it) != HEAP_OP_SUCCESS) {
-                printf("unable to delete record");
+                printf("unable to delete record_buffer");
             }
         }
-        buffer_free(record);
+        buffer_free(&record);
         heap_iterator_next(it);
     }
 
