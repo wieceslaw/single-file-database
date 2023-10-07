@@ -7,13 +7,7 @@
 
 #include "util/defines.h"
 #include "pool/pool.h"
-
-typedef enum {
-    TYPE_INT = 0,
-    TYPE_FLOAT = 1,
-    TYPE_STRING = 2,
-    TYPE_BOOL = 3
-} column_type;
+#include "row.h"
 
 typedef struct result_set_t result_set_t;
 

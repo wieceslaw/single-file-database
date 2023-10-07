@@ -27,10 +27,14 @@ struct cursor {
             char* alias;
         } from;
         struct {
-            join_type type;
-            join_condition condition;
+            join_info info;
             cursor_t left;
             cursor_t right;
+            struct {
+                bool found;
+                row_set_t val1;
+                row_set_t val2;
+            } left_join;
         } join;
         struct {
             cursor_t base;
@@ -39,11 +43,11 @@ struct cursor {
     };
 };
 
-cursor_t cursor_type_from(table_t, char* alias);
+cursor_t cursor_init_from(table_t table, char* alias);
 
-cursor_t cursor_type_join(cursor_t left, cursor_t right, join_condition condition, join_type type);
+cursor_t cursor_init_join(cursor_t left, cursor_t right, join_info info);
 
-cursor_t cursor_type_where(cursor_t base, where_condition condition);
+cursor_t cursor_init_where(cursor_t base, where_condition condition);
 
 bool cursor_is_empty(cursor_t cur);
 

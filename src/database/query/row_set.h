@@ -12,9 +12,11 @@
 typedef struct selector *selector_t;
 
 typedef struct table_row {
-    row_value row;
+    row_value data;
     table_scheme *scheme;
 } *table_row_t;
+
+column table_row_get_column(table_row_t table_row, char *column_name);
 
 // STR_ROW doesn't own data
 DECLARE_MAP(char*, table_row_t, row_set_t)

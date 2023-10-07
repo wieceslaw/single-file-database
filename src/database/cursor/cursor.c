@@ -9,7 +9,7 @@
 #include "util/exceptions/exceptions.h"
 
 // THROWS: [MALLOC_EXCEPTION]
-cursor_t cursor_type_from(table_t table, char* alias) {
+cursor_t cursor_init_from(table_t table, char *alias) {
     cursor_t cur = rmalloc(sizeof(struct cursor));
     cur->from.table = table;
     cur->from.it = pool_iterator(table->data_pool);
@@ -17,16 +17,44 @@ cursor_t cursor_type_from(table_t table, char* alias) {
     return cur;
 }
 
-// THROWS: [MALLOC_EXCEPTION]
-cursor_t cursor_type_join(cursor_t left, cursor_t right, join_condition condition, join_type type) {
-    // TODO: Implement
-    return NULL;
+void cursor_init_join_inner(cursor_t cur) {
+    if (!join_condition_check(cur->join.info, cursor_get(cur))) {
+        cursor_next(cur);
+    }
+}
+
+void cursor_init_join_left(cursor_t cur) {
+    cur->join.left_join.found = false;
+    cur->join.left_join.val1 = NULL;
+    cur->join.left_join.val2 = NULL;
+
 }
 
 // THROWS: [MALLOC_EXCEPTION]
-cursor_t cursor_type_where(cursor_t base, where_condition condition) {
-    // TODO: Implement
-    return NULL;
+cursor_t cursor_init_join(cursor_t left, cursor_t right, join_info info) {
+    cursor_t cur = rmalloc(sizeof(struct cursor));
+    cur->join.info = info;
+    cur->join.right = right;
+    cur->join.left = left;
+    switch (info.type) {
+        case JOIN_TYPE_INNER:
+            cursor_init_join_inner(cur);
+            break;
+        case JOIN_TYPE_RIGHT:
+            cur->join.left = right;
+            cur->join.right = left;
+        case JOIN_TYPE_LEFT:
+            cursor_init_join_left(cur);
+    }
+    return cur;
+}
+
+// THROWS: [MALLOC_EXCEPTION]
+cursor_t cursor_init_where(cursor_t base, where_condition condition) {
+    cursor_t cur = rmalloc(sizeof(struct cursor));
+    cur->where.condition = condition;
+    cur->where.base = base;
+    return cur;
 }
 
 bool cursor_is_empty(cursor_t cur) {
@@ -36,13 +64,12 @@ bool cursor_is_empty(cursor_t cur) {
             return pool_iterator_is_empty(cur->from.it);
         }
         case CURSOR_JOIN: {
-            switch (cur->join.type) {
+            switch (cur->join.info.type) {
                 case JOIN_TYPE_INNER:
                     return cursor_is_empty(cur->join.left) || cursor_is_empty(cur->join.right);
                 case JOIN_TYPE_LEFT:
-                    return cursor_is_empty(cur->join.left);
                 case JOIN_TYPE_RIGHT:
-                    return cursor_is_empty(cur->join.right);
+                    return cursor_is_empty(cur->join.left);
             }
         }
         case CURSOR_WHERE: {
@@ -85,6 +112,11 @@ row_set_t cursor_get(cursor_t cur) {
         case CURSOR_JOIN: {
             row_set_t right_set = cursor_get(cur->join.right);
             row_set_t left_set = cursor_get(cur->join.left);
+            if (right_set == NULL || left_set == NULL) {
+                MAP_FREE(right_set);
+                MAP_FREE(left_set);
+                return NULL;
+            }
             return row_set_merge(&right_set, &left_set);
         }
         case CURSOR_WHERE: {
@@ -99,8 +131,46 @@ static void cursor_restart_from(cursor_t cur) {
     cur->from.it = pool_iterator(cur->from.table->data_pool);
 }
 
+static void cursor_restart_join_inner(cursor_t cur) {
+    cursor_restart(cur->join.left);
+    cursor_restart(cur->join.right);
+    if (!join_condition_check(cur->join.info, cursor_get(cur))) {
+        cursor_next(cur);
+    }
+}
+
+bool cursor_join_left_find_next(cursor_t cur) {
+    while (!cursor_is_empty(cur->join.left)) {
+        cur->join.left_join.val2 = cursor_get(cur->join.left);
+        if (join_condition_check(cur->join.info, cursor_get(cur))) {
+            return true;
+        }
+        cursor_next(cur->join.right);
+    }
+    return false;
+}
+
+static void cursor_restart_join_left(cursor_t cur) {
+    cur->join.left_join.found = false;
+    MAP_FREE(cur->join.left_join.val1);
+    MAP_FREE(cur->join.left_join.val2);
+    if (!cursor_is_empty(cur->join.left)) {
+        cur->join.left_join.val1 = cursor_get(cur->join.left);
+        if (cursor_join_left_find_next(cur)) {
+            return;
+        }
+        MAP_FREE(cur->join.left_join.val2);
+    }
+}
+
 static void cursor_restart_join(cursor_t cur) {
-    // TODO: Implement
+    switch (cur->join.info.type) {
+        case JOIN_TYPE_INNER:
+            cursor_restart_join_inner(cur);
+        case JOIN_TYPE_LEFT:
+        case JOIN_TYPE_RIGHT:
+            cursor_restart_join_left(cur);
+    }
 }
 
 static void cursor_restart_where(cursor_t cur) {
@@ -128,15 +198,66 @@ void cursor_restart(cursor_t cur) {
     }
 }
 
-void cursor_next_from(cursor_t cur) {
+static void cursor_next_from(cursor_t cur) {
     pool_iterator_next(cur->from.it);
 }
 
-void cursor_next_join(cursor_t cur) {
-    // TODO: Implement
+static void cursor_next_join_inner(cursor_t cur) {
+    if (cursor_is_empty(cur)) {
+        return;
+    }
+    cursor_next(cur->join.right);
+    if (cursor_is_empty(cur->join.right)) {
+        cursor_next(cur->join.left);
+        cursor_restart(cur->join.right);
+    }
+    while (!cursor_is_empty(cur->join.left) && !cursor_is_empty(cur->join.right)) {
+        if (join_condition_check(cur->join.info, cursor_get(cur))) {
+            break;
+        }
+        cursor_next(cur->join.right);
+        if (cursor_is_empty(cur->join.right)) {
+            cursor_next(cur->join.left);
+            cursor_restart(cur->join.right);
+        }
+    }
 }
 
-void cursor_next_where(cursor_t cur) {
+static void cursor_next_join_left(cursor_t cur) {
+    if (cursor_is_empty(cur)) {
+        return;
+    }
+    if (cursor_is_empty(cur->join.right)) {
+        cursor_next(cur->join.left);
+        if (cursor_is_empty(cur)) {
+            return;
+        }
+        cursor_restart(cur->join.right);
+        MAP_FREE(cur->join.left_join.val1);
+        cur->join.left_join.val1 = cursor_get(cur->join.left);
+        if (cursor_join_left_find_next(cur)) {
+            return;
+        }
+        MAP_FREE(cur->join.left_join.val2);
+    } else {
+        cursor_next(cur->join.right);
+        if (!cursor_join_left_find_next(cur)) {
+            cursor_next(cur);
+        }
+    }
+}
+
+static void cursor_next_join(cursor_t cur) {
+    switch (cur->join.info.type) {
+        case JOIN_TYPE_INNER:
+            cursor_next_join_inner(cur);
+        case JOIN_TYPE_LEFT:
+        case JOIN_TYPE_RIGHT:
+            cursor_next_join_left(cur);
+    }
+}
+
+static void cursor_next_where(cursor_t cur) {
     cursor_t base = cur->where.base;
     cursor_next(base);
     while (!cursor_is_empty(base) &&

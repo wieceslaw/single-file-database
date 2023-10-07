@@ -79,3 +79,17 @@ row_value row_deserialize(const table_scheme *const scheme, buffer_t buffer) {
     }
     return row;
 }
+
+bool columns_equal(column col1, column col2) {
+    assert(col1.type == col2.type);
+    switch (col1.type) {
+        case TYPE_INT:
+            return col1.value.val_int == col2.value.val_int;
+        case TYPE_FLOAT:
+            return col1.value.val_float == col2.value.val_float;
+        case TYPE_STRING:
+            return 0 == strcmp(col1.value.val_string, col2.value.val_string);
+        case TYPE_BOOL:
+            return col1.value.val_bool == col2.value.val_bool;
+    }
+}
