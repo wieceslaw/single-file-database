@@ -7,53 +7,125 @@
 #include <string.h>
 #include "cursor.h"
 #include "util/exceptions/exceptions.h"
+#include "database/query/where_condition.h"
+#include "database/query/updater_builder.h"
+#include "util/string.h"
 
 // THROWS: [MALLOC_EXCEPTION]
-cursor_t cursor_init_from(table_t table, char *alias) {
+cursor_t cursor_init_from(table_t table) {
     cursor_t cur = rmalloc(sizeof(struct cursor));
     cur->from.table = table;
     cur->from.it = pool_iterator(table->data_pool);
-    cur->from.alias = alias;
+    cur->type = CURSOR_FROM;
     return cur;
 }
 
-void cursor_init_join_inner(cursor_t cur) {
-    if (!join_condition_check(cur->join.info, cursor_get(cur))) {
-        cursor_next(cur);
+static bool join_condition_check(join_condition *condition, cursor_t cur) {
+    assert(condition->right.type == COLUMN_DESC_INDEX && condition->left.type == COLUMN_DESC_INDEX);
+    column right_column = cursor_get_column(cur, condition->right);
+    column left_column = cursor_get_column(cur, condition->left);
+    return columns_equals(right_column, left_column);
+}
+
+static bool column_greater_than(column first, column second) {
+    assert(first.type == second.type);
+    assert(first.type == COLUMN_TYPE_FLOAT || first.type == COLUMN_TYPE_INT);
+    switch (first.type) {
+        case COLUMN_TYPE_INT:
+            return first.value.val_int > second.value.val_int;
+        case COLUMN_TYPE_FLOAT:
+            return first.value.val_float > second.value.val_float;
+    }
+    return false;
+}
+
+static bool column_lesser_than(column first, column second) {
+    assert(first.type == second.type);
+    assert(first.type == COLUMN_TYPE_FLOAT || first.type == COLUMN_TYPE_INT);
+    switch (first.type) {
+        case COLUMN_TYPE_INT:
+            return first.value.val_int < second.value.val_int;
+        case COLUMN_TYPE_FLOAT:
+            return first.value.val_float < second.value.val_float;
+    }
+    return false;
+}
+
+static bool compare_columns(comparing_type compare_type, column first, column second) {
+    assert(first.type == second.type);
+    switch (compare_type) {
+        case COMPARE_EQ:
+            return columns_equals(first, second);
+        case COMPARE_NE:
+            return !columns_equals(first, second);
+        case COMPARE_GT:
+            return column_greater_than(first, second);
+        case COMPARE_LT:
+            return column_lesser_than(first, second);
+        case COMPARE_GE:
+            return column_greater_than(first, second) || columns_equals(first, second);
+        case COMPARE_LE:
+            return column_lesser_than(first, second) || columns_equals(first, second);
     }
 }
 
-void cursor_init_join_left(cursor_t cur) {
-    cur->join.left_join.found = false;
-    cur->join.left_join.val1 = NULL;
-    cur->join.left_join.val2 = NULL;
+static column operand_extract_column(operand op, cursor_t cur) {
+    assert(cur != NULL);
+    switch (op.type) {
+        case OPERAND_VALUE_LITERAL:
+            return op.literal;
+        case OPERAND_VALUE_COLUMN:
+            return cursor_get_column(cur, op.column);
+    }
+}
 
+static bool where_condition_check_compare(where_condition *condition, cursor_t cur) {
+    assert(condition != NULL && cur != NULL && condition->type == CONDITION_COMPARE);
+    column first_column = operand_extract_column(condition->compare.first, cur);
+    column second_column = operand_extract_column(condition->compare.second, cur);
+    return compare_columns(condition->compare.type, first_column, second_column);
+}
+
+static bool where_condition_check(where_condition *condition, cursor_t cur) {
+    assert(condition != NULL && cur != NULL);
+    switch (condition->type) {
+        case CONDITION_AND:
+            return where_condition_check(condition->and.first, cur) &&
+                   where_condition_check(condition->and.second, cur);
+        case CONDITION_OR:
+            return where_condition_check(condition->or.first, cur) ||
+                   where_condition_check(condition->or.second, cur);
+        case CONDITION_NOT:
+            return !where_condition_check(condition->not.first, cur);
+        case CONDITION_COMPARE:
+            return where_condition_check_compare(condition, cur);
+    }
 }
 
 // THROWS: [MALLOC_EXCEPTION]
-cursor_t cursor_init_join(cursor_t left, cursor_t right, join_info info) {
+cursor_t cursor_init_join(cursor_t left, cursor_t right, join_condition condition) {
+    assert(left != NULL && right != NULL &&
+        condition.right.type == COLUMN_DESC_INDEX && condition.left.type == COLUMN_DESC_INDEX);
     cursor_t cur = rmalloc(sizeof(struct cursor));
-    cur->join.info = info;
+    cur->join.condition = condition;
     cur->join.right = right;
     cur->join.left = left;
-    switch (info.type) {
-        case JOIN_TYPE_INNER:
-            cursor_init_join_inner(cur);
-            break;
-        case JOIN_TYPE_RIGHT:
-            cur->join.left = right;
-            cur->join.right = left;
-        case JOIN_TYPE_LEFT:
-            cursor_init_join_left(cur);
+    if (!join_condition_check(&(cur->join.condition), cur)) {
+        cursor_next(cur);
     }
+    cur->type = CURSOR_JOIN;
     return cur;
 }
 
 // THROWS: [MALLOC_EXCEPTION]
-cursor_t cursor_init_where(cursor_t base, where_condition condition) {
+cursor_t cursor_init_where(cursor_t base, where_condition *condition) {
     cursor_t cur = rmalloc(sizeof(struct cursor));
     cur->where.condition = condition;
     cur->where.base = base;
+    cur->type = CURSOR_WHERE;
+    while (!cursor_is_empty(cur) && !where_condition_check(cur->where.condition, cur)) {
+        cursor_next(cur->where.base);
+    }
     return cur;
 }
 
@@ -64,66 +136,85 @@ bool cursor_is_empty(cursor_t cur) {
             return pool_iterator_is_empty(cur->from.it);
         }
         case CURSOR_JOIN: {
-            switch (cur->join.info.type) {
-                case JOIN_TYPE_INNER:
-                    return cursor_is_empty(cur->join.left) || cursor_is_empty(cur->join.right);
-                case JOIN_TYPE_LEFT:
-                case JOIN_TYPE_RIGHT:
-                    return cursor_is_empty(cur->join.left);
-            }
+            return cursor_is_empty(cur->join.left) || cursor_is_empty(cur->join.right);
         }
         case CURSOR_WHERE: {
-            return cursor_is_empty(cur);
+            return cursor_is_empty(cur->where.base);
         }
     }
-    assert(false);
-    return 0;
 }
 
-void cursor_delete(cursor_t cur, char *alias) {
+void cursor_delete(cursor_t cur, size_t table_idx) {
     assert(cur != NULL);
     switch (cur->type) {
         case CURSOR_FROM: {
-            if (0 == strcmp(alias, cur->from.alias)) {
+            if (cur->from.table_idx == table_idx) {
                 pool_iterator_delete(cur->from.it);
             }
             return;
         }
         case CURSOR_JOIN: {
-            cursor_delete(cur->join.left, alias);
-            cursor_delete(cur->join.right, alias);
+            cursor_delete(cur->join.left, table_idx);
+            cursor_delete(cur->join.right, table_idx);
             return;
         }
         case CURSOR_WHERE: {
-            cursor_delete(cur->where.base, alias);
+            cursor_delete(cur->where.base, table_idx);
             return;
         }
     }
 }
 
-row_set_t cursor_get(cursor_t cur) {
-    assert(cur != NULL);
+static row_value cursor_from_get_row(cursor_t cur) {
+    assert(cur != NULL && cur->type == CURSOR_FROM);
+    buffer_t buffer = pool_iterator_get(cur->from.it);
+    row_value value = row_deserialize(cur->from.table->scheme, buffer);
+    buffer_free(&buffer);
+    return value;
+}
+
+column cursor_get_column(cursor_t cur, column_description description) {
+    assert(cur != NULL && description.type == COLUMN_DESC_INDEX);
+    if (cursor_is_empty(cur)) {
+        return (column) {0};
+    }
     switch (cur->type) {
         case CURSOR_FROM: {
-            table_scheme *scheme = cur->from.table->scheme;
-            row_value row = row_deserialize(scheme, pool_iterator_get(cur->from.it));
-            return row_set_from(cur->from.alias, row, scheme);
+            if (cur->from.table_idx == description.index.table_idx) {
+                // TODO: Add caching of rows
+                row_value row = cursor_from_get_row(cur);
+                column_type type = cur->from.table->scheme->columns[description.index.column_idx].type;
+                column_value value;
+                if (type == COLUMN_TYPE_STRING) {
+                    value.val_string = string_copy(row->values[description.index.column_idx].val_string);
+                } else {
+                    value = row->values[description.index.column_idx];
+                }
+                row_value_free(cur->from.table->scheme, row);
+                return (column) {
+                        .type = type,
+                        .value = value
+                };
+            }
+            return (column) {0};
         }
         case CURSOR_JOIN: {
-            row_set_t right_set = cursor_get(cur->join.right);
-            row_set_t left_set = cursor_get(cur->join.left);
-            if (right_set == NULL || left_set == NULL) {
-                MAP_FREE(right_set);
-                MAP_FREE(left_set);
-                return NULL;
+            column left_column = cursor_get_column(cur->join.left, description);
+            column right_column = cursor_get_column(cur->join.right, description);
+            // both can't be full and both can't be empty
+            if (left_column.type != 0) {
+                assert(right_column.type == 0);
+                return left_column;
+            } else {
+                assert(right_column.type != 0);
+                assert(left_column.type == 0);
+                return right_column;
             }
-            return row_set_merge(&right_set, &left_set);
         }
         case CURSOR_WHERE: {
-            return cursor_get(cur->where.base);
+            return cursor_get_column(cur->where.base, description);
         }
     }
-    return NULL;
 }
 
 static void cursor_restart_from(cursor_t cur) {
@@ -131,51 +222,17 @@ static void cursor_restart_from(cursor_t cur) {
     cur->from.it = pool_iterator(cur->from.table->data_pool);
 }
 
-static void cursor_restart_join_inner(cursor_t cur) {
+static void cursor_restart_join(cursor_t cur) {
     cursor_restart(cur->join.left);
     cursor_restart(cur->join.right);
-    if (!join_condition_check(cur->join.info, cursor_get(cur))) {
+    if (!join_condition_check(&(cur->join.condition), cur)) {
         cursor_next(cur);
-    }
-}
-
-bool cursor_join_left_find_next(cursor_t cur) {
-    while (!cursor_is_empty(cur->join.left)) {
-        cur->join.left_join.val2 = cursor_get(cur->join.left);
-        if (join_condition_check(cur->join.info, cursor_get(cur))) {
-            return true;
-        }
-        cursor_next(cur->join.right);
-    }
-    return false;
-}
-
-static void cursor_restart_join_left(cursor_t cur) {
-    cur->join.left_join.found = false;
-    MAP_FREE(cur->join.left_join.val1);
-    MAP_FREE(cur->join.left_join.val2);
-    if (!cursor_is_empty(cur->join.left)) {
-        cur->join.left_join.val1 = cursor_get(cur->join.left);
-        if (cursor_join_left_find_next(cur)) {
-            return;
-        }
-        MAP_FREE(cur->join.left_join.val2);
-    }
-}
-
-static void cursor_restart_join(cursor_t cur) {
-    switch (cur->join.info.type) {
-        case JOIN_TYPE_INNER:
-            cursor_restart_join_inner(cur);
-        case JOIN_TYPE_LEFT:
-        case JOIN_TYPE_RIGHT:
-            cursor_restart_join_left(cur);
     }
 }
 
 static void cursor_restart_where(cursor_t cur) {
     cursor_restart(cur->where.base);
-    while (!where_condition_check(cur->where.condition, cursor_get(cur))) {
+    while (!where_condition_check(cur->where.condition, cur)) {
         cursor_next(cur->where.base);
     }
 }
@@ -202,7 +259,7 @@ static void cursor_next_from(cursor_t cur) {
     pool_iterator_next(cur->from.it);
 }
 
-static void cursor_next_join_inner(cursor_t cur) {
+static void cursor_next_join(cursor_t cur) {
     if (cursor_is_empty(cur)) {
         return;
     }
@@ -212,7 +269,7 @@ static void cursor_next_join_inner(cursor_t cur) {
         cursor_restart(cur->join.right);
     }
     while (!cursor_is_empty(cur->join.left) && !cursor_is_empty(cur->join.right)) {
-        if (join_condition_check(cur->join.info, cursor_get(cur))) {
+        if (join_condition_check(&(cur->join.condition), cur)) {
             break;
         }
         cursor_next(cur->join.right);
@@ -223,45 +280,10 @@ static void cursor_next_join_inner(cursor_t cur) {
     }
 }
 
-static void cursor_next_join_left(cursor_t cur) {
-    if (cursor_is_empty(cur)) {
-        return;
-    }
-    if (cursor_is_empty(cur->join.right)) {
-        cursor_next(cur->join.left);
-        if (cursor_is_empty(cur)) {
-            return;
-        }
-        cursor_restart(cur->join.right);
-        MAP_FREE(cur->join.left_join.val1);
-        cur->join.left_join.val1 = cursor_get(cur->join.left);
-        if (cursor_join_left_find_next(cur)) {
-            return;
-        }
-        MAP_FREE(cur->join.left_join.val2);
-    } else {
-        cursor_next(cur->join.right);
-        if (!cursor_join_left_find_next(cur)) {
-            cursor_next(cur);
-        }
-    }
-}
-
-static void cursor_next_join(cursor_t cur) {
-    switch (cur->join.info.type) {
-        case JOIN_TYPE_INNER:
-            cursor_next_join_inner(cur);
-        case JOIN_TYPE_LEFT:
-        case JOIN_TYPE_RIGHT:
-            cursor_next_join_left(cur);
-    }
-}
-
 static void cursor_next_where(cursor_t cur) {
     cursor_t base = cur->where.base;
     cursor_next(base);
-    while (!cursor_is_empty(base) &&
-           !where_condition_check(cur->where.condition, cursor_get(cur))) {
+    while (!cursor_is_empty(base) && !where_condition_check(cur->where.condition, cur)) {
         cursor_next(base);
     }
 }
@@ -284,5 +306,68 @@ void cursor_next(cursor_t cur) {
     }
 }
 
-// TODO: Implement
-// void cursor_update(cursor_t cur, char *alias, updater_t *updater);
+void cursor_update(cursor_t cur, size_t table_idx, updater_builder_t updater) {
+    assert(cur != NULL);
+    switch (cur->type) {
+        case CURSOR_FROM: {
+            if (cur->from.table_idx == table_idx) {
+                row_value value = cursor_from_get_row(cur);
+                updater_builder_update(updater, cur->from.table->scheme, value);
+                buffer_t serialized = row_serialize(cur->from.table->scheme, value);
+                row_value_free(cur->from.table->scheme, value);
+                pool_append(cur->from.table->data_pool, serialized);
+                pool_iterator_delete(cur->from.it);
+                buffer_free(&serialized);
+            }
+            return;
+        }
+        case CURSOR_JOIN: {
+            cursor_update(cur->join.left, table_idx, updater);
+            cursor_update(cur->join.right, table_idx, updater);
+            return;
+        }
+        case CURSOR_WHERE: {
+            cursor_update(cur->where.base, table_idx, updater);
+            return;
+        }
+    }
+}
+
+void cursor_flush(cursor_t cur) {
+    assert(cur != NULL);
+    switch (cur->type) {
+        case CURSOR_FROM: {
+            pool_flush(cur->from.table->data_pool);
+            return;
+        }
+        case CURSOR_JOIN: {
+            cursor_flush(cur->join.left);
+            cursor_flush(cur->join.right);
+            return;
+        }
+        case CURSOR_WHERE: {
+            cursor_flush(cur->where.base);
+            return;
+        }
+    }
+}
+
+void cursor_free(cursor_t cur) {
+    if (NULL == cur) {
+        return;
+    }
+    switch (cur->type) {
+        case CURSOR_FROM:
+            table_free(&(cur->from.table));
+            pool_iterator_free(&(cur->from.it));
+        case CURSOR_JOIN:
+            cursor_free(cur->join.right);
+            cursor_free(cur->join.left);
+            break;
+        case CURSOR_WHERE:
+            where_condition_free(cur->where.condition);
+            cursor_free(cur->where.base);
+            break;
+    }
+    free(cur);
+}

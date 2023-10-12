@@ -329,7 +329,9 @@ heap_it *heap_iterator(heap_t *heap) {
 }
 
 void heap_iterator_free(heap_it *it) {
-    assert(NULL != it);
+    if (NULL == it) {
+        return;
+    }
     if (it->record_buffer != NULL) {
         buffer_free(&(it->record_buffer));
     }

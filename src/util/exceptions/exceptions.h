@@ -22,6 +22,7 @@ enum {
     POOL_EXCEPTION,
     DATABASE_EXCEPTION,
     TABLE_ALREADY_EXISTS,
+    TRANSLATION_EXCEPTION,
 };
 
 // When below a TRY block in the call stack

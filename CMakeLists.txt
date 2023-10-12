@@ -28,9 +28,7 @@ add_executable(llp_lab1
         src/database/database.h
         src/database/cursor/cursor.h
         src/database/cursor/cursor.c
-        src/database/query/where.h
-        src/database/table/row.h
-        src/database/table/row.c
+        src/database/query/where_condition.h
         src/util/vector/vector.h
         src/util/vector/vector.c
         src/util/defines.h
@@ -43,20 +41,18 @@ add_executable(llp_lab1
         src/util/exceptions/exceptions.c
         src/util/exceptions/exceptions.h
         test/test_map.c
-        src/database/query/join.h
-        src/database/query/row_set.h
-        src/database/query/join.c
-        src/database/query/row_set.c
-        src/database/query/where.c
+        src/database/query/join_builder.h
+        src/database/query/join_builder.c
+        src/database/query/where_condition.c
+        src/util/map/set.h
+        src/util/string.c
+        src/util/string.h
+        src/database/query/updater_builder.h
+        src/database/query/updater_builder.c
+        src/database/query/scheme_builder.h
+        src/database/query/scheme_builder.c
+        src/database/query/selector_builder.h
+        src/database/query/selector_builder.c
+        src/database/query/result_view.h
+        src/database/query/result_view.c
 )
-
-if (UNIX)
-target_compile_options(llp_lab1 PRIVATE
-#        -Werror -Wall -Wextra -pedantic -Wmissing-prototypes -Wstrict-prototypes
-#        -Wno-unused-function -Wno-unused-but-set-variable
-#        -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak
-#        -fsanitize=undefined -fsanitize-address-use-after-scope
-)
-endif(UNIX)
-#target_link_directories(llp_lab1 PRIVATE "C:/Program Files/Microsoft Visual Studio/2022/Professional/VC/Tools/Llvm/x64/lib/clang/16/lib/windows")
-#target_link_libraries(llp_lab1 PRIVATE clang_rt.asan_dynamic-x86_64 clang_rt.asan_dynamic_runtime_thunk-x86_64)
