@@ -99,3 +99,37 @@ void skip_free(void *x) {
 void *skip_copy(const void *x) {
     return (void *) x;
 }
+
+size_t uint64_hash(const void *p) {
+    assert(p != NULL);
+    size_t *i = (uint64_t *) p;
+    size_t x = *i ^ hash_start();
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = (x >> 16) ^ x;
+    return x;
+}
+
+bool uint64_equals(const void *p1, const void *p2) {
+    assert(p1 != NULL && p2 != NULL);
+    uint64_t *i1 = (uint64_t *) p1;
+    uint64_t *i2 = (uint64_t *) p2;
+    return *i1 == *i2;
+}
+
+void uint64_free(void *x) {
+    free(x);
+}
+
+void* uint64_copy(const void *p) {
+    if (NULL == p) {
+        return NULL;
+    }
+    uint64_t *i = (uint64_t *) p;
+    uint64_t *res = malloc(sizeof(i));
+    if (NULL == res) {
+        return NULL;
+    }
+    *res = *i;
+    return res;
+}

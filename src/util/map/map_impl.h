@@ -28,6 +28,14 @@ void skip_free(void *x);
 
 void* skip_copy(const void *x);
 
+size_t uint64_hash(const void *x);
+
+bool uint64_equals(const void *x1, const void *x2);
+
+void uint64_free(void *x);
+
+void* uint64_copy(const void *x);
+
 // INT, STR
 DECLARE_MAP(int*, char*, int_str_map_t)
 #define MAP_NEW_INT_STR(C) MAP_NEW(int_str_map_t, C, int_hash, int_equals, int_copy, int_free, str_copy, str_free)
@@ -51,5 +59,9 @@ DECLARE_MAP(char*, str_int_map_t, str_map_str_int_map_t)
 // STR, VOID
 DECLARE_MAP(char*, void*, str_void_map_t)
 #define MAP_NEW_STR_VOID(C) MAP_NEW(str_void_map_t, C, str_hash, str_equals, str_copy, str_free, skip_copy, skip_free)
+
+// UINT64_T, VOID
+DECLARE_MAP(uint64_t *, void*, uint64_void_map_t)
+#define MAP_NEW_UINT64_VOID(C) MAP_NEW(uint64_void_map_t, C, uint64_hash, uint64_equals, uint64_copy, uint64_free, skip_copy, skip_free)
 
 #endif //LLP_LAB1_MAP_IMPL_H

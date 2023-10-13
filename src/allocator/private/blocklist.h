@@ -5,7 +5,10 @@
 #ifndef LLP_LAB1_BLOCKLIST_H
 #define LLP_LAB1_BLOCKLIST_H
 
+#define BLOCK_LIST_CAPACITY 100
+
 #include <stdbool.h>
+#include "util/map/map_impl.h"
 
 typedef struct block_list_node block_list_node;
 
@@ -34,6 +37,8 @@ struct block_list_node {
 typedef struct {
     block_list_node *head;
     block_list_node *tail;
+    size_t size;
+    uint64_void_map_t map;
 } block_list;
 
 typedef struct {
@@ -52,5 +57,7 @@ bool block_list_iterator_is_empty(block_list_it *it);
 void block_list_iterator_next(block_list_it *it);
 
 block *block_list_iterator_get(block_list_it *it);
+
+block_list_node *block_list_find(block_list *list, offset_t offset);
 
 #endif //LLP_LAB1_BLOCKLIST_H

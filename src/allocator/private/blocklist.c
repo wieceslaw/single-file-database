@@ -11,6 +11,7 @@
 
 block_list_node *block_list_append(block_list *list, block *block) {
     assert(NULL != list && NULL != block);
+    list->size++;
     block_list_node *node = malloc(sizeof(block_list_node));
     if (NULL == node) {
         return NULL;
@@ -27,11 +28,14 @@ block_list_node *block_list_append(block_list *list, block *block) {
         node->prev = last_node;
     }
     list->tail = node;
+    MAP_PUT(list->map, &(block->file_offset), node);
     return node;
 }
 
 bool block_list_delete(block_list *list, block_list_node *node) {
     assert(NULL != list && NULL != node);
+    list->size--;
+    MAP_REMOVE(list->map, &(node->file_offset));
     block_list_node *prev = node->prev;
     block_list_node *next = node->next;
     if (NULL != prev && NULL != next) {
@@ -79,4 +83,10 @@ block *block_list_iterator_get(block_list_it *it) {
         return NULL;
     }
     return it->node->block;
+}
+
+block_list_node *block_list_find(block_list *list, offset_t offset) {
+    assert(NULL != list);
+    block_list_node* node = MAP_GET(list->map, &offset);
+    return node;
 }
