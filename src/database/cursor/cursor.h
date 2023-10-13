@@ -19,17 +19,22 @@ typedef enum {
 
 typedef struct cursor {
     cursor_type type;
+    void (*free)(struct cursor* cur);
+    bool (*is_empty)(struct cursor* cur);
+    void (*next)(struct cursor* cur);
+    void (*restart)(struct cursor* cur);
+    void (*flush)(struct cursor* cur);
+    void (*delete)(struct cursor* cur, size_t table_idx);
+    void (*update)(struct cursor* cur, size_t table_idx, updater_builder_t updater);
+    column_t (*get)(struct cursor* cur, size_t table_idx, size_t column_idx);
     union {
         struct {
             table_t table;
             pool_it it;
             size_t table_idx;
+            row_t cached_row;
         } from;
         struct {
-            // left_table_idx
-            // left_column_idx
-            // right_table_idx
-            // right_column_idx
             join_condition condition;
             struct cursor *left;
             struct cursor *right;
@@ -41,28 +46,37 @@ typedef struct cursor {
     };
 } *cursor_t;
 
-// TODO: Remake using index conditions
+/// THROWS: [EXCEPTION]
+cursor_t cursor_init_from(table_t table, size_t table_idx);
 
-cursor_t cursor_init_from(table_t table);
-
+/// THROWS: [EXCEPTION]
 cursor_t cursor_init_join(cursor_t left, cursor_t right, join_condition condition);
 
+/// THROWS: [EXCEPTION]
 cursor_t cursor_init_where(cursor_t base, where_condition *condition);
 
-void cursor_free(cursor_t cur);
+/// THROWS: [EXCEPTION]
+void cursor_free(cursor_t *cur);
 
+/// THROWS: [EXCEPTION]
 bool cursor_is_empty(cursor_t cur);
 
+/// THROWS: [EXCEPTION]
 void cursor_next(cursor_t cur);
 
+/// THROWS: [EXCEPTION]
 void cursor_restart(cursor_t cur);
 
-column cursor_get_column(cursor_t cur, column_description description);
+/// THROWS: [EXCEPTION]
+void cursor_flush(cursor_t cur);
 
+/// THROWS: [EXCEPTION]
+column_t cursor_get(cursor_t cur, size_t table_idx, size_t column_idx);
+
+/// THROWS: [EXCEPTION]
 void cursor_delete(cursor_t cur, size_t table_idx);
 
+/// THROWS: [EXCEPTION]
 void cursor_update(cursor_t cur, size_t table_idx, updater_builder_t updater);
-
-void cursor_flush(cursor_t cur);
 
 #endif //LLP_LAB1_CURSOR_H

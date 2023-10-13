@@ -13,6 +13,7 @@
 #include "database/query/updater_builder.h"
 #include "database/query/result_view.h"
 #include "database/query/selector_builder.h"
+#include "database/query/row_batch.h"
 
 typedef enum database_result {
     DATABASE_RESULT_SUCCESS = 0,
@@ -45,9 +46,9 @@ void database_free(database_t database);
 
 void database_create_table(database_t database, table_scheme *table_scheme);
 
-void database_delete_table(database_t database, const char *table_name);
+void database_delete_table(database_t database, char *table_name);
 
-database_result database_insert(database_t database, const char *table_name, row_value row);
+database_result database_insert(database_t database, char * name, batch_builder_t batch);
 
 database_result database_delete(database_t database, query_t query);
 

@@ -22,7 +22,7 @@ typedef struct list_iterator *list_it;
 
 typedef void *list_value;
 
-// THROWS: [MALLOC_EXCEPTION]
+/// THROWS: [MALLOC_EXCEPTION]
 list_t list_init(void);
 
 void list_free(list_t *list_ptr);
@@ -33,10 +33,10 @@ size_t list_size(list_t list);
 
 bool list_is_empty(list_t list);
 
-// THROWS: [MALLOC_EXCEPTION]
+/// THROWS: [MALLOC_EXCEPTION]
 void list_append_head(list_t list, list_value value);
 
-// THROWS: [MALLOC_EXCEPTION]
+/// THROWS: [MALLOC_EXCEPTION]
 void list_append_tail(list_t list, list_value value);
 
 void list_remove_head(list_t list);

@@ -14,7 +14,6 @@
 #define MAP_EXTENSION_RATIO 2
 #define MAP_LOAD_FACTOR 0.75
 
-// TODO: Remake for generic
 #define FOR_MAP(M, E, CODE) { \
     map_it __it = map_get_iterator((map_t)M); \
     while (!map_it_is_empty(__it)) { \
@@ -51,8 +50,6 @@ typedef struct map_iterator *map_it;
 #define MAP_EXISTS_SIGNATURE(M, K, V, name) bool(*name)(M, K)
 
 #define MAP_REMOVE_SIGNATURE(M, K, V, name) void(*name)(M, K)
-
-// TODO: Implement generic iterator functions
 
 typedef struct generic_map {
     MAP_PUT_SIGNATURE(struct generic_map*, map_key, map_value, put);

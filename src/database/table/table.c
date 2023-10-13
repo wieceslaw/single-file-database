@@ -23,6 +23,8 @@ void table_scheme_free(table_scheme *scheme) {
     }
     free(scheme->columns);
     scheme->columns = NULL;
+    free(scheme->name);
+    scheme->name = NULL;
     free(scheme);
 }
 
@@ -43,12 +45,12 @@ void table_free(table_t *table_ptr) {
     })
 }
 
-static uint64_t row_size(const table_scheme *const scheme, row_value row) {
-    assert(scheme != NULL && row != NULL);
-    uint64_t size = sizeof(scheme->size);
-    for (uint32_t i = 0; i < scheme->size; i++) {
-        table_scheme_column scheme_col = scheme->columns[i];
-        switch (scheme_col.type) {
+static uint64_t row_size(row_t row) {
+    assert(row.columns != NULL);
+    size_t size = 0;
+    for (uint32_t i = 0; i < row.size; i++) {
+        column_t column = row.columns[i];
+        switch (column.type) {
             case COLUMN_TYPE_INT:
                 size += sizeof(b32_t);
                 break;
@@ -56,7 +58,7 @@ static uint64_t row_size(const table_scheme *const scheme, row_value row) {
                 size += sizeof(b32_t);
                 break;
             case COLUMN_TYPE_STRING:
-                size += strlen(row->values[i].val_string);
+                size += strlen(column.value.val_string);
                 break;
             case COLUMN_TYPE_BOOL:
                 size += sizeof(b8_t);
@@ -66,42 +68,43 @@ static uint64_t row_size(const table_scheme *const scheme, row_value row) {
     return size;
 }
 
-void row_value_free(const table_scheme *const scheme, row_value row) {
-    for (uint32_t i = 0; i < scheme->size; i++) {
-        table_scheme_column scheme_col = scheme->columns[i];
-        column_value col = row->values[i];
-        switch (scheme_col.type) {
+void row_free(row_t row) {
+    if (NULL == row.columns) {
+        return;
+    }
+    for (uint32_t i = 0; i < row.size; i++) {
+        column_t col = row.columns[i];
+        switch (col.type) {
             case COLUMN_TYPE_INT:
             case COLUMN_TYPE_FLOAT:
             case COLUMN_TYPE_BOOL:
                 break;
             case COLUMN_TYPE_STRING:
-                free(col.val_string);
+                free(col.value.val_string);
         }
     }
-    free(row->values);
-    free(row);
+    free(row.columns);
+    row.columns = NULL;
 }
 
 // THROWS: [MALLOC_EXCEPTION]
-buffer_t row_serialize(const table_scheme *const scheme, row_value row) {
-    assert(scheme != NULL && row != NULL);
-    buffer_t buffer = buffer_init(row_size(scheme, row));
-    for (uint32_t i = 0; i < scheme->size; i++) {
-        table_scheme_column scheme_col = scheme->columns[i];
-        column_value col = row->values[i];
-        switch (scheme_col.type) {
+buffer_t row_serialize(row_t row) {
+    assert(row.columns != NULL);
+    buffer_t buffer = buffer_init(row_size(row));
+    for (uint32_t i = 0; i < row.size; i++) {
+        column_t col = row.columns[i];
+        switch (col.type) {
             case COLUMN_TYPE_INT:
-                buffer_write_b32(buffer, (b32_t) {.i32 = col.val_int});
+                buffer_write_b32(buffer, (b32_t) {.i32 = col.value.val_int});
                 break;
             case COLUMN_TYPE_FLOAT:
-                buffer_write_b32(buffer, (b32_t) {.f32 = col.val_float});
+                buffer_write_b32(buffer, (b32_t) {.f32 = col.value.val_float});
                 break;
             case COLUMN_TYPE_STRING:
-                buffer_write_string(buffer, col.val_string);
+                buffer_write_string(buffer, col.value.val_string);
                 break;
             case COLUMN_TYPE_BOOL:
-                buffer_write_b8(buffer, (b8_t) {.ui8 = col.val_bool});
+                buffer_write_b8(buffer, (b8_t) {.ui8 = col.value.val_bool});
                 break;
         }
     }
@@ -109,29 +112,32 @@ buffer_t row_serialize(const table_scheme *const scheme, row_value row) {
 }
 
 // THROWS: [MALLOC_EXCEPTION]
-row_value row_deserialize(const table_scheme *const scheme, buffer_t buffer) {
+row_t row_deserialize(const table_scheme *scheme, buffer_t buffer) {
     assert(scheme != NULL && buffer != NULL);
-    row_value row = rmalloc(sizeof(struct row_value));
-    row->values = rmalloc(sizeof(column_value) * scheme->size);
+    column_t *columns = rmalloc(sizeof(column_t) * scheme->size);
     for (uint32_t i = 0; i < scheme->size; i++) {
         table_scheme_column scheme_col = scheme->columns[i];
         switch (scheme_col.type) {
             case COLUMN_TYPE_INT:
-                row->values[i].val_int = buffer_read_b32(buffer).i32;
+                columns[i].value.val_int = buffer_read_b32(buffer).i32;
                 break;
             case COLUMN_TYPE_FLOAT:
-                row->values[i].val_float = buffer_read_b32(buffer).f32;
+                columns[i].value.val_float = buffer_read_b32(buffer).f32;
                 break;
             case COLUMN_TYPE_STRING: {
-                row->values[i].val_string = buffer_read_string(buffer);
+                columns[i].value.val_string = buffer_read_string(buffer);
                 break;
             }
             case COLUMN_TYPE_BOOL:
-                row->values[i].val_bool = buffer_read_b8(buffer).ui8;
+                columns[i].value.val_bool = buffer_read_b8(buffer).ui8;
                 break;
         }
+        columns[i].type = scheme_col.type;
     }
-    return row;
+    return (row_t) {
+        .size = scheme->size,
+        .columns = columns
+    };
 }
 
 column_description table_column_of(char *table_name, char *column_name) {
@@ -141,5 +147,33 @@ column_description table_column_of(char *table_name, char *column_name) {
             .table_name = string_copy(table_name),
             .column_name = string_copy(column_name)
         }
+    };
+}
+
+column_t column_int(int32_t value) {
+    return (column_t) {
+        .type = COLUMN_TYPE_INT,
+        .value = {.val_int = value}
+    };
+}
+
+column_t column_float(float value) {
+    return (column_t) {
+            .type = COLUMN_TYPE_FLOAT,
+            .value = {.val_float = value}
+    };
+}
+
+column_t column_string(char *value) {
+    return (column_t) {
+            .type = COLUMN_TYPE_STRING,
+            .value = {.val_string = value}
+    };
+}
+
+column_t column_bool(bool value) {
+    return (column_t) {
+            .type = COLUMN_TYPE_BOOL,
+            .value = {.val_bool = value}
     };
 }

@@ -128,7 +128,7 @@ void where_condition_free(where_condition *condition) {
     free(condition);
 }
 
-bool columns_equals(column first, column second) {
+bool columns_equals(column_t first, column_t second) {
     assert(first.type == second.type);
     switch (first.type) {
         case COLUMN_TYPE_INT:

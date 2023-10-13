@@ -12,7 +12,7 @@ void result_view_free(result_view_t *view_ptr) {
         return;
     }
     free(view->view_selector);
-    cursor_free(view->cursor);
+    cursor_free(&(view->cursor));
     table_scheme_free(view->view_scheme);
     free(view);
     *view_ptr = NULL;
@@ -22,15 +22,15 @@ bool result_view_is_empty(result_view_t view) {
     return cursor_is_empty(view->cursor);
 }
 
-row_value result_view_get(result_view_t view) {
-    // TODO: Remove excess allocation
+row_t result_view_get(result_view_t view) {
     size_t size = view->view_scheme->size;
-    row_value result = rmalloc(sizeof(struct row_value));
-    result->values = rmalloc(sizeof(column_value) * size);
+    row_t result;
+    result.size = size;
+    result.columns = rmalloc(sizeof(column_t) * size);
     for (size_t i = 0; i < size; i++) {
         column_description description = view->view_selector[i];
-        column col = cursor_get_column(view->cursor, description);
-        result->values[i] = col.value;
+        column_t col = cursor_get(view->cursor, description.index.table_idx, description.index.column_idx);
+        result.columns[i] = col;
     }
     return result;
 }

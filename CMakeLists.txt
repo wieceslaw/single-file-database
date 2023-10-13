@@ -55,4 +55,10 @@ add_executable(llp_lab1
         src/database/query/selector_builder.c
         src/database/query/result_view.h
         src/database/query/result_view.c
+        test/test_database.c
+        src/database/query/row_batch.h
+        src/database/query/row_batch.c
+        src/database/cursor/cursor_from.c
+        src/database/cursor/cursor_join.c
+        src/database/cursor/cursor_where.c
 )

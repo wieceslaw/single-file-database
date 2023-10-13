@@ -15,7 +15,7 @@ typedef struct column_updater {
         size_t idx;
         char* name;
     } target;
-    column new_value;
+    column_t new_value;
 } column_updater;
 
 typedef struct updater_builder {
@@ -23,7 +23,7 @@ typedef struct updater_builder {
 } *updater_builder_t;
 
 /// THROWS: [MALLOC_EXCEPTION]
-column_updater *column_updater_of(char* target, column new_value);
+column_updater *column_updater_of(char* target, column_t new_value);
 
 /// THROWS: [MALLOC_EXCEPTION]
 updater_builder_t updater_builder_init();
@@ -35,6 +35,6 @@ void updater_builder_free(updater_builder_t* updater_ptr);
 /// THROWS: [MALLOC_EXCEPTION]
 void updater_builder_add(updater_builder_t updater, column_updater *);
 
-void updater_builder_update(updater_builder_t updater, table_scheme *scheme, row_value value);
+row_t updater_builder_update(updater_builder_t updater, row_t row);
 
 #endif //LLP_LAB1_UPDATER_BUILDER_H

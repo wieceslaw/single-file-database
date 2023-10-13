@@ -9,28 +9,29 @@
 #include "pool/pool.h"
 #include "stddef.h"
 
-typedef enum {
+typedef enum column_type {
     COLUMN_TYPE_INT = 1,
     COLUMN_TYPE_FLOAT = 2,
     COLUMN_TYPE_STRING = 3,
     COLUMN_TYPE_BOOL = 4
 } column_type;
 
-typedef union {
+typedef union column_value {
     float val_float;
     int32_t val_int;
     uint8_t val_bool;
     char *val_string;
 } column_value;
 
-typedef struct row_value {
-    column_value *values;
-} *row_value;
-
-typedef struct {
+typedef struct column {
     column_type type;
     column_value value;
-} column;
+} column_t;
+
+typedef struct row {
+    column_t *columns;
+    size_t size;
+} row_t;
 
 typedef enum column_description_type {
     COLUMN_DESC_NAME = 0,
@@ -68,16 +69,24 @@ typedef struct table {
     pool_t *data_pool;
 } *table_t;
 
-void row_value_free(const table_scheme *const scheme, row_value row);
+void row_free(row_t row);
 
-buffer_t row_serialize(const table_scheme *scheme, row_value row);
+buffer_t row_serialize(row_t row);
 
-row_value row_deserialize(const table_scheme *scheme, buffer_t buffer);
+row_t row_deserialize(const table_scheme *scheme, buffer_t buffer);
 
 void table_scheme_free(table_scheme *scheme);
 
 void table_free(table_t *table);
 
 column_description table_column_of(char *table_name, char *column_name);
+
+column_t column_int(int32_t value);
+
+column_t column_float(float value);
+
+column_t column_string(char *value);
+
+column_t column_bool(bool value);
 
 #endif //LLP_LAB1_TABLE_H

@@ -52,7 +52,7 @@ table_scheme *scheme_builder_build(scheme_builder_t builder) {
     table_scheme *scheme = rmalloc(sizeof(table_scheme));
     scheme->size = list_size(builder->column_list);
     scheme->pool_offset = 0;
-    scheme->name = builder->name;
+    scheme->name = string_copy(builder->name);
     scheme->columns = rmalloc(sizeof(table_scheme_column) * scheme->size);
     int i = 0;
     FOR_LIST(builder->column_list, it, {

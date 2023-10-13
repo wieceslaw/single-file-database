@@ -569,9 +569,9 @@ heap_result heap_flush(heap_t *heap) {
         if (heap_flush_delete(heap) != HEAP_OP_SUCCESS) {
             return HEAP_OP_ERROR;
         }
-    }
-    if (heap_shrink_list(heap) != HEAP_OP_SUCCESS) {
-        return HEAP_OP_ERROR;
+        if (heap_shrink_list(heap) != HEAP_OP_SUCCESS) {
+            return HEAP_OP_ERROR;
+        }
     }
     return HEAP_OP_SUCCESS;
 }

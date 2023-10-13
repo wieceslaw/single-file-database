@@ -9,6 +9,8 @@
 #include "allocator/allocator.h"
 #include "blocklist.h"
 
+#define NEW_SIZE(SIZE) ((uint32_t) (((double) SIZE) * 1.5))
+
 typedef PACK(
         struct {
             offset_t next;
@@ -456,7 +458,8 @@ allocator_result allocator_reserve_pages(allocator_t *allocator_t, uint32_t n) {
     if (count >= n) {
         return ALLOCATOR_SUCCESS;
     }
-    uint32_t added = n - count;
+    uint32_t needed = n - count;
+    uint32_t added = MAX(needed, NEW_SIZE(count));
     offset_t old_size = allocator_t->liFileSize.QuadPart;
     offset_t new_size =  PAGE_SIZE * (uint64_t) added + old_size;
     if (clear_mapping(allocator_t) != ALLOCATOR_SUCCESS) {
@@ -651,12 +654,14 @@ file_status allocator_free(allocator_t *allocator) {
 
 allocator_result allocator_reserve_pages(allocator_t *allocator, uint32_t n) {
     assert(NULL != allocator);
-    if (allocator_get_header(allocator)->free_pages_count >= n) {
+    uint32_t old_count = allocator_get_header(allocator)->free_pages_count;
+    if (old_count >= n) {
         return ALLOCATOR_SUCCESS;
     }
-    uint32_t added = n - allocator_get_header(allocator)->free_pages_count;
+    uint32_t diff = n - old_count;
+    uint32_t new_count = MAX(diff, NEW_SIZE(old_count));
     offset_t old_size = allocator->file_size;
-    offset_t new_size = old_size + (PAGE_SIZE * added);
+    offset_t new_size = old_size + (PAGE_SIZE * new_count);
     if (ftruncate(allocator->fd, new_size) != 0) {
         return ALLOCATOR_UNABLE_EXTEND;
     }

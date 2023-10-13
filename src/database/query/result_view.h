@@ -18,7 +18,7 @@ void result_view_free(result_view_t *view_ptr);
 
 bool result_view_is_empty(result_view_t view);
 
-row_value result_view_get(result_view_t view);
+row_t result_view_get(result_view_t view);
 
 void result_view_next(result_view_t view);
 

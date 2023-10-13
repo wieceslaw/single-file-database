@@ -48,4 +48,8 @@ DECLARE_MAP(char*, int*, str_int_map_t)
 DECLARE_MAP(char*, str_int_map_t, str_map_str_int_map_t)
 #define MAP_NEW_STR_MAP_STR_INT(C) MAP_NEW(str_map_str_int_map_t, C, str_hash, str_equals, str_copy, str_free, skip_copy, skip_free)
 
+// STR, VOID
+DECLARE_MAP(char*, void*, str_void_map_t)
+#define MAP_NEW_STR_VOID(C) MAP_NEW(str_void_map_t, C, str_hash, str_equals, str_copy, str_free, skip_copy, skip_free)
+
 #endif //LLP_LAB1_MAP_IMPL_H

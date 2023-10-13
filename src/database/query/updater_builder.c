@@ -8,7 +8,7 @@
 #include "util/string.h"
 
 /// THROWS: [MALLOC_EXCEPTION]
-column_updater *column_updater_of(char* target, column new_value) {
+column_updater *column_updater_of(char* target, column_t new_value) {
     column_updater *updater = rmalloc(sizeof(column_updater));
     updater->new_value = new_value;
     updater->target.name = target;
@@ -42,20 +42,24 @@ void updater_builder_add(updater_builder_t updater, column_updater *col_updater)
     list_append_tail(updater->column_updaters, col_updater);
 }
 
-void updater_builder_update(updater_builder_t updater, table_scheme *scheme, row_value value) {
+/// THROWS: [MALLOC_EXCEPTION]
+row_t updater_builder_update(updater_builder_t updater, row_t row) {
+    row_t copy;
+    copy.size = row.size;
+    copy.columns = rmalloc(sizeof(column_t) * copy.size);
     FOR_LIST(updater->column_updaters, it, {
-        column_updater *col_upd = list_it_get(it);
-        size_t idx = col_upd->target.idx;
-        assert(col_upd->translated);
-        column_value new_value;
-        if (scheme->columns[idx].type == COLUMN_TYPE_STRING) {
-            free(value->values[col_upd->target.idx].val_string);
-            new_value.val_string = string_copy(col_upd->new_value.value.val_string);
+        column_updater *col_updater = list_it_get(it);
+        assert(col_updater->translated);
+        size_t column_idx = col_updater->target.idx;
+        column_t column = row.columns[column_idx];
+        if (column.type == COLUMN_TYPE_STRING) {
+            copy.columns[column_idx].value.val_string = string_copy(col_updater->new_value.value.val_string);
         } else {
-            new_value = col_upd->new_value.value;
+            copy.columns[column_idx].value = col_updater->new_value.value;
         }
-        value->values[col_upd->target.idx] = new_value;
+        copy.columns[column_idx].type = column.type;
     })
+    return copy;
 }
 
 updater_builder_t updater_builder_translate(updater_builder_t old_updater, str_int_map_t map) {
