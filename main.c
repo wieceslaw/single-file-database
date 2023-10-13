@@ -28,12 +28,15 @@ void print_row(row_t row) {
 }
 
 void print_view(result_view_t view) {
+    int count = 0;
     while (!result_view_is_empty(view)) {
         row_t row = result_view_get(view);
-        // print_row(row);
+         print_row(row);
         row_free(row);
         result_view_next(view);
+        count++;
     }
+    printf("count: %d \n", count);
 }
 
 int main(void) {
@@ -49,13 +52,14 @@ int main(void) {
 
 //    test_insert(db, 10000);
 
-    clock_t begin = clock();
-    test_select(db, "user");
-    clock_t end = clock();
-    double time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
-    printf("time: %f \n", time_spent);
+//    clock_t begin = clock();
+//    test_select(db, "user");
+//    clock_t end = clock();
+//    double time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
+//    printf("time: %f \n", time_spent);
 
-    /*
+    test_delete(db, "user");
+
     query_t query = {.table = "user", .where = NULL, .joins = NULL};
     selector_builder selector = selector_builder_init();
     selector_builder_add(selector, "user", "id");
@@ -65,7 +69,6 @@ int main(void) {
     print_view(view);
     result_view_free(&view);
     selector_builder_free(&selector);
-    */
 
     database_free(db);
     return 0;
@@ -90,16 +93,17 @@ int maind(void) {
 //    struct row_value row = {(column_value *) &columns};
 //    database_insert(db, "user", &row);
 
-//    query_t delete_query = {
-//            .table = "user",
+    query_t delete_query = {
+            .table = "user",
+            .where = NULL,
 //            .where = where_condition_compare(
 //                    COMPARE_EQ,
 //                    operand_column("user", "id"),
 //                    operand_literal_int(2)
 //            ),
-//            .joins = NULL
-//    };
-//    database_delete(db, delete_query);
+            .joins = NULL
+    };
+    database_delete(db, delete_query);
 
     query_t update_query = {
             .table = "user",

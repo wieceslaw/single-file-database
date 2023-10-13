@@ -29,12 +29,29 @@ void test_select(database_t db, char* table_name) {
     selector_builder_add(selector, "user", "id");
     selector_builder_add(selector, "user", "name");
     selector_builder_add(selector, "user", "age");
+    int count = 0;
     result_view_t view = database_select(db, query, selector);
     while (!result_view_is_empty(view)) {
         row_t row = result_view_get(view);
         row_free(row);
         result_view_next(view);
+        count++;
     }
     result_view_free(&view);
     selector_builder_free(&selector);
+    printf("count: %d \n", count);
+}
+
+void test_delete(database_t db, char *table_name) {
+    query_t delete_query = {
+        .table = "user",
+        .where = NULL,
+//            .where = where_condition_compare(
+//                    COMPARE_EQ,
+//                    operand_column("user", "id"),
+//                    operand_literal_int(2)
+//            ),
+        .joins = NULL
+    };
+    database_delete(db, delete_query);
 }

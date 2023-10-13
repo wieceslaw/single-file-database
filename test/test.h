@@ -23,4 +23,6 @@ void test_insert(database_t db, int n);
 
 void test_select(database_t db, char* table_name);
 
+void test_delete(database_t db, char *table_name);
+
 #endif //LLP_LAB1_TEST_H

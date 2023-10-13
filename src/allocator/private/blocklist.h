@@ -5,7 +5,7 @@
 #ifndef LLP_LAB1_BLOCKLIST_H
 #define LLP_LAB1_BLOCKLIST_H
 
-#define BLOCK_LIST_CAPACITY 100
+#define BLOCK_LIST_CAPACITY 500
 
 #include <stdbool.h>
 #include "util/map/map_impl.h"

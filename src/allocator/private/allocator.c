@@ -243,7 +243,7 @@ file_status allocator_init(file_settings *settings, allocator_t **allocator_ptr)
     }
     **allocator_ptr = (allocator_t) {0};
     allocator_t *allocator = *allocator_ptr;
-    allocator->block_list.map = MAP_NEW_UINT64_VOID(100);
+    allocator->block_list.map = MAP_NEW_UINT64_VOID(BLOCK_LIST_CAPACITY);
     switch (settings->open_type) {
         case FILE_OPEN_EXIST: {
             allocator->hFile = CreateFile(settings->path,
@@ -553,6 +553,7 @@ file_status allocator_init(file_settings *settings, allocator_t **allocator_ptr)
     }
     **allocator_ptr = (allocator_t) {0};
     allocator_t *allocator = *allocator_ptr;
+    allocator->list.map = MAP_NEW_UINT64_VOID(BLOCK_LIST_CAPACITY);
     switch (settings->open_type) {
         case FILE_OPEN_EXIST: {
             allocator->fd = open(settings->path, O_RDWR);
@@ -639,6 +640,7 @@ file_status allocator_free(allocator_t *allocator) {
         free(allocator);
         return FILE_ST_UNABLE_RELEASE;
     }
+    MAP_FREE(allocator->list.map);
     free(allocator);
     return FILE_ST_OK;
 }

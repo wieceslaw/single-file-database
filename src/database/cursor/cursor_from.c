@@ -58,7 +58,6 @@ static void cursor_flush_from(cursor_t cur) {
 
 static column_t cursor_get_from(cursor_t cur, size_t table_idx, size_t column_idx) {
     if (cur->from.table_idx == table_idx) {
-        // TODO: Add caching of rows
         row_t row = cursor_get_row_from(cur);
         column_t column = row.columns[column_idx];
         column_type type = column.type;
