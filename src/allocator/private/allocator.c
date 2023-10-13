@@ -475,10 +475,10 @@ allocator_result allocator_reserve_pages(allocator_t *allocator_t, uint32_t n) {
     if (!SetEndOfFile(allocator_t->hFile)) {
         return ALLOCATOR_UNABLE_EXTEND;
     }
+    allocator_t->liFileSize.QuadPart = new_size;
     if (fill_mapping(allocator_t) != ALLOCATOR_SUCCESS) {
         return ALLOCATOR_UNABLE_MAP;
     }
-    allocator_t->liFileSize.QuadPart = new_size;
     for (offset_t file_offset = old_size; file_offset < new_size; file_offset += PAGE_SIZE) {
         if (allocator_return_page(allocator_t, file_offset) != ALLOCATOR_SUCCESS) {
             return ALLOCATOR_UNABLE_EXTEND;

@@ -6,6 +6,7 @@
 #include <malloc.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "util/map/map_impl.h"
 
 void test_map(int n) {
@@ -32,8 +33,8 @@ void test_map(int n) {
     MAP_FREE(map);
 }
 
-/*
- *     for (int i = 1; i < 10; i++) {
+int main() {
+    for (int i = 1; i < 10; i++) {
         clock_t begin = clock();
         test_map(i * 1000);
         clock_t end = clock();
@@ -41,4 +42,5 @@ void test_map(int n) {
         printf("n: %d, time: %f \n", i * 1000, time_spent);
         printf("time for one op: %f \n", time_spent / (double) i);
     }
- */
+    int a = 1;
+}

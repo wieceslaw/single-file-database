@@ -293,6 +293,9 @@ static str_int_map_t table_scheme_mapping(database_t database, char* table_name)
     str_int_map_t map = NULL;
     TRY({
         scheme = database_find_table_scheme(database, table_name);
+        if (NULL == scheme) {
+            RAISE(DATABASE_RESULT_WRONG_QUERY);
+        }
         map = MAP_NEW_STR_INT(scheme->size);
         for (int i = 0; i < scheme->size; i++) {
             table_scheme_column col = scheme->columns[i];
@@ -340,13 +343,16 @@ static indexed_maps query_mapping(database_t database, query_t query) {
 }
 
 void indexed_maps_free(indexed_maps maps) {
-    assert(maps.table_maps != NULL && maps.columns_maps != NULL);
-    MAP_FREE(maps.table_maps);
-    FOR_MAP(maps.columns_maps, entry, {
-        MAP_FREE(entry->val);
-        free(entry);
-    })
-    MAP_FREE(maps.columns_maps);
+    if (maps.table_maps != NULL) {
+        MAP_FREE(maps.table_maps);
+    }
+    if (maps.columns_maps != NULL) {
+        FOR_MAP(maps.columns_maps, entry, {
+            MAP_FREE(entry->val);
+            free(entry);
+        })
+        MAP_FREE(maps.columns_maps);
+    }
 }
 
 static cursor_t query_cursor(database_t database, query_t query, indexed_maps maps) {
@@ -464,13 +470,23 @@ static column_description *create_view_selector(selector_builder selector, index
 
 result_view_t database_select(database_t database, query_t query, selector_builder selector) {
     assert(database != NULL && selector != NULL);
-    result_view_t result = rmalloc(sizeof(struct result_view));
-    indexed_maps maps = query_mapping(database, query);
-    cursor_t cur = query_cursor(database, query, maps);
-    result->cursor = cur;
-    result->view_scheme = create_view_scheme(database, selector, maps);
-    result->view_selector = create_view_selector(selector, maps);
-    indexed_maps_free(maps);
+    result_view_t result = NULL;
+    indexed_maps maps = {0};
+    cursor_t cur = NULL;
+    TRY({
+        result = rmalloc(sizeof(struct result_view));
+        maps = query_mapping(database, query);
+        cur = query_cursor(database, query, maps);
+        result->cursor = cur;
+        result->view_scheme = create_view_scheme(database, selector, maps);
+        result->view_selector = create_view_selector(selector, maps);
+        indexed_maps_free(maps);
+    }) CATCH(exception >= EXCEPTION, {
+        free(result);
+        indexed_maps_free(maps);
+        cursor_free(&cur);
+        return NULL;
+    }) FINALLY()
     return result;
 }
 

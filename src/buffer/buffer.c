@@ -3,7 +3,6 @@
 //
 
 #include <stddef.h>
-#include <malloc.h>
 #include <string.h>
 #include <assert.h>
 #include "buffer/buffer.h"
