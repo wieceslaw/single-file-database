@@ -48,7 +48,6 @@ static bool compare_columns(comparing_type compare_type, column_t first, column_
 }
 
 static column_t operand_extract_column(operand op, cursor_t cur) {
-    assert(op.column.type == COLUMN_DESC_INDEX);
     switch (op.type) {
         case OPERAND_VALUE_LITERAL:
             return op.literal;
@@ -129,10 +128,6 @@ cursor_t cursor_init_where(cursor_t base, where_condition *condition) {
     cur->type = CURSOR_WHERE;
     cur->where.condition = condition;
     cur->where.base = base;
-    while (!cursor_is_empty(cur) && !where_condition_check(cur->where.condition, cur)) {
-        cursor_next(cur->where.base);
-    }
-
     cur->free = cursor_free_where;
     cur->is_empty = cursor_is_empty_where;
     cur->next = cursor_next_where;
@@ -141,5 +136,9 @@ cursor_t cursor_init_where(cursor_t base, where_condition *condition) {
     cur->get = cursor_get_where;
     cur->delete = cursor_delete_where;
     cur->update = cursor_update_where;
+
+    while (!cursor_is_empty(cur) && !where_condition_check(cur->where.condition, cur)) {
+        cursor_next(cur->where.base);
+    }
     return cur;
 }

@@ -58,7 +58,7 @@ static uint64_t row_size(row_t row) {
                 size += sizeof(b32_t);
                 break;
             case COLUMN_TYPE_STRING:
-                size += strlen(column.value.val_string);
+                size += strlen(column.value.val_string) + 1;
                 break;
             case COLUMN_TYPE_BOOL:
                 size += sizeof(b8_t);
@@ -109,6 +109,27 @@ buffer_t row_serialize(row_t row) {
         }
     }
     return buffer;
+}
+
+column_t column_copy(column_t column) {
+    column_t copy;
+    if (column.type == COLUMN_TYPE_STRING) {
+        copy.value.val_string = string_copy(column.value.val_string);
+    } else {
+        copy.value = column.value;
+    }
+    copy.type = column.type;
+    return copy;
+}
+
+row_t row_copy(row_t row) {
+    row_t copy;
+    copy.size = row.size;
+    copy.columns = rmalloc(sizeof(column_t) * copy.size);
+    for (size_t i = 0; i < row.size; i++) {
+        copy.columns[i] = column_copy(row.columns[i]);
+    }
+    return copy;
 }
 
 // THROWS: [MALLOC_EXCEPTION]

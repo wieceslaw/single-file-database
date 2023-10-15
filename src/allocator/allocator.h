@@ -32,14 +32,14 @@ typedef enum {
 } file_status;
 
 typedef enum {
-    FILE_OPEN_CREATE,
-    FILE_OPEN_EXIST,
-    FILE_OPEN_CLEAR
-} file_open_type;
+    FILE_OPEN_CREATE = 0,
+    FILE_OPEN_EXIST = 1,
+    FILE_OPEN_CLEAR = 2
+} file_open_mode;
 
 typedef struct {
     char *path;
-    file_open_type open_type;
+    file_open_mode open_mode;
 } file_settings;
 
 typedef PACK(

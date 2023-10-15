@@ -9,7 +9,7 @@
 #include "allocator/allocator.h"
 #include "blocklist.h"
 
-#define NEW_SIZE(SIZE) ((uint32_t) (((double) SIZE) * 1.5))
+#define NEW_SIZE(SIZE) (SIZE + 10)
 
 typedef PACK(
         struct {
@@ -244,7 +244,7 @@ file_status allocator_init(file_settings *settings, allocator_t **allocator_ptr)
     **allocator_ptr = (allocator_t) {0};
     allocator_t *allocator = *allocator_ptr;
     allocator->block_list.map = MAP_NEW_UINT64_VOID(BLOCK_LIST_CAPACITY);
-    switch (settings->open_type) {
+    switch (settings->open_mode) {
         case FILE_OPEN_EXIST: {
             allocator->hFile = CreateFile(settings->path,
                                             GENERIC_READ | GENERIC_WRITE,
@@ -289,7 +289,7 @@ file_status allocator_init(file_settings *settings, allocator_t **allocator_ptr)
         CloseHandle((*allocator_ptr)->hFile);
         return FILE_ST_ERROR;
     }
-    switch (settings->open_type) {
+    switch (settings->open_mode) {
         case FILE_OPEN_EXIST: {
             if ((*allocator_ptr)->liFileSize.QuadPart < PAGE_SIZE) {
                 CloseHandle((*allocator_ptr)->hFile);
@@ -554,7 +554,7 @@ file_status allocator_init(file_settings *settings, allocator_t **allocator_ptr)
     **allocator_ptr = (allocator_t) {0};
     allocator_t *allocator = *allocator_ptr;
     allocator->list.map = MAP_NEW_UINT64_VOID(BLOCK_LIST_CAPACITY);
-    switch (settings->open_type) {
+    switch (settings->open_mode) {
         case FILE_OPEN_EXIST: {
             allocator->fd = open(settings->path, O_RDWR);
             if (-1 == allocator->fd) {
@@ -583,7 +583,7 @@ file_status allocator_init(file_settings *settings, allocator_t **allocator_ptr)
         return FILE_ST_WRONG_FORMAT;
     }
     allocator->file_size = statbuf.st_size;
-    switch (settings->open_type) {
+    switch (settings->open_mode) {
         case FILE_OPEN_EXIST: {
             if (allocator->file_size < PAGE_SIZE) {
                 return FILE_ST_WRONG_FORMAT;

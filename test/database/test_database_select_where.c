@@ -29,7 +29,22 @@ void print_row(row_t row) {
 }
 
 void selecting(database_t db) {
-    query_t query = {.table = "test", .where = NULL, .joins = NULL};
+    query_t query = {
+            .table = "test",
+            .where = where_condition_and(
+                    where_condition_compare(
+                            COMPARE_EQ,
+                            operand_column("test", "bool"),
+                            operand_literal_bool(true)
+                    ),
+                    where_condition_compare(
+                            COMPARE_GE,
+                            operand_column("test", "float"),
+                            operand_literal_float(0.5f)
+                    )
+            ),
+            .joins = NULL
+    };
     selector_builder selector = selector_builder_init();
     selector_builder_add(selector, "test", "int");
     selector_builder_add(selector, "test", "string");
@@ -46,13 +61,13 @@ void selecting(database_t db) {
     int count = 0;
     while (!result_view_is_empty(view)) {
         row_t row = result_view_get(view);
-        print_row(row);
+//        print_row(row);
         row_free(row);
         result_view_next(view);
         count++;
     }
+//    printf("count: %d \n", count);
     result_view_free(&view);
-    printf("count: %d \n", count);
 
     clock_t end = clock();
     double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;

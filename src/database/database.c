@@ -89,7 +89,7 @@ database_t database_init(file_settings *settings) {
         free(database);
         return NULL;
     }
-    if (settings->open_type == FILE_OPEN_CLEAR || settings->open_type == FILE_OPEN_CREATE) {
+    if (settings->open_mode == FILE_OPEN_CLEAR || settings->open_mode == FILE_OPEN_CREATE) {
         offset_t offset = pool_create(allocator);
         if (0 == offset) {
             allocator_free(allocator);

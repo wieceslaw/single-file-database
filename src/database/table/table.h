@@ -71,6 +71,10 @@ typedef struct table {
 
 void row_free(row_t row);
 
+column_t column_copy(column_t column);
+
+row_t row_copy(row_t row);
+
 buffer_t row_serialize(row_t row);
 
 row_t row_deserialize(const table_scheme *scheme, buffer_t buffer);

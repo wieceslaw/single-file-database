@@ -270,6 +270,9 @@ page_list_result page_list_delete_node(page_list_t *list, page_t *node_page) {
             }
         }
     }
+    if (allocator_return_page(allocator, page_offset(node_page)) != ALLOCATOR_SUCCESS) {
+        return LIST_OP_ERROR;
+    }
     return LIST_OP_SUCCESS;
 }
 

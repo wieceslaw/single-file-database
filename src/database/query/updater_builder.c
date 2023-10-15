@@ -44,20 +44,12 @@ void updater_builder_add(updater_builder_t updater, column_updater *col_updater)
 
 /// THROWS: [MALLOC_EXCEPTION]
 row_t updater_builder_update(updater_builder_t updater, row_t row) {
-    row_t copy;
-    copy.size = row.size;
-    copy.columns = rmalloc(sizeof(column_t) * copy.size);
+    row_t copy = row_copy(row);
     FOR_LIST(updater->column_updaters, it, {
         column_updater *col_updater = list_it_get(it);
         assert(col_updater->translated);
         size_t column_idx = col_updater->target.idx;
-        column_t column = row.columns[column_idx];
-        if (column.type == COLUMN_TYPE_STRING) {
-            copy.columns[column_idx].value.val_string = string_copy(col_updater->new_value.value.val_string);
-        } else {
-            copy.columns[column_idx].value = col_updater->new_value.value;
-        }
-        copy.columns[column_idx].type = column.type;
+        copy.columns[column_idx] = column_copy(col_updater->new_value);
     })
     return copy;
 }

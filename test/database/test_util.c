@@ -1,25 +1,24 @@
 //
+// Created by vyach on 16.10.2023.
+//
+
+//
 // Created by vyach on 13.10.2023.
 //
 
 #include <stdio.h>
-#include <assert.h>
 #include <time.h>
 #include "allocator/allocator.h"
 #include "database/database.h"
 #include "database/query/scheme_builder.h"
 
-void insertdd(database_t db, int n) {
+static void insert(database_t db, int n) {
     batch_builder_t batch = batch_builder_init(n);
     for (int i = 0; i < n; i++) {
-        int integer;
-        float floating;
-        int boolean;
-        char string[64];
-        scanf("%d", &integer);
-        scanf("%s", string);
-        scanf("%d", &boolean);
-        scanf("%f", &floating);
+        int integer = 228;
+        float floating = 0.5f;
+        int boolean = 1;
+        char string[64] = "12345678123456781234567812345678";
         row_builder_t row = row_builder_init(4);
         row_builder_add(&row, column_int(integer));
         row_builder_add(&row, column_string(string));
@@ -37,7 +36,7 @@ void insertdd(database_t db, int n) {
     batch_builder_free(&batch);
 }
 
-void create_table(database_t db) {
+static void create_table(database_t db) {
     scheme_builder_t scheme_builder = scheme_builder_init("test");
     scheme_builder_add_column(scheme_builder, "int", COLUMN_TYPE_INT);
     scheme_builder_add_column(scheme_builder, "string", COLUMN_TYPE_STRING);
@@ -47,18 +46,18 @@ void create_table(database_t db) {
     scheme_builder_free(&scheme_builder);
 }
 
-int main(int argc, char *argv[]) {
-    assert(argc == 3);
-    int n = atoi(argv[1]);
-    file_open_mode mode = atoi(argv[2]);
+int main() {
+    file_open_mode mode = FILE_OPEN_CLEAR;
+
     file_settings settings = {.path = "C:\\Users\\vyach\\CLionProjects\\llp-lab1\\test.bin", .open_mode = mode};
     database_t db = database_init(&settings);
     if (mode == FILE_OPEN_CLEAR) {
         create_table(db);
     }
 
-    insertdd(db, n);
+    insert(db, 1000);
 
     database_free(db);
     return 0;
 }
+
