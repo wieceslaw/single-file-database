@@ -14,6 +14,7 @@
 #include "database/query/result_view.h"
 #include "database/query/selector_builder.h"
 #include "database/query/row_batch.h"
+#include "database/query/scheme_builder.h"
 
 typedef enum database_result {
     DATABASE_RESULT_SUCCESS = 0,
@@ -44,7 +45,7 @@ database_t database_init(file_settings *settings);
 
 void database_free(database_t database);
 
-void database_create_table(database_t database, table_scheme *table_scheme);
+void database_create_table(database_t database, scheme_builder_t scheme_builder);
 
 void database_delete_table(database_t database, char *table_name);
 

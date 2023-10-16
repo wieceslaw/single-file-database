@@ -7,13 +7,14 @@
 #include "database/database.h"
 
 void delete(database_t db) {
+    where_condition *condition = where_condition_compare(
+            COMPARE_EQ,
+            operand_column("test", "bool"),
+            operand_literal_bool(true)
+    );
     query_t query = {
             .table = "test",
-            .where = where_condition_compare(
-                    COMPARE_EQ,
-                    operand_column("test", "bool"),
-                    operand_literal_bool(true)
-            ),
+            .where = condition,
             .joins = NULL
     };
 
@@ -21,6 +22,7 @@ void delete(database_t db) {
     database_delete(db, query);
     clock_t end = clock();
     double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+    where_condition_free(condition);
     printf("%f", time_spent);
 }
 

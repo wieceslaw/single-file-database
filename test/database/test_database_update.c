@@ -7,13 +7,14 @@
 #include "database/database.h"
 
 void update(database_t db) {
+    where_condition *condition = where_condition_compare(
+            COMPARE_EQ,
+            operand_column("test", "bool"),
+            operand_literal_bool(true)
+    );
     query_t query = {
             .table = "test",
-            .where = where_condition_compare(
-                    COMPARE_EQ,
-                    operand_column("test", "bool"),
-                    operand_literal_bool(true)
-            ),
+            .where = condition,
             .joins = NULL
     };
 
@@ -36,7 +37,7 @@ void update(database_t db) {
     clock_t end = clock();
     double time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
     printf("%f", time_spent);
-
+    where_condition_free(condition);
     updater_builder_free(&updater);
 }
 

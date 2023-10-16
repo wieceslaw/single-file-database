@@ -5,8 +5,6 @@
 #ifndef LLP_LAB1_BLOCKLIST_H
 #define LLP_LAB1_BLOCKLIST_H
 
-#define BLOCK_LIST_CAPACITY 500
-
 #include <stdbool.h>
 #include "util/map/map_impl.h"
 
@@ -37,7 +35,6 @@ struct block_list_node {
 typedef struct {
     block_list_node *head;
     block_list_node *tail;
-    size_t size;
     uint64_void_map_t map;
 } block_list;
 

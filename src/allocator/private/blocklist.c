@@ -11,7 +11,6 @@
 
 block_list_node *block_list_append(block_list *list, block *block) {
     assert(NULL != list && NULL != block);
-    list->size++;
     block_list_node *node = malloc(sizeof(block_list_node));
     if (NULL == node) {
         return NULL;
@@ -34,7 +33,6 @@ block_list_node *block_list_append(block_list *list, block *block) {
 
 bool block_list_delete(block_list *list, block_list_node *node) {
     assert(NULL != list && NULL != node);
-    list->size--;
     MAP_REMOVE(list->map, &(node->file_offset));
     block_list_node *prev = node->prev;
     block_list_node *next = node->next;

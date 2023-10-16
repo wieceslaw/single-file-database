@@ -124,17 +124,15 @@ allocator_result allocator_unmap_page(allocator_t *allocator, page_t *page) {
         return ALLOCATOR_UNABLE_UNMAP;
     }
     node->used -= 1;
-    if (list->size >= BLOCK_LIST_CAPACITY) {
-        if (0 == node->used) {
-            if (0 != unmap_block(page->block)) {
-                block_list_delete(list, node);
-                free(page);
-                return ALLOCATOR_UNABLE_UNMAP;
-            }
-            if (!block_list_delete(list, node)) {
-                free(page);
-                return ALLOCATOR_UNABLE_UNMAP;
-            }
+    if (0 == node->used) {
+        if (0 != unmap_block(page->block)) {
+            block_list_delete(list, node);
+            free(page);
+            return ALLOCATOR_UNABLE_UNMAP;
+        }
+        if (!block_list_delete(list, node)) {
+            free(page);
+            return ALLOCATOR_UNABLE_UNMAP;
         }
     }
     free(page);
@@ -243,7 +241,7 @@ file_status allocator_init(file_settings *settings, allocator_t **allocator_ptr)
     }
     **allocator_ptr = (allocator_t) {0};
     allocator_t *allocator = *allocator_ptr;
-    allocator->block_list.map = MAP_NEW_UINT64_VOID(BLOCK_LIST_CAPACITY);
+    allocator->block_list.map = MAP_NEW_UINT64_VOID(0);
     switch (settings->open_mode) {
         case FILE_OPEN_EXIST: {
             allocator->hFile = CreateFile(settings->path,
@@ -553,7 +551,7 @@ file_status allocator_init(file_settings *settings, allocator_t **allocator_ptr)
     }
     **allocator_ptr = (allocator_t) {0};
     allocator_t *allocator = *allocator_ptr;
-    allocator->list.map = MAP_NEW_UINT64_VOID(BLOCK_LIST_CAPACITY);
+    allocator->list.map = MAP_NEW_UINT64_VOID(0);
     switch (settings->open_mode) {
         case FILE_OPEN_EXIST: {
             allocator->fd = open(settings->path, O_RDWR);

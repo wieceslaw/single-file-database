@@ -82,6 +82,7 @@ static buffer_t table_serialize(const table_scheme *const table_schema) {
 
 /// THROWS: [MALLOC_EXCEPTION]
 database_t database_init(file_settings *settings) {
+    // TODO: change interface to not raise exceptions
     database_t database = rmalloc(sizeof(struct database));
     allocator_t *allocator;
     if (allocator_init(settings, &allocator) != FILE_ST_OK) {
@@ -110,6 +111,7 @@ database_t database_init(file_settings *settings) {
 }
 
 void database_free(database_t database) {
+    // TODO: change interface to not raise exceptions
     TRY({
         pool_free(database->table_pool);
         allocator_free(database->allocator);
@@ -121,8 +123,10 @@ void database_free(database_t database) {
     }) FINALLY()
 }
 
-void database_create_table(database_t database, table_scheme *table_schema) {
-    assert(database != NULL && table_schema != NULL);
+void database_create_table(database_t database, scheme_builder_t scheme_builder) {
+    // TODO: change interface to not raise exceptions
+    assert(database != NULL && scheme_builder != NULL);
+    table_scheme *table_schema = scheme_builder_build(scheme_builder);
     pool_it it = pool_iterator(database->table_pool);
     while (!pool_iterator_is_empty(it)) {
         buffer_t buffer = pool_iterator_get(it);
@@ -150,12 +154,14 @@ void database_create_table(database_t database, table_scheme *table_schema) {
         serialized = table_serialize(table_schema);
         pool_append(database->table_pool, serialized);
         pool_flush(database->table_pool);
-    }) CATCH(exception >= EXCEPTION, {
+        table_scheme_free(table_schema);
         buffer_free(&serialized);
-    }) FINALLY()
+    }) CATCH(exception >= EXCEPTION, {})
+    FINALLY()
 }
 
 void database_delete_table(database_t database, char *name) {
+    // TODO: change interface to not raise exceptions
     pool_it it = NULL;
     buffer_t buffer = NULL;
     table_scheme *schema = NULL;
@@ -227,7 +233,8 @@ database_result database_insert(database_t database, char * name, batch_builder_
     assert(database != NULL && name != NULL);
     table_t table = NULL;
     buffer_t buffer = NULL;
-    TRY({
+    // TODO: assert all batch rows are correct
+        TRY({
         table = database_find_table(database, name);
         for (size_t i = 0; i < batch.size; i++) {
             row_t row = row_builder_to_row(&(batch.rows[i]));
@@ -236,13 +243,11 @@ database_result database_insert(database_t database, char * name, batch_builder_
             buffer_free(&buffer);
         }
         pool_flush(table->data_pool);
-    }) CATCH(exception >= EXCEPTION, {
-        buffer_free(&buffer);
         table_free(&table);
+        buffer_free(&buffer);
+    }) CATCH(exception >= EXCEPTION, {
         return DATABASE_RESULT_INTERNAL_ERROR;
     }) FINALLY()
-    table_free(&table);
-    buffer_free(&buffer);
     return DATABASE_RESULT_SUCCESS;
 }
 
@@ -349,6 +354,7 @@ void indexed_maps_free(indexed_maps maps) {
     if (maps.columns_maps != NULL) {
         FOR_MAP(maps.columns_maps, entry, {
             MAP_FREE(entry->val);
+            free(entry->key);
             free(entry);
         })
         MAP_FREE(maps.columns_maps);
@@ -398,44 +404,47 @@ static cursor_t query_cursor(database_t database, query_t query, indexed_maps ma
 
 database_result database_delete(database_t database, query_t query) {
     assert(database != NULL);
-    indexed_maps maps = query_mapping(database, query);
-    cursor_t cur = query_cursor(database, query, maps);
+    indexed_maps maps = {0};
+    cursor_t cur = NULL;
     TRY({
+        maps = query_mapping(database, query);
+        cur = query_cursor(database, query, maps);
         while (!cursor_is_empty(cur)) {
             cursor_delete(cur, 0);
             cursor_next(cur);
         }
         cursor_flush(cur);
+        cursor_free(&cur);
+        indexed_maps_free(maps);
     }) CATCH (exception >= EXCEPTION, {
-        cursor_free(&cur);
         return DATABASE_RESULT_INTERNAL_ERROR;
-    }) FINALLY({
-        cursor_free(&cur);
-    })
-    indexed_maps_free(maps);
+    }) FINALLY()
     return DATABASE_RESULT_SUCCESS;
 }
 
 database_result database_update(database_t database, query_t query, updater_builder_t updater) {
     assert(database != NULL);
-    indexed_maps maps = query_mapping(database, query);
-    cursor_t cur = query_cursor(database, query, maps);
-    str_int_map_t map = MAP_GET(maps.columns_maps, query.table);
-    updater_builder_t translated_updater = updater_builder_translate(updater, map);
+    indexed_maps maps = {0};
+    cursor_t cur = NULL;
+    str_int_map_t map = NULL;
+    updater_builder_t translated_updater = NULL;
     TRY({
+        maps = query_mapping(database, query);
+        cur = query_cursor(database, query, maps);
+        map = MAP_GET(maps.columns_maps, query.table);
+        translated_updater = updater_builder_translate(updater, map);
+        // TODO: assert that updater is correct
         while (!cursor_is_empty(cur)) {
             cursor_update(cur, 0, translated_updater);
             cursor_next(cur);
         }
         cursor_flush(cur);
+        cursor_free(&cur);
+        indexed_maps_free(maps);
+        updater_builder_free(&translated_updater);
     }) CATCH (exception >= EXCEPTION, {
-        cursor_free(&cur);
         return DATABASE_RESULT_INTERNAL_ERROR;
-    }) FINALLY({
-        cursor_free(&cur);
-    })
-    updater_builder_free(&translated_updater);
-    indexed_maps_free(maps);
+    }) FINALLY()
     return DATABASE_RESULT_SUCCESS;
 }
 

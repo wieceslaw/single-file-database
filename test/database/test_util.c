@@ -2,10 +2,6 @@
 // Created by vyach on 16.10.2023.
 //
 
-//
-// Created by vyach on 13.10.2023.
-//
-
 #include <stdio.h>
 #include <time.h>
 #include "allocator/allocator.h"
@@ -26,13 +22,7 @@ static void insert(database_t db, int n) {
         row_builder_add(&row, column_float(floating));
         batch_builder_add(&batch, row);
     }
-
-    clock_t begin = clock();
     database_insert(db, "test", batch);
-    clock_t end = clock();
-    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-    printf("%f", time_spent);
-
     batch_builder_free(&batch);
 }
 
@@ -42,22 +32,18 @@ static void create_table(database_t db) {
     scheme_builder_add_column(scheme_builder, "string", COLUMN_TYPE_STRING);
     scheme_builder_add_column(scheme_builder, "bool", COLUMN_TYPE_BOOL);
     scheme_builder_add_column(scheme_builder, "float", COLUMN_TYPE_FLOAT);
-    database_create_table(db, scheme_builder_build(scheme_builder));
+    database_create_table(db, scheme_builder);
     scheme_builder_free(&scheme_builder);
 }
 
 int main() {
     file_open_mode mode = FILE_OPEN_CLEAR;
-
     file_settings settings = {.path = "C:\\Users\\vyach\\CLionProjects\\llp-lab1\\test.bin", .open_mode = mode};
     database_t db = database_init(&settings);
     if (mode == FILE_OPEN_CLEAR) {
         create_table(db);
     }
-
-    insert(db, 1000);
-
+    insert(db, 25000);
     database_free(db);
     return 0;
 }
-

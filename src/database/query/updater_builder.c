@@ -49,6 +49,10 @@ row_t updater_builder_update(updater_builder_t updater, row_t row) {
         column_updater *col_updater = list_it_get(it);
         assert(col_updater->translated);
         size_t column_idx = col_updater->target.idx;
+        if (copy.columns[column_idx].type == COLUMN_TYPE_STRING) {
+            free(copy.columns[column_idx].value.val_string);
+            copy.columns[column_idx].value.val_string = NULL;
+        }
         copy.columns[column_idx] = column_copy(col_updater->new_value);
     })
     return copy;

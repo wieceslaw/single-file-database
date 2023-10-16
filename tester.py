@@ -12,6 +12,7 @@ SELECT_TEST = "cmake-build-windows/test/test_select.exe"
 SELECT_WHERE_TEST = "cmake-build-windows/test/test_where.exe"
 DELETE_TEST = "cmake-build-windows/test/test_delete.exe"
 UPDATE_TEST = "cmake-build-windows/test/test_update.exe"
+READ_TEST = "cmake-build-windows/test/test_read.exe"
 
 
 def file_size():
@@ -75,6 +76,14 @@ def call_update() -> float:
     ret = p.wait(None)
     assert ret == 0
     return took
+
+
+def call_read() -> list[str]:
+    p = subprocess.Popen([READ_TEST], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+    lines = [bytes.decode(i, encoding="ascii") for i in p.stdout.readlines()]
+    ret = p.wait(None)
+    assert ret == 0
+    return lines
 
 
 def test_insert():
@@ -219,5 +228,25 @@ def test_update_size():
     plt.show()
 
 
+def correctness(n: int):
+    data = {i: (i, random_string(32), random_bool(), random_float()) for i in range(n)}
+    call_insert(n, 2, [f"{i[0]} {i[1]} {i[2]} {i[3]} " for i in data.values()])
+
+    res = call_read()
+    read_data = []
+    for i in res:
+        row_str = i.strip().split()
+        row = (int(row_str[0]), row_str[1], int(row_str[2]), float(row_str[3]))
+        read_data.append(row)
+
+    # check correctness
+    assert(len(read_data) == len(data))
+    for read, real in zip(read_data, data.values()):
+        assert read[0] == real[0]
+        assert read[1] == real[1]
+        assert read[2] == real[2]
+        assert abs(read[3] - real[3]) < 0.001
+
+
 if __name__ == '__main__':
-    test_update_size()
+    correctness(10000)

@@ -35,9 +35,6 @@ void selecting(database_t db) {
     selector_builder_add(selector, "test", "string");
     selector_builder_add(selector, "test", "bool");
     selector_builder_add(selector, "test", "float");
-
-    clock_t begin = clock();
-
     result_view_t view = database_select(db, query, selector);
     if (NULL == view) {
         printf("Can't create select \n");
@@ -45,13 +42,11 @@ void selecting(database_t db) {
     }
     while (!result_view_is_empty(view)) {
         row_t row = result_view_get(view);
+        print_row(row);
         row_free(row);
         result_view_next(view);
     }
     result_view_free(&view);
-    clock_t end = clock();
-    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-    printf("%f", time_spent);
     selector_builder_free(&selector);
 }
 
