@@ -357,27 +357,21 @@ static indexed_maps query_mapping(database_t database, query_t query) {
             assert(condition->left.type == COLUMN_DESC_NAME && condition->right.type == COLUMN_DESC_NAME);
             str_int_map_t left_columns_map = MAP_GET(columns_maps, condition->left.name.table_name);
             if (NULL == left_columns_map) { // table should exists in join set
-                // TODO: release?
                 RAISE(DATABASE_TRANSLATION_EXCEPTION);
             }
             if (!MAP_EXISTS(left_columns_map, condition->left.name.column_name)) { // table should have such column
-                // TODO: release?
                 RAISE(DATABASE_TRANSLATION_EXCEPTION);
             }
             if (MAP_EXISTS(columns_maps, condition->right.name.table_name)) { // can't self-join
-                // TODO: release?
                 RAISE(DATABASE_TRANSLATION_EXCEPTION);
             }
             str_int_map_t right_columns_map = table_scheme_mapping(database, condition->right.name.table_name);
             if (NULL == right_columns_map) { // table should exist in database
-                // TODO: release?
                 RAISE(DATABASE_TRANSLATION_EXCEPTION);
             }
             if (!MAP_EXISTS(right_columns_map, condition->right.name.column_name)) { // right table has such column
-                // TODO: release?
                 RAISE(DATABASE_TRANSLATION_EXCEPTION);
             }
-            // TODO: assert that columns types are same (get schemas here)
             MAP_PUT(columns_maps, condition->right.name.table_name, right_columns_map);
             MAP_PUT(table_maps, condition->right.name.table_name, &count);
         })
@@ -406,7 +400,6 @@ void indexed_maps_free(indexed_maps maps) {
 static cursor_t query_cursor(database_t database, query_t query, indexed_maps maps) {
     assert(database != NULL && query.table != NULL);
     cursor_t result = database_build_base_cursor(database, query.table, 0);
-    // TODO: handle exceptions
     if (query.joins != NULL) {
         FOR_LIST(query.joins->join_condition_list, it, {
             TRY({
@@ -478,7 +471,6 @@ void database_update(database_t database, query_t query, updater_builder_t updat
         cur = query_cursor(database, query, maps);
         map = MAP_GET(maps.columns_maps, query.table);
         translated_updater = updater_builder_translate(updater, map);
-        // TODO: assert that updater is correct
         while (!cursor_is_empty(cur)) {
             cursor_update(cur, 0, translated_updater);
             cursor_next(cur);
