@@ -20,7 +20,7 @@ void row_builder_free(row_builder_t *row_builder);
 
 void row_builder_add(row_builder_t *row_builder, column_t col);
 
-row_t row_builder_to_row(row_builder_t *row_builder);
+row_t row_builder_as_row(row_builder_t *row_builder);
 
 typedef struct batch_builder {
     row_builder_t *rows;

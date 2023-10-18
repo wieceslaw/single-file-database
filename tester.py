@@ -13,6 +13,8 @@ SELECT_WHERE_TEST = "cmake-build-windows/test/test_where.exe"
 DELETE_TEST = "cmake-build-windows/test/test_delete.exe"
 UPDATE_TEST = "cmake-build-windows/test/test_update.exe"
 READ_TEST = "cmake-build-windows/test/test_read.exe"
+JOIN_TEST = "cmake-build-windows/test/test_join.exe"
+CREATE_TABLE_TEST = "cmake-build-windows/test/test_createtable.exe"
 
 
 def file_size():
@@ -39,8 +41,8 @@ def random_input() -> str:
     return f"{random_int32()} {random_string(32)} {random_bool()} {random_float()} "
 
 
-def call_insert(n: int, mode: int, records: list[str]) -> float:
-    p = subprocess.Popen([INSERT_TEST, str(n), str(mode)],
+def call_insert(n: int, mode: int, records: list[str], table_name: str) -> float:
+    p = subprocess.Popen([INSERT_TEST, str(n), str(mode), table_name],
                          stdout=subprocess.PIPE,
                          stdin=subprocess.PIPE)
     written = []
@@ -56,6 +58,14 @@ def call_insert(n: int, mode: int, records: list[str]) -> float:
 
 def call_select() -> float:
     p = subprocess.Popen([SELECT_WHERE_TEST], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+    took = float(p.stdout.read())
+    ret = p.wait(None)
+    assert ret == 0
+    return took
+
+
+def call_join() -> float:
+    p = subprocess.Popen([JOIN_TEST], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
     took = float(p.stdout.read())
     ret = p.wait(None)
     assert ret == 0
@@ -86,14 +96,20 @@ def call_read() -> list[str]:
     return lines
 
 
-def test_insert():
-    call_insert(0, 2, [])
+def call_create_table(mode: int, table_name: str):
+    p = subprocess.Popen([CREATE_TABLE_TEST, str(mode), table_name], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+    ret = p.wait(None)
+    assert ret == 0
+
+
+def test_insert(table_name: str):
+    call_insert(0, 2, [], table_name)
     y = []
     x = []
     z = []
     batch_size = 1000
     for i in range(1000):
-        timediff = call_insert(batch_size, 1, [random_input() for _ in range(batch_size)])
+        timediff = call_insert(batch_size, 1, [random_input() for _ in range(batch_size)], table_name)
         size = file_size()
         # print(f"n: {i}, inserting: {batch_size}, took: {timediff}s, filesize: {size}")
         y.append(timediff)
@@ -116,10 +132,10 @@ def test_select():
     batch_size = 1000
     y = []
     x = []
-    call_insert(0, 2, [])
+    call_insert(0, 2, [], "test")
     for i in range(100):
         print(i)
-        call_insert(batch_size, 1, [random_input() for _ in range(batch_size)])
+        call_insert(batch_size, 1, [random_input() for _ in range(batch_size)], "test")
         timediff = call_select()
         y.append(timediff)
         x.append(i * batch_size)
@@ -140,7 +156,7 @@ def test_delete_time():
     x = []
     for i in range(1, 101):
         print(i)
-        call_insert(i * batch_size, 2, [random_input() for _ in range(batch_size * i)])
+        call_insert(i * batch_size, 2, [random_input() for _ in range(batch_size * i)], "test")
         timediff = call_delete()
         y.append(timediff)
         x.append(i * batch_size)
@@ -159,10 +175,10 @@ def test_update_time():
     batch_size = 1000
     y = []
     x = []
-    call_insert(0, 2, [])
+    call_insert(0, 2, [], "test")
     for i in range(0, 100):
         print(i)
-        call_insert(batch_size, 1, [random_input() for _ in range(batch_size)])
+        call_insert(batch_size, 1, [random_input() for _ in range(batch_size)], "test")
         timediff = call_update()
         y.append(timediff)
         x.append(i * batch_size)
@@ -181,13 +197,14 @@ def test_delete_size():
     batch_size = 1000
     y = []
     x = []
-    call_insert(0, 2, [])
+    call_insert(0, 2, [], "test")
     for i in range(100):
         print(i)
         call_insert(
             batch_size,
             1,
-            [f"{random_int32()} {random_string(32)} {1} {random_float()} " for _ in range(batch_size)]
+            [f"{random_int32()} {random_string(32)} {1} {random_float()} " for _ in range(batch_size)],
+            "test"
         )
         call_delete()
         y.append(file_size())
@@ -210,7 +227,8 @@ def test_update_size():
     call_insert(
         batch_size,
         2,
-        [f"{random_int32()} {random_string(32)} {1} {random_float()} " for _ in range(batch_size)]
+        [f"{random_int32()} {random_string(32)} {1} {random_float()} " for _ in range(batch_size)],
+        "test"
     )
     for i in range(100):
         print(i)
@@ -228,9 +246,33 @@ def test_update_size():
     plt.show()
 
 
+def test_join():
+    batch_size = 10
+    y = []
+    x = []
+    call_create_table(2, "test")
+    call_create_table(1, "test2")
+    for i in range(50):
+        print(i)
+        call_insert(batch_size, 1, [random_input() for _ in range(batch_size)], "test")
+        call_insert(batch_size, 1, [random_input() for _ in range(batch_size)], "test2")
+        timediff = call_join()
+        y.append(timediff)
+        x.append(i * batch_size)
+
+    fig, time_axes = plt.subplots()
+
+    time_axes.set_title(f"Select-Join Test")
+    time_axes.plot(x, y)
+    time_axes.set_ylabel("time (seconds)")
+    time_axes.set_xlabel("records number")
+
+    plt.show()
+
+
 def correctness(n: int):
     data = {i: (i, random_string(32), random_bool(), random_float()) for i in range(n)}
-    call_insert(n, 2, [f"{i[0]} {i[1]} {i[2]} {i[3]} " for i in data.values()])
+    call_insert(n, 2, [f"{i[0]} {i[1]} {i[2]} {i[3]} " for i in data.values()], "test")
 
     res = call_read()
     read_data = []
@@ -249,4 +291,4 @@ def correctness(n: int):
 
 
 if __name__ == '__main__':
-    correctness(10000)
+    test_join()

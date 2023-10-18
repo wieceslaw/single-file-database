@@ -7,8 +7,8 @@
 
 static bool join_condition_check(join_condition *condition, cursor_t cur) {
     assert(condition->right.type == COLUMN_DESC_INDEX && condition->left.type == COLUMN_DESC_INDEX);
-    column_t right_column = cursor_get(cur, condition->right.index.table_idx, condition->right.index.column_idx);
-    column_t left_column = cursor_get(cur, condition->left.index.table_idx, condition->left.index.column_idx);
+    column_t right_column = cursor_get(cur->join.right, condition->right.index.table_idx, condition->right.index.column_idx);
+    column_t left_column = cursor_get(cur->join.left, condition->left.index.table_idx, condition->left.index.column_idx);
     return columns_equals(right_column, left_column);
 }
 
@@ -90,10 +90,6 @@ cursor_t cursor_init_join(cursor_t left, cursor_t right, join_condition conditio
     cur->join.condition = condition;
     cur->join.right = right;
     cur->join.left = left;
-    if (!join_condition_check(&(cur->join.condition), cur)) {
-        cursor_next(cur);
-    }
-
     cur->free = cursor_free_join;
     cur->is_empty = cursor_is_empty_join;
     cur->next = cursor_next_join;
@@ -102,5 +98,8 @@ cursor_t cursor_init_join(cursor_t left, cursor_t right, join_condition conditio
     cur->get = cursor_get_join;
     cur->delete = cursor_delete_join;
     cur->update = cursor_update_join;
+    if (!cursor_is_empty(cur) && !join_condition_check(&(cur->join.condition), cur)) {
+        cursor_next(cur);
+    }
     return cur;
 }

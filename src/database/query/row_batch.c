@@ -75,7 +75,7 @@ void batch_builder_add(batch_builder_t *batch_builder, row_builder_t row) {
     batch_builder->size++;
 }
 
-row_t row_builder_to_row(row_builder_t *row_builder) {
+row_t row_builder_as_row(row_builder_t *row_builder) {
     return (row_t) {
         .size = row_builder->size,
         .columns = row_builder->columns

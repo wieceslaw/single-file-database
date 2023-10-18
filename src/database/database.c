@@ -34,14 +34,15 @@ static table_scheme *table_schema_deserialize(buffer_t buffer) {
     assert(buffer != NULL);
     // table[offset_t pool_offset, name*, table_scheme[size, values[type, name*]*]*]*
     table_scheme *schema;
+    buffer_reset(buffer);
+    schema = rmalloc(sizeof(table_scheme));
+    schema->pool_offset = buffer_read_b64(buffer).ui64;
+    schema->name = buffer_read_string(buffer);
+    schema->size = buffer_read_b32(buffer).ui32;
+    schema->columns = rmalloc(sizeof(table_scheme_column) * schema->size);
+    read_columns(schema, buffer);
     TRY({
-        buffer_reset(buffer);
-        schema = rmalloc(sizeof(table_scheme));
-        schema->pool_offset = buffer_read_b64(buffer).ui64;
-        schema->name = buffer_read_string(buffer);
-        schema->size = buffer_read_b32(buffer).ui32;
-        schema->columns = rmalloc(sizeof(table_scheme_column) * schema->size);
-        read_columns(schema, buffer);
+        //
     }) CATCH(exception >= EXCEPTION, {
         free(schema);
         free(schema->columns);
@@ -82,36 +83,28 @@ static buffer_t table_serialize(const table_scheme *const table_schema) {
 
 /// THROWS: [MALLOC_EXCEPTION]
 database_t database_init(file_settings *settings) {
-    // TODO: change interface to not raise exceptions
-    database_t database = rmalloc(sizeof(struct database));
-    allocator_t *allocator;
-    if (allocator_init(settings, &allocator) != FILE_ST_OK) {
-        free(allocator);
-        free(database);
-        return NULL;
-    }
-    if (settings->open_mode == FILE_OPEN_CLEAR || settings->open_mode == FILE_OPEN_CREATE) {
-        offset_t offset = pool_create(allocator);
-        if (0 == offset) {
-            allocator_free(allocator);
-            free(database);
-            return NULL;
+    database_t database;
+    TRY({
+        database = rmalloc(sizeof(struct database));
+        allocator_t *allocator;
+        if (allocator_init(settings, &allocator) != FILE_ST_OK) {
+            RAISE(DATABASE_INTERNAL_ERROR);
         }
-        allocator_set_entrypoint(allocator, offset);
-    }
-    pool_t *table_pool = pool_init(allocator, allocator_get_entrypoint(allocator));
-    if (NULL == table_pool) {
-        allocator_free(allocator);
+        if (settings->open_mode == FILE_OPEN_CLEAR || settings->open_mode == FILE_OPEN_CREATE) {
+            offset_t offset = pool_create(allocator);
+            allocator_set_entrypoint(allocator, offset);
+        }
+        pool_t *table_pool = pool_init(allocator, allocator_get_entrypoint(allocator));
+        database->table_pool = table_pool;
+        database->allocator = allocator;
+    }) CATCH(exception >= EXCEPTION, {
         free(database);
-        return NULL;
-    }
-    database->table_pool = table_pool;
-    database->allocator = allocator;
+        RAISE(DATABASE_INTERNAL_ERROR);
+    }) FINALLY()
     return database;
 }
 
 void database_free(database_t database) {
-    // TODO: change interface to not raise exceptions
     TRY({
         pool_free(database->table_pool);
         allocator_free(database->allocator);
@@ -119,34 +112,34 @@ void database_free(database_t database) {
     }) CATCH(exception >= EXCEPTION, {
         allocator_free(database->allocator);
         free(database);
-        RAISE(exception);
+        RAISE(DATABASE_INTERNAL_ERROR);
     }) FINALLY()
 }
 
 void database_create_table(database_t database, scheme_builder_t scheme_builder) {
-    // TODO: change interface to not raise exceptions
     assert(database != NULL && scheme_builder != NULL);
-    table_scheme *table_schema = scheme_builder_build(scheme_builder);
-    pool_it it = pool_iterator(database->table_pool);
-    while (!pool_iterator_is_empty(it)) {
-        buffer_t buffer = pool_iterator_get(it);
-        assert(NULL != buffer);
-        table_scheme *schema = table_schema_deserialize(buffer);
-        if (0 == strcmp(schema->name, table_schema->name)) {
-            pool_iterator_free(&it);
-            RAISE(TABLE_ALREADY_EXISTS);
-        }
-        table_scheme_free(schema);
-        buffer_free(&buffer);
-        TRY({
+    pool_it it = NULL;
+    table_scheme *table_schema = NULL;
+    TRY({
+        table_schema = scheme_builder_build(scheme_builder);
+        it = pool_iterator(database->table_pool);
+        while (!pool_iterator_is_empty(it)) {
+            buffer_t buffer = pool_iterator_get(it);
+            assert(NULL != buffer);
+            table_scheme *schema = table_schema_deserialize(buffer);
+            if (0 == strcmp(schema->name, table_schema->name)) {
+                pool_iterator_free(&it);
+                RAISE(DATABASE_TABLE_ALREADY_EXISTS);
+            }
+            table_scheme_free(schema);
+            buffer_free(&buffer);
             pool_iterator_next(it);
-        }) CATCH(exception >= EXCEPTION, {
-            pool_iterator_free(&it);
-            RAISE(exception);
-        }) FINALLY()
-    }
-    pool_iterator_free(&it);
-    it = NULL;
+        }
+    }) CATCH(exception >= EXCEPTION, {
+        RAISE(DATABASE_INTERNAL_ERROR);
+    }) FINALLY({
+        pool_iterator_free(&it);
+    })
     buffer_t serialized;
     TRY({
         offset_t offset = pool_create(database->allocator);
@@ -154,14 +147,15 @@ void database_create_table(database_t database, scheme_builder_t scheme_builder)
         serialized = table_serialize(table_schema);
         pool_append(database->table_pool, serialized);
         pool_flush(database->table_pool);
+    }) CATCH(exception >= EXCEPTION, {
+        RAISE(DATABASE_INTERNAL_ERROR);
+    }) FINALLY({
         table_scheme_free(table_schema);
         buffer_free(&serialized);
-    }) CATCH(exception >= EXCEPTION, {})
-    FINALLY()
+    })
 }
 
 void database_delete_table(database_t database, char *name) {
-    // TODO: change interface to not raise exceptions
     pool_it it = NULL;
     buffer_t buffer = NULL;
     table_scheme *schema = NULL;
@@ -180,6 +174,8 @@ void database_delete_table(database_t database, char *name) {
             pool_iterator_next(it);
         }
         pool_flush(database->table_pool);
+    }) CATCH(exception >= EXCEPTION, {
+        RAISE(DATABASE_INTERNAL_ERROR);
     }) FINALLY({
         table_scheme_free(schema);
         buffer_free(&buffer);
@@ -220,6 +216,10 @@ static table_t database_find_table(database_t database, char *name) {
     TRY({
         table = rmalloc(sizeof(struct table));
         table->scheme = database_find_table_scheme(database, name);
+        if (table->scheme == NULL) {
+            free(table);
+            return NULL;
+        }
         table->data_pool = pool_init(database->allocator, table->scheme->pool_offset);
     }) CATCH(exception >= EXCEPTION, {
         table_scheme_free(table->scheme);
@@ -229,29 +229,50 @@ static table_t database_find_table(database_t database, char *name) {
     return table;
 }
 
-database_result database_insert(database_t database, char * name, batch_builder_t batch) {
+static bool row_is_valid(table_scheme *scheme, row_builder_t row) {
+    for (size_t i = 0; i < row.size; i++) {
+        if (scheme->columns[i].type != row.columns[i].type) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool batch_is_valid(table_scheme *scheme, batch_builder_t batch) {
+    for (size_t i = 0; i < batch.size; i++) {
+        if (!row_is_valid(scheme, batch.rows[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void database_insert(database_t database, char * name, batch_builder_t batch) {
     assert(database != NULL && name != NULL);
     table_t table = NULL;
     buffer_t buffer = NULL;
-    // TODO: assert all batch rows are correct
-        TRY({
-        table = database_find_table(database, name);
+    table = database_find_table(database, name);
+    if (NULL == table) {
+        RAISE(DATABASE_QUERY_EXCEPTION);
+    }
+    if (!batch_is_valid(table->scheme, batch)) {
+        RAISE(DATABASE_QUERY_EXCEPTION);
+    }
+    TRY({
         for (size_t i = 0; i < batch.size; i++) {
-            row_t row = row_builder_to_row(&(batch.rows[i]));
+            row_t row = row_builder_as_row(&(batch.rows[i]));
             buffer = row_serialize(row);
             pool_append(table->data_pool, buffer);
             buffer_free(&buffer);
         }
         pool_flush(table->data_pool);
         table_free(&table);
-        buffer_free(&buffer);
     }) CATCH(exception >= EXCEPTION, {
-        return DATABASE_RESULT_INTERNAL_ERROR;
+        RAISE(DATABASE_INTERNAL_ERROR);
     }) FINALLY()
-    return DATABASE_RESULT_SUCCESS;
 }
 
-cursor_t database_build_base_cursor(database_t database, char* table_name, size_t table_idx) {
+static cursor_t database_build_base_cursor(database_t database, char* table_name, size_t table_idx) {
     cursor_t cur = NULL;
     TRY({
         table_t table = database_find_table(database, table_name);
@@ -263,7 +284,7 @@ cursor_t database_build_base_cursor(database_t database, char* table_name, size_
     return cur;
 }
 
-/// THROWS: [MALLOC_EXCEPTION, TRANSLATION_EXCEPTION]
+/// THROWS: [MALLOC_EXCEPTION, DATABASE_TRANSLATION_EXCEPTION]
 column_description indexed_maps_translate(indexed_maps maps, column_description description) {
     column_description result;
     int *column_idx = NULL;
@@ -271,15 +292,15 @@ column_description indexed_maps_translate(indexed_maps maps, column_description 
     TRY({
         table_idx = MAP_GET(maps.table_maps, description.name.table_name);
         if (table_idx == NULL) {
-            RAISE(TRANSLATION_EXCEPTION);
+            RAISE(DATABASE_TRANSLATION_EXCEPTION);
         }
         str_int_map_t column_map = MAP_GET(maps.columns_maps, description.name.table_name);
         if (column_map == NULL) {
-            RAISE(TRANSLATION_EXCEPTION);
+            RAISE(DATABASE_TRANSLATION_EXCEPTION);
         }
         column_idx = MAP_GET(column_map, description.name.column_name);
         if (column_idx == NULL) {
-            RAISE(TRANSLATION_EXCEPTION);
+            RAISE(DATABASE_TRANSLATION_EXCEPTION);
         }
         result.type = COLUMN_DESC_INDEX;
         result.index.table_idx = *table_idx;
@@ -299,7 +320,7 @@ static str_int_map_t table_scheme_mapping(database_t database, char* table_name)
     TRY({
         scheme = database_find_table_scheme(database, table_name);
         if (NULL == scheme) {
-            RAISE(DATABASE_RESULT_WRONG_QUERY);
+            return NULL;
         }
         map = MAP_NEW_STR_INT(scheme->size);
         for (int i = 0; i < scheme->size; i++) {
@@ -312,9 +333,8 @@ static str_int_map_t table_scheme_mapping(database_t database, char* table_name)
     return map;
 }
 
+/// THROWS: [TRANSLATION_EXCEPTION, EXCEPTION]
 static indexed_maps query_mapping(database_t database, query_t query) {
-    // maps all joined tables and checks
-    // TODO: remake asserts to exceptions
     assert(query.table != NULL);
     size_t size = 1;
     if (query.joins != NULL) {
@@ -323,7 +343,11 @@ static indexed_maps query_mapping(database_t database, query_t query) {
     str_map_str_int_map_t columns_maps = MAP_NEW_STR_MAP_STR_INT(size);
     str_int_map_t table_maps = MAP_NEW_STR_INT(size);
     int count = 0;
-    MAP_PUT(columns_maps, query.table, table_scheme_mapping(database, query.table));
+    str_int_map_t columns_map = table_scheme_mapping(database, query.table);
+    if (NULL == columns_map) {
+        RAISE(DATABASE_TRANSLATION_EXCEPTION);
+    }
+    MAP_PUT(columns_maps, query.table, columns_map);
     MAP_PUT(table_maps, query.table, &count);
     if (query.joins != NULL) {
         FOR_LIST(query.joins->join_condition_list, it, {
@@ -332,11 +356,28 @@ static indexed_maps query_mapping(database_t database, query_t query) {
             assert(condition != NULL);
             assert(condition->left.type == COLUMN_DESC_NAME && condition->right.type == COLUMN_DESC_NAME);
             str_int_map_t left_columns_map = MAP_GET(columns_maps, condition->left.name.table_name);
-            assert(left_columns_map != NULL); // table exists before
-            assert(MAP_EXISTS(left_columns_map, condition->left.name.column_name)); // table has such column_t
-            assert(!MAP_EXISTS(columns_maps, condition->right.name.table_name)); // can't join same table twice
+            if (NULL == left_columns_map) { // table should exists in join set
+                // TODO: release?
+                RAISE(DATABASE_TRANSLATION_EXCEPTION);
+            }
+            if (!MAP_EXISTS(left_columns_map, condition->left.name.column_name)) { // table should have such column
+                // TODO: release?
+                RAISE(DATABASE_TRANSLATION_EXCEPTION);
+            }
+            if (MAP_EXISTS(columns_maps, condition->right.name.table_name)) { // can't self-join
+                // TODO: release?
+                RAISE(DATABASE_TRANSLATION_EXCEPTION);
+            }
             str_int_map_t right_columns_map = table_scheme_mapping(database, condition->right.name.table_name);
-            assert(MAP_EXISTS(right_columns_map, condition->right.name.column_name)); // right table has such column_t
+            if (NULL == right_columns_map) { // table should exist in database
+                // TODO: release?
+                RAISE(DATABASE_TRANSLATION_EXCEPTION);
+            }
+            if (!MAP_EXISTS(right_columns_map, condition->right.name.column_name)) { // right table has such column
+                // TODO: release?
+                RAISE(DATABASE_TRANSLATION_EXCEPTION);
+            }
+            // TODO: assert that columns types are same (get schemas here)
             MAP_PUT(columns_maps, condition->right.name.table_name, right_columns_map);
             MAP_PUT(table_maps, condition->right.name.table_name, &count);
         })
@@ -361,9 +402,11 @@ void indexed_maps_free(indexed_maps maps) {
     }
 }
 
+/// THROWS: [DATABASE_TRANSLATION_EXCEPTION]
 static cursor_t query_cursor(database_t database, query_t query, indexed_maps maps) {
     assert(database != NULL && query.table != NULL);
     cursor_t result = database_build_base_cursor(database, query.table, 0);
+    // TODO: handle exceptions
     if (query.joins != NULL) {
         FOR_LIST(query.joins->join_condition_list, it, {
             TRY({
@@ -402,7 +445,7 @@ static cursor_t query_cursor(database_t database, query_t query, indexed_maps ma
     return result;
 }
 
-database_result database_delete(database_t database, query_t query) {
+void database_delete(database_t database, query_t query) {
     assert(database != NULL);
     indexed_maps maps = {0};
     cursor_t cur = NULL;
@@ -415,14 +458,16 @@ database_result database_delete(database_t database, query_t query) {
         }
         cursor_flush(cur);
         cursor_free(&cur);
-        indexed_maps_free(maps);
+    }) CATCH(exception == DATABASE_TRANSLATION_EXCEPTION, {
+        RAISE(DATABASE_QUERY_EXCEPTION);
     }) CATCH (exception >= EXCEPTION, {
-        return DATABASE_RESULT_INTERNAL_ERROR;
-    }) FINALLY()
-    return DATABASE_RESULT_SUCCESS;
+        RAISE(DATABASE_INTERNAL_ERROR);
+    }) FINALLY({
+        indexed_maps_free(maps);
+    })
 }
 
-database_result database_update(database_t database, query_t query, updater_builder_t updater) {
+void database_update(database_t database, query_t query, updater_builder_t updater) {
     assert(database != NULL);
     indexed_maps maps = {0};
     cursor_t cur = NULL;
@@ -440,12 +485,14 @@ database_result database_update(database_t database, query_t query, updater_buil
         }
         cursor_flush(cur);
         cursor_free(&cur);
+    }) CATCH(exception == DATABASE_TRANSLATION_EXCEPTION, {
+        RAISE(DATABASE_QUERY_EXCEPTION);
+    }) CATCH (exception >= EXCEPTION, {
+        RAISE(DATABASE_INTERNAL_ERROR);
+    }) FINALLY({
         indexed_maps_free(maps);
         updater_builder_free(&translated_updater);
-    }) CATCH (exception >= EXCEPTION, {
-        return DATABASE_RESULT_INTERNAL_ERROR;
-    }) FINALLY()
-    return DATABASE_RESULT_SUCCESS;
+    })
 }
 
 static table_scheme *create_view_scheme(database_t database, selector_builder selector, indexed_maps maps) {
@@ -454,7 +501,7 @@ static table_scheme *create_view_scheme(database_t database, selector_builder se
         column_description *description = list_it_get(it);
         assert(description != NULL);
         column_description indexed_description = indexed_maps_translate(maps, *description);
-        // TODO: cache schemes
+        // add schemes cache?
         table_scheme *scheme = database_find_table_scheme(database, description->name.table_name);
         table_scheme_column column = scheme->columns[indexed_description.index.column_idx];
         scheme_builder_add_column(view_scheme_builder, column.name, column.type);
@@ -490,11 +537,14 @@ result_view_t database_select(database_t database, query_t query, selector_build
         result->view_scheme = create_view_scheme(database, selector, maps);
         result->view_selector = create_view_selector(selector, maps);
         indexed_maps_free(maps);
+    }) CATCH(exception == DATABASE_TRANSLATION_EXCEPTION, {
+        free(result);
+        indexed_maps_free(maps);
+        RAISE(DATABASE_QUERY_EXCEPTION);
     }) CATCH(exception >= EXCEPTION, {
         free(result);
         indexed_maps_free(maps);
-        cursor_free(&cur);
-        return NULL;
+        RAISE(DATABASE_INTERNAL_ERROR);
     }) FINALLY()
     return result;
 }

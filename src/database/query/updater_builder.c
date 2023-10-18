@@ -58,6 +58,7 @@ row_t updater_builder_update(updater_builder_t updater, row_t row) {
     return copy;
 }
 
+/// THROWS: [DATABASE_TRANSLATION_EXCEPTION]
 updater_builder_t updater_builder_translate(updater_builder_t old_updater, str_int_map_t map) {
     updater_builder_t new_updater = rmalloc(sizeof(struct updater_builder));
     new_updater->column_updaters = list_init();
@@ -66,7 +67,7 @@ updater_builder_t updater_builder_translate(updater_builder_t old_updater, str_i
         assert(!col_upd->translated);
         int *idx = MAP_GET(map, col_upd->target.name);
         if (idx == NULL) {
-            RAISE(TRANSLATION_EXCEPTION);
+            RAISE(DATABASE_TRANSLATION_EXCEPTION);
         }
         column_updater *updater = rmalloc(sizeof(column_updater));
         updater->new_value = col_upd->new_value;

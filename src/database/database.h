@@ -16,12 +16,6 @@
 #include "database/query/row_batch.h"
 #include "database/query/scheme_builder.h"
 
-typedef enum database_result {
-    DATABASE_RESULT_SUCCESS = 0,
-    DATABASE_RESULT_INTERNAL_ERROR = 1,
-    DATABASE_RESULT_WRONG_QUERY = 2,
-} database_result;
-
 typedef struct indexed_maps {
     str_map_str_int_map_t columns_maps;
     str_int_map_t table_maps;
@@ -41,20 +35,28 @@ column_description indexed_maps_translate(indexed_maps maps, column_description 
 
 where_condition *where_condition_translate(where_condition *condition, indexed_maps maps);
 
+/// THROWS: [DATABASE_INTERNAL_ERROR]
 database_t database_init(file_settings *settings);
 
+/// THROWS: [DATABASE_INTERNAL_ERROR]
 void database_free(database_t database);
 
+/// THROWS: [DATABASE_TABLE_ALREADY_EXISTS, DATABASE_INTERNAL_ERROR]
 void database_create_table(database_t database, scheme_builder_t scheme_builder);
 
+/// THROWS: [DATABASE_INTERNAL_ERROR]
 void database_delete_table(database_t database, char *table_name);
 
-database_result database_insert(database_t database, char * name, batch_builder_t batch);
+/// THROWS: [DATABASE_INTERNAL_ERROR, DATABASE_QUERY_EXCEPTION]
+void database_insert(database_t database, char * name, batch_builder_t batch);
 
-database_result database_delete(database_t database, query_t query);
+/// THROWS: [DATABASE_INTERNAL_ERROR, DATABASE_QUERY_EXCEPTION]
+void database_delete(database_t database, query_t query);
 
-database_result database_update(database_t database, query_t query, updater_builder_t updater);
+/// THROWS: [DATABASE_INTERNAL_ERROR, DATABASE_QUERY_EXCEPTION]
+void database_update(database_t database, query_t query, updater_builder_t updater);
 
+/// THROWS: [DATABASE_INTERNAL_ERROR, DATABASE_QUERY_EXCEPTION]
 result_view_t database_select(database_t database, query_t query, selector_builder selector);
 
 #endif //LLP_LAB1_DATABASE_H
