@@ -3,6 +3,5 @@ project(llp_lab1 C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_subdirectory(src/)
-
-add_subdirectory(test/)
+add_subdirectory(core/)
+add_subdirectory(parser/)

@@ -6,7 +6,6 @@
 #include <stddef.h>
 #include <malloc.h>
 #include <assert.h>
-#include "allocator/allocator.h"
 #include "blocklist.h"
 
 block_list_node *block_list_append(block_list *list, block *block) {

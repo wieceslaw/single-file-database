@@ -8,7 +8,7 @@ foreach (TEST_SOURCE ${TEST_SOURCES})
             ${TEST_SOURCE}
     )
     message("TEST_NAME=${TEST_NAME}, TEST_SOURCE=${TEST_SOURCE}")
-    target_link_libraries(${TEST_NAME} PRIVATE DatabaseLibrary)
-    target_include_directories(${TEST_NAME} PUBLIC "${PROJECT_SOURCE_DIR}/src")
+    target_include_directories(${TEST_NAME} INTERFACE ../../test)
+    target_link_libraries(${TEST_NAME} DatabaseLib)
 
 endforeach ()

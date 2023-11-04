@@ -14,7 +14,6 @@
 #include "util/map/map_impl.h"
 #include "database/query/scheme_builder.h"
 #include "database/query/row_batch.h"
-#include "util/string.h"
 
 struct database {
     allocator_t *allocator;
