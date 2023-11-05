@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16.3)
-project(llp_lab1 C)
+project(single_file_database C)
 
 set(CMAKE_C_STANDARD 11)
 

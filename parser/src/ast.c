@@ -23,27 +23,49 @@ void FreeAstNode(struct AstNode *node) {
     switch (node->type) {
         case N_INT:
             break;
+        case N_BOOL:
+            break;
         case N_FLOAT:
             break;
-        case N_PLUS:
-            free(node->data.PLUS.right);
-            free(node->data.PLUS.left);
+        case N_STRING:
+            free(node->data.STRING.value);
             break;
-        case N_MINUS:
-            free(node->data.MINUS.right);
-            free(node->data.MINUS.left);
+        case N_COMPARE:
+            FreeAstNode(node->data.COMPARE.right);
+            FreeAstNode(node->data.COMPARE.left);
             break;
-        case N_MULTIPLY:
-            free(node->data.MULTIPLY.right);
-            free(node->data.MULTIPLY.left);
+        case N_OPERAND:
+            switch (node->data.OPERAND.type) {
+                case OP_LITERAL:
+                    FreeAstNode(node->data.OPERAND.LITERAL.value);
+                    break;
+                case OP_COLUMN:
+                    FreeAstNode(node->data.OPERAND.COLUMN.table);
+                    FreeAstNode(node->data.OPERAND.COLUMN.column);
+                    break;
+            }
             break;
-        case N_DIVIDE:
-            free(node->data.DIVIDE.right);
-            free(node->data.DIVIDE.left);
+        case N_CONDITION:
+            FreeAstNode(node->data.CONDITION.first);
+            FreeAstNode(node->data.CONDITION.second);
             break;
     }
     free(node);
 }
+
+extern int yylineno;
+
+typedef struct yy_buffer_state *YY_BUFFER_STATE;
+
+void yy_switch_to_buffer(YY_BUFFER_STATE new_buffer);
+
+extern int yyparse(struct AstNode **result);
+
+extern FILE *yyin;
+
+extern void yy_delete_buffer(YY_BUFFER_STATE buffer);
+
+extern YY_BUFFER_STATE yy_scan_string(char *str);
 
 void yyerror(struct AstNode **result, char *s, ...) {
     va_list ap;
@@ -56,7 +78,7 @@ void yyerror(struct AstNode **result, char *s, ...) {
 struct AstNode *ParseString(char *string) {
     YY_BUFFER_STATE buffer = yy_scan_string(string);
     yy_switch_to_buffer(buffer);
-    struct AstNode* nodeRef;
+    struct AstNode* nodeRef = NULL;
     yyparse(&nodeRef);
     yy_delete_buffer(buffer);
     return nodeRef;
@@ -64,7 +86,7 @@ struct AstNode *ParseString(char *string) {
 
 struct AstNode *ParseFile(FILE *file) {
     yyin = file;
-    struct AstNode* nodeRef;
+    struct AstNode* nodeRef = NULL;
     yyparse(&nodeRef);
     return nodeRef;
 }

@@ -1,8 +1,5 @@
-<character> ::= <letter> | <digit>
-<variable-char> ::= <letter> | <digit> | "_"
-<variable> ::= <letter> | <variable> <variable-char>
-<column> ::= <variable>
-<table> ::= <variable>
+<column> ::= <name>
+<table> ::= <name>
 <comparison_operator> ::= "=" | "!=" | ">" | "<" | ">=" | "<="
 <comparison_operand> ::= <table>.<column> | <value>
 <compare_condition> ::= <comparison_operand> <comparison_operator> <comparison_operand>

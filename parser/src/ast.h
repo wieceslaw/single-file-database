@@ -8,13 +8,35 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+enum CompareType {
+    CMP_LE = 0,
+    CMP_GE,
+    CMP_LS,
+    CMP_GR,
+    CMP_EQ,
+    CMP_NQ,
+};
+
+enum ConditionType {
+    COND_CMP = 0,
+    COND_NOT,
+    COND_AND,
+    COND_OR,
+};
+
+enum OperandType {
+    OP_LITERAL = 0,
+    OP_COLUMN,
+};
+
 enum AstNodeType {
     N_INT = 0,
+    N_BOOL,
+    N_STRING,
     N_FLOAT,
-    N_PLUS,
-    N_MINUS,
-    N_MULTIPLY,
-    N_DIVIDE,
+    N_OPERAND,
+    N_COMPARE,
+    N_CONDITION
 };
 
 struct AstNode {
@@ -24,42 +46,40 @@ struct AstNode {
             int value;
         } INT;
         struct {
+            bool value;
+        } BOOL;
+        struct {
+            char* value;
+        } STRING;
+        struct {
             float value;
         } FLOAT;
         struct {
-            struct AstNode* left;
-            struct AstNode* right;
-        } PLUS;
+            enum OperandType type;
+            union {
+                struct {
+                    struct AstNode* table;
+                    struct AstNode* column;
+                } COLUMN;
+                struct {
+                    struct AstNode* value;
+                } LITERAL;
+            };
+        } OPERAND;
         struct {
+            enum CompareType type;
             struct AstNode* left;
             struct AstNode* right;
-        } MINUS;
+        } COMPARE;
         struct {
-            struct AstNode* left;
-            struct AstNode* right;
-        } MULTIPLY;
-        struct {
-            struct AstNode* left;
-            struct AstNode* right;
-        } DIVIDE;
+            enum ConditionType type;
+            struct AstNode* first;
+            struct AstNode* second;
+        } CONDITION;
     } data;
 };
 
-extern int yylineno;
-
 void yyerror(struct AstNode **result, char *s, ...);
-
-typedef struct yy_buffer_state *YY_BUFFER_STATE;
-
-extern int yyparse(struct AstNode **result);
-
-extern FILE *yyin;
-
-extern YY_BUFFER_STATE yy_scan_string(char *str);
-
-extern void yy_delete_buffer(YY_BUFFER_STATE buffer);
-
-void yy_switch_to_buffer(YY_BUFFER_STATE new_buffer);
 
 struct AstNode *ParseString(char *string);
 
