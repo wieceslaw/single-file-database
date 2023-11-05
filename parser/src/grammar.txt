@@ -1,0 +1,42 @@
+<character> ::= <letter> | <digit>
+<variable-char> ::= <letter> | <digit> | "_"
+<variable> ::= <letter> | <variable> <variable-char>
+<column> ::= <variable>
+<table> ::= <variable>
+<comparison_operator> ::= "=" | "!=" | ">" | "<" | ">=" | "<="
+<comparison_operand> ::= <table>.<column> | <value>
+<compare_condition> ::= <comparison_operand> <comparison_operator> <comparison_operand>
+<condition> ::= <compare_condition> | <condition> OR <condition> | <condition> AND <condition> | NOT <condition>
+<integer> ::= ...
+<string> ::= ...
+<float> ::= ...
+<boolean> ::= "true" | "false"
+<value> ::= <string> | <boolean> | <integer> | <float>
+<datatype> ::= INT32 | FLOAT32 | TEXT | BOOLEAN
+
+====== SELECT =======
+SELECT <column>, ... FROM <table>
+JOIN <table> ON <table>.<column> = <table>.<column>
+WHERE <condition>
+
+====== INSERT =======
+INSERT INTO <table> (<column>, ...)
+VALUES (<value>, ...)
+
+====== DELETE =======
+DELETE FROM <table>
+WHERE <condition>
+
+====== UPDATE =======
+UPDATE <table>
+SET <column> = <value>, ...
+WHERE <condition>
+
+====== CREATE TABLE ======
+CREATE TABLE <table> (
+    <column> <datatype>,
+    ...
+)
+
+====== DELETE TABLE ======
+DELETE TABLE <table>
