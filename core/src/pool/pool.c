@@ -3,7 +3,6 @@
 //
 
 #include <assert.h>
-#include <malloc.h>
 #include "pool.h"
 #include "heap/heap.h"
 #include "util/exceptions/exceptions.h"

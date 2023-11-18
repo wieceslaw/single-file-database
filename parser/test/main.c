@@ -42,6 +42,19 @@ char* ConditionTypeToString(enum ConditionType type) {
     }
 }
 
+char* DataTypeToString(enum DataType type) {
+    switch (type) {
+        case TYPE_INT32:
+            return "INT32";
+        case TYPE_FLOAT32:
+            return "FLOAT32";
+        case TYPE_TEXT:
+            return "TEXT";
+        case TYPE_BOOL:
+            return "BOOL";
+    }
+}
+
 void PrintAst(struct AstNode *tree, int indent) {
     if (tree == NULL) {
         return;
@@ -49,45 +62,92 @@ void PrintAst(struct AstNode *tree, int indent) {
     PrintIndent(indent);
     switch (tree->type) {
         case N_INT:
-            printf("INT=%d \n", tree->data.INT.value);
+            printf("INT [%d] \n", tree->data.INT.value);
             break;
         case N_FLOAT:
-            printf("FLOAT=%f \n", tree->data.FLOAT.value);
+            printf("FLOAT [%f] \n", tree->data.FLOAT.value);
             break;
         case N_BOOL:
-            printf("BOOL=%d \n", tree->data.BOOL.value);
+            printf("BOOL [%d] \n", tree->data.BOOL.value);
             break;
         case N_STRING:
-            printf("STRING=%s \n", tree->data.STRING.value);
+            printf("STRING [%s] \n", tree->data.STRING.value);
             break;
         case N_COMPARE:
-            printf("COMPARE: %s \n", CompareTypeToString(tree->data.COMPARE.type));
+            printf("COMPARE [TYPE: %s] \n", CompareTypeToString(tree->data.COMPARE.type));
             PrintAst(tree->data.COMPARE.left, indent + SINGLE_INDENT);
             PrintAst(tree->data.COMPARE.right, indent + SINGLE_INDENT);
             break;
         case N_CONDITION:
-            printf("CONDITION: %s \n", ConditionTypeToString(tree->data.CONDITION.type));
+            printf("CONDITION [TYPE: %s] \n", ConditionTypeToString(tree->data.CONDITION.type));
             PrintAst(tree->data.CONDITION.first, indent + SINGLE_INDENT);
             PrintAst(tree->data.CONDITION.second, indent + SINGLE_INDENT);
             break;
-        case N_OPERAND:
-            switch (tree->data.OPERAND.type) {
-                case OP_LITERAL:
-                    printf("OPERAND: LITERAL: \n");
-                    PrintAst(tree->data.OPERAND.LITERAL.value, indent + SINGLE_INDENT);
-                    break;
-                case OP_COLUMN:
-                    printf("OPERAND: TABLE, COLUMN \n");
-                    PrintAst(tree->data.OPERAND.COLUMN.table, indent + SINGLE_INDENT);
-                    PrintAst(tree->data.OPERAND.COLUMN.column, indent + SINGLE_INDENT);
-                    break;
-            }
+        case N_COLUMN_REFERENCE:
+            printf("COLUMN REFERENCE [TABLE: %s, COLUMN: %s] \n", tree->data.COLUMN_REFERENCE.table,
+                   tree->data.COLUMN_REFERENCE.column);
+            break;
+        case N_JOIN:
+            printf("JOIN ON [TABLE: %s] \n", tree->data.JOIN.table);
+            PrintAst(tree->data.JOIN.left, indent + SINGLE_INDENT);
+            PrintAst(tree->data.JOIN.right, indent + SINGLE_INDENT);
+            break;
+        case N_DELETE_TABLE_QUERY:
+            printf("DELETE TABLE [TABLE: %s] \n", tree->data.DELETE_TABLE_QUERY.table);
+            break;
+        case N_COLUMN_DECL:
+            printf("COLUMN DECLARATION [NAME: %s, TYPE: %s] \n", tree->data.COLUMN_DECL.column,
+                   DataTypeToString(tree->data.COLUMN_DECL.type));
+            break;
+        case N_CREATE_TABLE_QUERY:
+            printf("CREATE TABLE [TABLE: %s] \n", tree->data.CREATE_TABLE_QUERY.table);
+            PrintAst(tree->data.CREATE_TABLE_QUERY.columns, indent + SINGLE_INDENT);
+            break;
+        case N_SELECT_QUERY:
+            printf("SELECT FROM [TABLE: %s] \n", tree->data.SELECT_QUERY.table);
+            PrintAst(tree->data.SELECT_QUERY.selector, indent + SINGLE_INDENT);
+            PrintAst(tree->data.SELECT_QUERY.join, indent + SINGLE_INDENT);
+            PrintAst(tree->data.SELECT_QUERY.where, indent + SINGLE_INDENT);
+            break;
+        case N_INSERT_QUERY:
+            printf("INSERT INTO [TABLE: %s] \n", tree->data.INSERT_QUERY.table);
+            PrintAst(tree->data.INSERT_QUERY.columns, indent + SINGLE_INDENT);
+            PrintAst(tree->data.INSERT_QUERY.values, indent + SINGLE_INDENT);
+            break;
+        case N_DELETE_QUERY:
+            printf("DELETE FROM [TABLE: %s] \n", tree->data.DELETE_QUERY.table);
+            PrintAst(tree->data.DELETE_QUERY.where, indent + SINGLE_INDENT);
+            break;
+        case N_LIST:
+            printf("LIST ITEM \n");
+            PrintAst(tree->data.LIST.value, indent + SINGLE_INDENT);
+            PrintAst(tree->data.LIST.next, indent);
+            break;
+        case N_UPDATE_LIST_ITEM:
+            printf("SET [COLUMN: %s]", tree->data.UPDATE_LIST_ITEM.column);
+            PrintAst(tree->data.UPDATE_LIST_ITEM.value, indent + SINGLE_INDENT);
+            break;
+        case N_UPDATE_QUERY:
+            printf("UPDATE [TABLE: %s]", tree->data.UPDATE_QUERY.table);
+            PrintAst(tree->data.UPDATE_QUERY.updateList, indent + SINGLE_INDENT);
+            PrintAst(tree->data.UPDATE_QUERY.where, indent + SINGLE_INDENT);
             break;
     }
 }
 
-int main() {
-    struct AstNode *tree = ParseString("(NOT (1 > 2)) AND (user.id = 1)");
+int main(int argc, char * argv[]) {
+    if (argc != 2) {
+        printf("Wrong number of arguments \n");
+        return -1;
+    }
+    // <-1
+    char* filename = argv[1];
+    FILE *f = fopen(filename, "r");
+    if (f == NULL) {
+        printf("Can't read file: %s \n", filename);
+        return -1;
+    }
+    struct AstNode *tree = ParseFile(f);
     if (tree == NULL) {
         printf("No tree");
     } else {
