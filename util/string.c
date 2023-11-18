@@ -2,8 +2,9 @@
 // Created by vyach on 11.10.2023.
 //
 
+#include "util_string.h"
 #include "string.h"
-#include "util/exceptions/exceptions.h"
+#include "exceptions/exceptions.h"
 
 /// THROWS: [MALLOC_EXCEPTION]
 char* string_copy(char* src) {

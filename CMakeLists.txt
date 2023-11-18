@@ -3,5 +3,6 @@ project(single_file_database C)
 
 set(CMAKE_C_STANDARD 11)
 
+add_subdirectory(util/)
 add_subdirectory(core/)
 add_subdirectory(parser/)

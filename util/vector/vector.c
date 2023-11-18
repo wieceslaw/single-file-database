@@ -4,9 +4,9 @@
 
 #include <malloc.h>
 #include <assert.h>
-#include <string.h>
+#include <util_string.h>
 #include "vector.h"
-#include "util/defines.h"
+#include "../defines.h"
 
 struct vector {
     vector_value *array;

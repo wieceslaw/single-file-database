@@ -5,7 +5,7 @@
 #ifndef LLP_LAB1_STRING_H
 #define LLP_LAB1_STRING_H
 
-#include <string.h>
+#include <util_string.h>
 
 /// THROWS: [MALLOC_EXCEPTION]
 char* string_copy(char* src);

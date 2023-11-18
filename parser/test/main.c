@@ -140,7 +140,6 @@ int main(int argc, char * argv[]) {
         printf("Wrong number of arguments \n");
         return -1;
     }
-    // <-1
     char* filename = argv[1];
     FILE *f = fopen(filename, "r");
     if (f == NULL) {

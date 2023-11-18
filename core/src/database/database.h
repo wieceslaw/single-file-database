@@ -6,7 +6,7 @@
 #define LLP_LAB1_DATABASE_H
 
 #include "allocator/allocator.h"
-#include "util/map/map_impl.h"
+#include "map/map_impl.h"
 #include "table/table.h"
 #include "database/query/where_condition.h"
 #include "database/query/join_builder.h"

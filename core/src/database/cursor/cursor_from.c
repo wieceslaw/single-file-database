@@ -4,7 +4,7 @@
 
 #include <assert.h>
 #include "cursor.h"
-#include "util/string.h"
+#include "util_string.h"
 
 static row_t cursor_get_row_from(cursor_t cur) {
     if (NULL != cur->from.cached_row.columns) {

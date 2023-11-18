@@ -5,7 +5,7 @@
 #ifndef LLP_LAB1_TABLE_H
 #define LLP_LAB1_TABLE_H
 
-#include "util/defines.h"
+#include "defines.h"
 #include "pool/pool.h"
 #include "stddef.h"
 

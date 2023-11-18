@@ -5,7 +5,7 @@
 #ifndef LLP_LAB1_SELECTOR_BUILDER_H
 #define LLP_LAB1_SELECTOR_BUILDER_H
 
-#include "util/list/list.h"
+#include "list/list.h"
 #include "database/table/table.h"
 
 typedef struct selector_builder {

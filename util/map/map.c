@@ -5,8 +5,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "map.h"
-#include "util/defines.h"
-#include "util/exceptions/exceptions.h"
+#include "../exceptions/exceptions.h"
 
 struct map_iterator {
     map_t map;

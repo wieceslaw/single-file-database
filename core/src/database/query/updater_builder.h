@@ -6,8 +6,8 @@
 #define LLP_LAB1_UPDATER_BUILDER_H
 
 #include "database/table/table.h"
-#include "util/list/list.h"
-#include "util/map/map_impl.h"
+#include "list/list.h"
+#include "map/map_impl.h"
 
 typedef struct column_updater {
     bool translated;

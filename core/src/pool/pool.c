@@ -5,7 +5,7 @@
 #include <assert.h>
 #include "pool.h"
 #include "heap/heap.h"
-#include "util/exceptions/exceptions.h"
+#include "exceptions/exceptions.h"
 
 #define POOL_SIZE  57
 #define POOL_START 64

@@ -7,8 +7,8 @@
 
 #include <stddef.h>
 #include <stdbool.h>
-#include "util/defines.h"
-#include "util/list/list.h"
+#include "../defines.h"
+#include "../list/list.h"
 
 #define MAP_START_CAPACITY 8
 #define MAP_EXTENSION_RATIO 2

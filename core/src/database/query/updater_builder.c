@@ -4,8 +4,7 @@
 
 #include <assert.h>
 #include "updater_builder.h"
-#include "util/exceptions/exceptions.h"
-#include "util/string.h"
+#include "exceptions/exceptions.h"
 
 /// THROWS: [MALLOC_EXCEPTION]
 column_updater *column_updater_of(char* target, column_t new_value) {

@@ -5,8 +5,7 @@
 #include <assert.h>
 #include "join_builder.h"
 #include "database/table/table.h"
-#include "util/exceptions/exceptions.h"
-#include "util/list/list.h"
+#include "exceptions/exceptions.h"
 
 /// THROWS: [MALLOC_EXCEPTION]
 join_builder_t join_builder_init() {

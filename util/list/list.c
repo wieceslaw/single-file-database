@@ -4,7 +4,7 @@
 
 #include <assert.h>
 #include "list.h"
-#include "util/exceptions/exceptions.h"
+#include "../exceptions/exceptions.h"
 
 typedef struct list_node {
     void *value;

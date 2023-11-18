@@ -9,9 +9,9 @@
 #include "pool/pool.h"
 #include "table/table.h"
 #include "database.h"
-#include "util/exceptions/exceptions.h"
+#include "exceptions/exceptions.h"
 #include "database/cursor/cursor.h"
-#include "util/map/map_impl.h"
+#include "map/map_impl.h"
 #include "database/query/scheme_builder.h"
 #include "database/query/row_batch.h"
 

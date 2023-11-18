@@ -6,7 +6,8 @@
 #define LLP_LAB1_BLOCKLIST_H
 
 #include <stdbool.h>
-#include "util/map/map_impl.h"
+#include "map/map_impl.h"
+#include "allocator/allocator.h"
 
 typedef struct block_list_node block_list_node;
 

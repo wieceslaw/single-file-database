@@ -5,7 +5,7 @@
 #ifndef LLP_LAB1_ROW_BATCH_H
 #define LLP_LAB1_ROW_BATCH_H
 
-#include "util/vector/vector.h"
+#include "vector/vector.h"
 #include "database/table/table.h"
 
 typedef struct row_builder {

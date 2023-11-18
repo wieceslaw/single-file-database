@@ -6,7 +6,7 @@
 #include <string.h>
 #include <assert.h>
 #include "buffer/buffer.h"
-#include "util/exceptions/exceptions.h"
+#include "exceptions/exceptions.h"
 
 // THROWS: [MALLOC_EXCEPTION]
 buffer_t buffer_init(uint64_t size) {

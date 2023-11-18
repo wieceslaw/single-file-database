@@ -4,8 +4,8 @@
 
 #include <stdlib.h>
 #include <time.h>
-#include <string.h>
 #include <assert.h>
+#include <string.h>
 #include "map_impl.h"
 
 static size_t hash_start_val = 0;

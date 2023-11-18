@@ -6,7 +6,6 @@
 #define LLP_LAB1_MAP_IMPL_H
 
 #include "map.h"
-#include "database/table/table.h"
 
 size_t int_hash(const void *x);
 

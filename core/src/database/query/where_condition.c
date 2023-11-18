@@ -4,7 +4,8 @@
 
 #include <stdbool.h>
 #include <assert.h>
-#include "util/string.h"
+#include <string.h>
+#include "util_string.h"
 #include "where_condition.h"
 
 /// THROWS: [MALLOC_EXCEPTION]

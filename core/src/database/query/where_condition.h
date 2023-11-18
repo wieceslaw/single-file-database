@@ -5,8 +5,8 @@
 #ifndef LLP_LAB1_WHERE_CONDITION_H
 #define LLP_LAB1_WHERE_CONDITION_H
 
-#include "util/defines.h"
-#include "util/exceptions/exceptions.h"
+#include "defines.h"
+#include "exceptions/exceptions.h"
 #include "database/table/table.h"
 
 typedef enum {

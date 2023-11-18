@@ -4,8 +4,8 @@
 
 #include <assert.h>
 #include "selector_builder.h"
-#include "util/list/list.h"
-#include "util/exceptions/exceptions.h"
+#include "list/list.h"
+#include "exceptions/exceptions.h"
 #include "database/table/table.h"
 
 /// THROWS: [MALLOC_EXCEPTION]

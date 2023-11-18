@@ -4,8 +4,8 @@
 
 #include <assert.h>
 #include "row_batch.h"
-#include "util/exceptions/exceptions.h"
-#include "util/string.h"
+#include "exceptions/exceptions.h"
+#include "util_string.h"
 
 row_builder_t row_builder_init(size_t capacity) {
     return (row_builder_t) {

@@ -6,7 +6,7 @@
 #define LLP_LAB1_ALLOCATOR_H
 
 #include <stdint.h>
-#include "util/defines.h"
+#include "defines.h"
 
 #define PAGE_SIZE 4096
 #define PAGE_CAPACITY (PAGE_SIZE - sizeof(page_list_node_h))

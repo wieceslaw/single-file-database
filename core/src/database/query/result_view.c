@@ -3,6 +3,8 @@
 //
 
 #include <assert.h>
+#include <malloc.h>
+#include "exceptions/exceptions.h"
 #include "result_view.h"
 
 void result_view_free(result_view_t *view_ptr) {

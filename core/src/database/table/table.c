@@ -5,8 +5,8 @@
 #include <assert.h>
 #include <string.h>
 #include "table.h"
-#include "util/exceptions/exceptions.h"
-#include "util/string.h"
+#include "exceptions/exceptions.h"
+#include "util_string.h"
 
 static void free_column(table_scheme_column *column) {
     assert(column != NULL);
