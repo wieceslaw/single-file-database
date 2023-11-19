@@ -29,7 +29,7 @@ extern int yylex();
 
 %type<ival> COMPARISON_OPERATOR DATA_TYPE
 %type<node> VALUE_INT VALUE_BOOL VALUE_FLOAT VALUE_STRING VALUE
-%type<node> COMPARISON_OPERAND COMPARE_CONDITION CONDITION JOIN JOIN_OPT WHERE_OPT SELECTOR
+%type<node> COMPARISON_OPERAND COMPARE_CONDITION CONDITION JOIN JOINS WHERE_OPT SELECTOR
 %type<node> COLUMN_DECL COLUMNS_DECL
 %type<node> COLUMNS_LIST VALUES_LIST UPDATE_LIST TABLE_COLUMN
 %type<node> QUERIES QUERY SELECT_QUERY INSERT_QUERY DELETE_QUERY UPDATE_QUERY CREATE_TABLE_QUERY DELETE_TABLE_QUERY
@@ -40,12 +40,9 @@ extern int yylex();
 
 QUERIES:
     { $$ = NULL; } |
-    QUERIES QUERY T_SEMICOLON {
-        if ($$ == NULL) {
-            $$ = list_init();
-            *tree = $$;
-        }
-        list_append($$, $2);
+    QUERY T_SEMICOLON QUERIES {
+        $$ = NewListAstNode($1, $3);
+        *tree = $$;
     };
 
 QUERY:
@@ -102,19 +99,23 @@ JOIN:
         $$ = NewJoinAstNode($2, $4, $6);
     };
 
-JOIN_OPT: { $$ = NULL; } | JOIN;
+JOINS:
+    { $$ = NULL; } |
+    JOIN JOINS {
+        $$ = NewListAstNode($1, $2);
+    };
 
 WHERE_OPT: { $$ = NULL; } | T_WHERE CONDITION { $$ = $2; };
 
 SELECTOR:
     TABLE_COLUMN {
-        // TODO: linked list of nodes
-    } | SELECTOR T_COMMA TABLE_COLUMN {
-        // TODO: linked list of nodes
+        $$ = NewListAstNode($1, NULL);
+    } | TABLE_COLUMN T_COMMA SELECTOR {
+        $$ = NewListAstNode($1, $3);
     };
 
 SELECT_QUERY:
-    T_SELECT SELECTOR T_FROM T_NAME JOIN_OPT WHERE_OPT {
+    T_SELECT SELECTOR T_FROM T_NAME JOINS WHERE_OPT {
         $$ = NewSelectQueryAstNode($2, $4, $5, $6);
     };
 
@@ -132,9 +133,10 @@ COLUMN_DECL:
 
 COLUMNS_DECL:
     COLUMN_DECL {
-        // TODO: linked list of nodes
-    } | COLUMNS_DECL T_COMMA COLUMN_DECL {
-        // TODO: linked list of nodes
+        $$ = NewListAstNode($1, NULL);
+    } |
+    COLUMN_DECL T_COMMA COLUMNS_DECL {
+        $$ = NewListAstNode($1, $3);
     };
 
 CREATE_TABLE_QUERY:
@@ -149,15 +151,16 @@ DELETE_QUERY:
 
 COLUMNS_LIST:
     T_NAME {
-        $$ = NewStringAstNode($1);
-    } | COLUMNS_LIST T_COMMA T_NAME {
-        $$ = NewStringAstNode($3);
-        // TODO: Linked list
+        $$ = NewListAstNode(NewStringAstNode($1), NULL);
+    } | T_NAME T_COMMA COLUMNS_LIST {
+        $$ = NewListAstNode(NewStringAstNode($1), $3);
     };
 
 VALUES_LIST:
-    VALUE | VALUES_LIST T_COMMA VALUE {
-        // TODO: Linked list
+    VALUE {
+        $$ = NewListAstNode($1, NULL);
+    } | VALUE T_COMMA VALUES_LIST {
+        $$ = NewListAstNode($1, $3);
     };
 
 INSERT_QUERY:
@@ -167,9 +170,9 @@ INSERT_QUERY:
 
 UPDATE_LIST:
     T_NAME T_EQUALS VALUE {
-        // TODO: Linked list
-    } | UPDATE_LIST T_COMMA T_NAME T_EQUALS VALUE {
-        // TODO: Linked list
+        $$ = NewListAstNode(NewUpdateListItemAstNode($1, $3), NULL);
+    } | T_NAME T_EQUALS VALUE T_COMMA UPDATE_LIST {
+        $$ = NewListAstNode(NewUpdateListItemAstNode($1, $3), $5);
     };
 
 UPDATE_QUERY:

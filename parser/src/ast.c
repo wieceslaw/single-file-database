@@ -138,6 +138,14 @@ struct AstNode *NewInsertQueryAstNode(
     return node;
 }
 
+struct AstNode *NewUpdateListItemAstNode(char* column, struct AstNode *value) {
+    struct AstNode *node = NewAstNode();
+    node->type = N_UPDATE_LIST_ITEM;
+    node->data.UPDATE_LIST_ITEM.column = column;
+    node->data.UPDATE_LIST_ITEM.value = value;
+    return node;
+}
+
 struct AstNode *NewUpdateQueryAstNode(
         char *table,
         struct AstNode *updateList,

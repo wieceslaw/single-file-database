@@ -51,7 +51,7 @@ char* DataTypeToString(enum DataType type) {
         case TYPE_TEXT:
             return "TEXT";
         case TYPE_BOOL:
-            return "BOOL";
+            return "BOOLEAN";
     }
 }
 
@@ -68,7 +68,7 @@ void PrintAst(struct AstNode *tree, int indent) {
             printf("FLOAT [%f] \n", tree->data.FLOAT.value);
             break;
         case N_BOOL:
-            printf("BOOL [%d] \n", tree->data.BOOL.value);
+            printf("BOOL [%s] \n", tree->data.BOOL.value ? "TRUE" : "FALSE");
             break;
         case N_STRING:
             printf("STRING [%s] \n", tree->data.STRING.value);
@@ -105,13 +105,25 @@ void PrintAst(struct AstNode *tree, int indent) {
             break;
         case N_SELECT_QUERY:
             printf("SELECT FROM [TABLE: %s] \n", tree->data.SELECT_QUERY.table);
+            indent += SINGLE_INDENT;
+            PrintIndent(indent);
+            printf("SELECTOR LIST \n");
             PrintAst(tree->data.SELECT_QUERY.selector, indent + SINGLE_INDENT);
+            PrintIndent(indent);
+            printf("JOIN LIST \n");
             PrintAst(tree->data.SELECT_QUERY.join, indent + SINGLE_INDENT);
+            PrintIndent(indent);
+            printf("WHERE \n");
             PrintAst(tree->data.SELECT_QUERY.where, indent + SINGLE_INDENT);
             break;
         case N_INSERT_QUERY:
             printf("INSERT INTO [TABLE: %s] \n", tree->data.INSERT_QUERY.table);
+            indent += SINGLE_INDENT;
+            PrintIndent(indent);
+            printf("COLUMNS LIST \n");
             PrintAst(tree->data.INSERT_QUERY.columns, indent + SINGLE_INDENT);
+            PrintIndent(indent);
+            printf("VALUES LIST \n");
             PrintAst(tree->data.INSERT_QUERY.values, indent + SINGLE_INDENT);
             break;
         case N_DELETE_QUERY:
@@ -124,12 +136,17 @@ void PrintAst(struct AstNode *tree, int indent) {
             PrintAst(tree->data.LIST.next, indent);
             break;
         case N_UPDATE_LIST_ITEM:
-            printf("SET [COLUMN: %s]", tree->data.UPDATE_LIST_ITEM.column);
+            printf("SET [COLUMN: %s] \n", tree->data.UPDATE_LIST_ITEM.column);
             PrintAst(tree->data.UPDATE_LIST_ITEM.value, indent + SINGLE_INDENT);
             break;
         case N_UPDATE_QUERY:
-            printf("UPDATE [TABLE: %s]", tree->data.UPDATE_QUERY.table);
+            printf("UPDATE [TABLE: %s] \n", tree->data.UPDATE_QUERY.table);
+            indent += SINGLE_INDENT;
+            PrintIndent(indent);
+            printf("UPDATE LIST \n");
             PrintAst(tree->data.UPDATE_QUERY.updateList, indent + SINGLE_INDENT);
+            PrintIndent(indent);
+            printf("WHERE \n");
             PrintAst(tree->data.UPDATE_QUERY.where, indent + SINGLE_INDENT);
             break;
     }

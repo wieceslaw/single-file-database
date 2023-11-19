@@ -188,6 +188,8 @@ struct AstNode *NewInsertQueryAstNode(
         struct AstNode *values
 );
 
+struct AstNode *NewUpdateListItemAstNode(char* column, struct AstNode *value);
+
 struct AstNode *NewUpdateQueryAstNode(
         char *table,
         struct AstNode *updateList,
