@@ -2,6 +2,7 @@
 // Created by vyach on 04.11.2023.
 //
 
+#include <string.h>
 #include "ast.h"
 
 #define SINGLE_INDENT 2
@@ -158,7 +159,12 @@ int main(int argc, char * argv[]) {
         return -1;
     }
     char* filename = argv[1];
-    FILE *f = fopen(filename, "r");
+    FILE *f = NULL;
+    if (strcmp(filename, "stdin") == 0) {
+        f = stdin;
+    } else {
+        f = fopen(filename, "r");
+    }
     if (f == NULL) {
         printf("Can't read file: %s \n", filename);
         return -1;
@@ -169,6 +175,7 @@ int main(int argc, char * argv[]) {
     } else {
         PrintAst(tree, 0);
     }
+    fclose(f);
     FreeAstNode(tree);
     return 0;
 }

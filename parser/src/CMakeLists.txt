@@ -16,5 +16,4 @@ add_library(ParserLib STATIC
 )
 
 target_link_libraries(ParserLib ${FLEX_LIBRARIES})
-target_link_libraries(ParserLib UtilLib)
 target_include_directories(ParserLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

@@ -24,11 +24,6 @@ enum ConditionType {
     COND_OR,
 };
 
-enum OperandType {
-    OP_LITERAL = 0,
-    OP_COLUMN,
-};
-
 enum DataType {
     TYPE_INT32 = 0,
     TYPE_FLOAT32,
@@ -117,7 +112,6 @@ struct AstNode {
             struct AstNode *where;
         } DELETE_QUERY;
         struct {
-            // TODO: change or not? Complex structures inside ast may be a bad idea.
             struct AstNode *value;
             struct AstNode *next;
         } LIST;

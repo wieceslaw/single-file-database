@@ -4,6 +4,7 @@
 
 - core - file management functionality
 - parser - syntactic analysis of query language
+- util - utility data structures and definitions
 
 ## File data structures
 
