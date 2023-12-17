@@ -1,4 +1,4 @@
-set(TARGET_NAME Client)
+set(TARGET_NAME Server)
 
 file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/**.c)
 add_executable(${TARGET_NAME} ${SOURCES})

@@ -3,11 +3,11 @@
 //
 
 #include <stdio.h>
-#include "example.pb-c.h"
+#include "lib.h"
 
 int main() {
     PhoneNumber phoneNumber = PHONE_NUMBER__INIT;
-    phoneNumber.
+    phoneNumber.number = "1";
     printf("Hello, world \n");
     return 0;
 }

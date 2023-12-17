@@ -14,6 +14,5 @@ add_library(ParserLib STATIC
         ${BISON_MyParser_OUTPUTS}
         ${FLEX_MyScanner_OUTPUTS}
 )
-
 target_link_libraries(ParserLib ${FLEX_LIBRARIES})
 target_include_directories(ParserLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
