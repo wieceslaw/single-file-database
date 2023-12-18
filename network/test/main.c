@@ -8,6 +8,8 @@
 int main() {
     PhoneNumber phoneNumber = PHONE_NUMBER__INIT;
     phoneNumber.number = "1";
+    phone_number__init(&phoneNumber);
+    
     printf("Hello, world \n");
     return 0;
 }
