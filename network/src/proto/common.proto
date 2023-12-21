@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+enum ColumnType {
+  COLUMN_TYPE_INT = 0;
+  COLUMN_TYPE_FLOAT = 1;
+  COLUMN_TYPE_STRING = 2;
+  COLUMN_TYPE_BOOL = 3;
+}
+
+message ColumnData {
+  oneof value {
+    int32 i = 1;
+    float f = 2;
+    string s = 3;
+    bool b = 4;
+  }
+}
+
+message ColumnDataType {
+  ColumnType type = 1;
+  ColumnData data = 2;
+}
+
+message RowType {
+  repeated string names = 1;
+  repeated ColumnType types = 2;
+}
+
+message RowData {
+  repeated ColumnData columns = 1;
+}
+
+message RowDataType {
+  repeated ColumnDataType data = 1;
+}

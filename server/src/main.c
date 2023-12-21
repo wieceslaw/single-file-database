@@ -5,49 +5,87 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
+#include <pthread.h>
 
-#define PORTNUM 2300
+#include "lib.h"
+#include "Server.h"
+
+//struct threadInfo {
+//    pthread_mutex_t *lock;
+//    int sockfd;
+//};
+//
+//void *handle(void *arg) {
+//    struct threadInfo *info = arg;
+//
+//    printf("handle \n");
+//
+//    while (info->sockfd) {
+//        pthread_mutex_lock(info->lock);
+//        //
+//        Message *message = receiveMessage(info->sockfd);
+//        if (message == NULL) {
+//            break;
+//        }
+//        char *str = message->request->message;
+//        printf("%s", str);
+//        message__free_unpacked(message, NULL);
+//        //
+//        pthread_mutex_unlock(info->lock);
+//    }
+//    close(info->sockfd);
+//
+//    return NULL;
+//}
+//
+//int createThread(struct threadInfo *info) {
+//    pthread_t *pthread = malloc(sizeof(pthread_t));
+//    *pthread = (pthread_t) {0};
+//    return pthread_create(pthread, NULL, &handle, info);
+//    // TODO: how to free after malloc?
+//}
 
 int main(int argc, char *argv[]) {
-    char *msg = "Hello World !\n";
-
-    struct sockaddr_in dest; /* socket info about the machine connecting to us */
-    struct sockaddr_in serv; /* socket info about our server */
-    int mysocket;            /* socket used to listen for incoming connections */
-    socklen_t socksize = sizeof(struct sockaddr_in);
-
-    memset(&serv, 0, sizeof(serv));           /* zero the struct before filling the fields */
-    serv.sin_family = AF_INET;                /* set the type of connection to TCP/IP */
-    serv.sin_addr.s_addr = htonl(INADDR_ANY); /* set our address to any interface */
-    serv.sin_port = htons(PORTNUM);           /* set the server port number */
-
-    mysocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (mysocket == -1) {
-        printf("Can't open socket");
-        return mysocket;
+    uint16_t port = 0;
+    if (argc != 1 && argc != 3) {
+        fprintf(stderr, "Wrong number of arguments, optional: -p <port> \n");
+        return EXIT_FAILURE;
+    }
+    if (argc == 3) {
+        if (strcmp(argv[1], "-p") != 0) {
+            fprintf(stderr, "Unknown param: \"%s\" \n", argv[1]);
+            return EXIT_FAILURE;
+        }
+        if (parsePort(argv[2], &port) != 0) {
+            fprintf(stderr, "Unable to parse port \n");
+            return EXIT_FAILURE;
+        }
     }
 
-    /* bind serv information to mysocket */
-    int err = bind(mysocket, (struct sockaddr *) &serv, sizeof(struct sockaddr));
-    if (err == -1) {
-        printf("Can't bind socket");
-        return mysocket;
+    struct Server *server = ServerNew(port);
+
+    pthread_t serveThread = {0};
+    int err = pthread_create(&serveThread, NULL, &ServerStart, server);
+    if (err != 0) {
+        ServerFree(&server);
+        perror("Server start failed");
+        return EXIT_FAILURE;
     }
+    printf("Server started using port: %d \n", server->port);
 
-    /* start listening, allowing a queue of up to 1 pending connection */
-    listen(mysocket, 1);
-    int consocket = accept(mysocket, (struct sockaddr *) &dest, &socksize);
-
-    if (consocket) {
-        printf("Incoming connection from %s - sending welcome\n", inet_ntoa(dest.sin_addr));
-        send(consocket, msg, strlen(msg), 0);
-        close(consocket);
+    char *line = NULL;
+    size_t length = 0;
+    while (getline(&line, &length, stdin) != -1) {
+        printf("Command: %s", line);
+        if (strcmp(line, "exit\n") == 0) {
+            printf("Exiting... \n");
+            break;
+        }
     }
+    free(line);
 
-    close(mysocket);
+    ServerStop(server);
+    ServerFree(&server);
+    printf("Server stopped \n");
     return EXIT_SUCCESS;
 }

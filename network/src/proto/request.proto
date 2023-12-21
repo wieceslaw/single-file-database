@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+import "common.proto";
+
+message BatchCollect {
+  int32 max = 1;
+}
+
+message CreateTableQuery {
+  string name = 1;
+  repeated RowType scheme = 2;
+}
+
+message DeleteTableQuery {
+  string name = 1;
+}
+
+message InsertQuery {
+  string table = 1;
+  repeated string columns = 2;
+  repeated RowDataType values = 3;
+}
+
+message Request {
+  oneof data {
+    string message = 42;
+    BatchCollect batch = 2;
+    CreateTableQuery createTableQuery = 3;
+    DeleteTableQuery deleteTableQuery = 4;
+    InsertQuery insertQuery = 5;
+  }
+}

@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+import "common.proto";
+
+message Batch {
+  int32 number = 1;
+  repeated RowData rows = 2;
+}
+
+message QueryStart {
+
+}
+
+message Response {
+  bool ok = 1;
+  oneof data {
+    string message = 2;
+//      InsertData insert = 3;
+//      UpdateData update = 4;
+//      DeleteData delete = 5;
+//      SelectData select = 6;
+  }
+}
+
+// id |     message_id      |     channel_id      |     category_id     | is_started | bot_account_id |        time_started
+// ----+---------------------+---------------------+---------------------+------------+----------------+----------------------------
+// 48 | 1179218547633815582 | 1127366185680371782 | 1179230803058769962 | t          |              2 | 2023-11-29 01:22:11.691095
+// 49 | 1179230829042475008 | 1127366185680371782 | 1179235424573603883 | t          |              1 | 2023-11-29 01:40:33.113025
+// 50 | 1179235464599847012 | 1127366185680371782 |                     | f          |              3 | 1900-01-01 00:00:00
+// (3 rows)
+// returning?

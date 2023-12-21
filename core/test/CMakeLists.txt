@@ -9,6 +9,6 @@ foreach (TEST_SOURCE ${TEST_SOURCES})
     )
     message("TEST_NAME=${TEST_NAME}, TEST_SOURCE=${TEST_SOURCE}")
     target_include_directories(${TEST_NAME} INTERFACE ../../test)
-    target_link_libraries(${TEST_NAME} DatabaseLib)
+    target_link_libraries(${TEST_NAME} CoreLib)
 
 endforeach ()

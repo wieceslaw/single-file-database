@@ -3,37 +3,61 @@
 //
 
 #include <stdio.h>
-
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-#define MAXRCVLEN 500
-#define PORTNUM 2303
+#include "lib.h"
 
 int main(int argc, char *argv[]) {
-    char buffer[MAXRCVLEN + 1]; /* +1 so we can add null terminator */
-    int len, mysocket;
-    struct sockaddr_in dest;
-
-    mysocket = socket(AF_INET, SOCK_STREAM, 0);
-
-    memset(&dest, 0, sizeof(dest));                /* zero the struct */
+    if (argc != 3) {
+        fprintf(stderr, "Wrong number of arguments, expected <ip_address> <port> \n");
+        return EXIT_FAILURE;
+    }
+    struct sockaddr_in dest = {0};
     dest.sin_family = AF_INET;
-    dest.sin_addr.s_addr = htonl(INADDR_LOOPBACK); /* set destination IP number - localhost, 127.0.0.1*/
-    dest.sin_port = htons(PORTNUM);                /* set destination port number */
+    char *addressStr = argv[1];
+    char *portStr = argv[2];
+    if (parsePort(portStr, &(dest.sin_port))) {
+        fprintf(stderr, "Unable to parse port \n");
+        return EXIT_FAILURE;
+    }
+    if (parseIp4Address(addressStr, &dest.sin_addr)) {
+        fprintf(stderr, "Unable to parse address \n");
+        return EXIT_FAILURE;
+    }
 
-    connect(mysocket, (struct sockaddr *) &dest, sizeof(struct sockaddr_in));
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (connect(sockfd, (struct sockaddr *) &dest, sizeof(struct sockaddr_in))) {
+        fprintf(stderr, "Unable to connect to the server: %s:%s \n", addressStr, portStr);
+        return EXIT_FAILURE;
+    }
 
-    len = recv(mysocket, buffer, MAXRCVLEN, 0);
 
-    /* We have to null terminate the received data ourselves */
-    buffer[len] = '\0';
+//    Message message;
+//    message__init(&message);
+//    Request request;
+//    request__init(&request);
+//    message.request = &request;
+//    message.content_case = MESSAGE__CONTENT_REQUEST;
+//    request.data_case = REQUEST__DATA_MESSAGE;
+//
+//    char *line = NULL;
+//    size_t len = 0;
+//    ssize_t nread;
+//    while ((nread = getline(&line, &len, stdin)) != -1) {
+//        request.message = line;
+//        if (sendMessage(sockfd, &message)) {
+//            printf("Sending message error \n");
+//        }
+//    }
+//    free(line);
 
-    printf("Received %s (%d bytes).\n", buffer, len);
+    Message *msg = receiveMessage(sockfd);
+    printf("Server response: %s", msg->response->message);
+    message__free_unpacked(msg, NULL);
 
-    close(mysocket);
+    close(sockfd);
     return EXIT_SUCCESS;
 }

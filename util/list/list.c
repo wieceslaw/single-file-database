@@ -21,7 +21,7 @@ struct list_iterator {
     list_node_t node;
 };
 
-/// throws: [MALLOC_EXCEPTION]
+// throws: [MALLOC_EXCEPTION]
 static list_node_t list_node_init(list_value value) {
     list_node_t node = rmalloc(sizeof(struct list_node));
     *node = (struct list_node) {.value = value, .next = NULL, .prev = NULL};
