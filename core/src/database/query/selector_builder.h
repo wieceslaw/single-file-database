@@ -13,7 +13,7 @@ typedef struct selector_builder {
 } *selector_builder;
 
 /// THROWS: [MALLOC_EXCEPTION]
-selector_builder selector_builder_init();
+selector_builder selector_builder_init(void);
 
 void selector_builder_free(selector_builder *selector);
 

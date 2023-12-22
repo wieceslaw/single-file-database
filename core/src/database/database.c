@@ -322,7 +322,7 @@ static str_int_map_t table_scheme_mapping(database_t database, char* table_name)
             return NULL;
         }
         map = MAP_NEW_STR_INT(scheme->size);
-        for (int i = 0; i < scheme->size; i++) {
+        for (int i = 0; i < (int) scheme->size; i++) {
             table_scheme_column col = scheme->columns[i];
             MAP_PUT(map, col.name, &i);
         }
@@ -551,6 +551,8 @@ static operand column_operand_translate(operand op, indexed_maps maps) {
                     .column = indexed_maps_translate(maps, op.column)
             };
         }
+        default:
+            assert(0);
     }
 }
 
@@ -583,4 +585,5 @@ where_condition *where_condition_translate(where_condition *condition, indexed_m
         case CONDITION_COMPARE:
             return where_condition_translate_indexed(condition, maps);
     }
+    assert(0);
 }

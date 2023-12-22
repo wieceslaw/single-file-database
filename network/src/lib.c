@@ -42,7 +42,7 @@ int sendMessage(int sockfd, Message *message) {
     ProtobufCBufferSimple simple = PROTOBUF_C_BUFFER_SIMPLE_INIT(pad);
     ProtobufCBuffer *buffer = (ProtobufCBuffer *) &simple;
     size_t size = message__pack_to_buffer(message, buffer);
-    ssize_t len;
+    size_t len;
     len = send(sockfd, &size, sizeof(size), 0);
     if (len != sizeof(size)) {
         PROTOBUF_C_BUFFER_SIMPLE_CLEAR(&simple);
@@ -58,8 +58,8 @@ int sendMessage(int sockfd, Message *message) {
 }
 
 Message *receiveMessage(int sockfd) {
-    uint64_t size = 0;
-    ssize_t len;
+    size_t size = 0;
+    size_t len;
     len = recv(sockfd, &size, sizeof(size), 0);
     if (len != sizeof(size)) {
         return NULL;
@@ -76,4 +76,16 @@ Message *receiveMessage(int sockfd) {
     Message *message = message__unpack(NULL, size, data);
     free(data);
     return message;
+}
+
+int respond(int sockfd, char *msg) {
+    Message message;
+    message__init(&message);
+    Response response;
+    response__init(&response);
+    message.response = &response;
+    message.content_case = MESSAGE__CONTENT_RESPONSE;
+    response.data_case = RESPONSE__DATA_MESSAGE;
+    response.message = msg;
+    return sendMessage(sockfd, &message);
 }

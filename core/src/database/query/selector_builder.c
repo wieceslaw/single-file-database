@@ -9,7 +9,7 @@
 #include "database/table/table.h"
 
 /// THROWS: [MALLOC_EXCEPTION]
-selector_builder selector_builder_init() {
+selector_builder selector_builder_init(void) {
     selector_builder selector = rmalloc(sizeof(struct selector_builder));
     selector->columns_list = list_init();
     return selector;

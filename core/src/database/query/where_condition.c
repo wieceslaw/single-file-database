@@ -141,4 +141,5 @@ bool columns_equals(column_t first, column_t second) {
         case COLUMN_TYPE_BOOL:
             return first.value.val_bool == second.value.val_bool;
     }
+    assert(0);
 }

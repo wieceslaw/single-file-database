@@ -4,7 +4,7 @@
 
 #include <malloc.h>
 #include <assert.h>
-#include <util_string.h>
+#include <string.h>
 #include "vector.h"
 #include "../defines.h"
 

@@ -94,6 +94,7 @@ void str_free(void *p) {
 }
 
 void skip_free(void *x) {
+    (void)(x);
 }
 
 void *skip_copy(const void *x) {

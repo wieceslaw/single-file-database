@@ -5,6 +5,20 @@
 #ifndef LLP_LAB1_DEFINES_H
 #define LLP_LAB1_DEFINES_H
 
+#ifndef __FILE_NAME__
+#define __FILE_NAME__ (__builtin_strrchr(__FILE__, '/') ? __builtin_strrchr(__FILE__, '/') + 1 : __FILE__)
+#endif
+
+#if defined NDEBUG
+#define debug( format, ... )
+#else
+#define debug(format, ...) printf("%s::%s::%d " format "\n", __FILE_NAME__, __func__, __LINE__, ##__VA_ARGS__)
+#endif
+
+#define loginfo(msg_, ...) fprintf(stdout, "[INFO]: " msg_ "\n", ##__VA_ARGS__)
+#define logerr(msg_, ...) fprintf(stderr, "[ERROR]: " msg_ "\n", ##__VA_ARGS__)
+
+
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define MIN(a, b) (((a)<(b))?(a):(b))
 

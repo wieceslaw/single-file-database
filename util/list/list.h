@@ -14,7 +14,7 @@ while (!list_it_is_empty(I)) { \
  CODE \
 list_it_next(I); \
 } \
-list_it_free(&I); }\
+list_it_free(&(I)); }\
 
 typedef struct list *list_t;
 

@@ -41,7 +41,7 @@ void result_view_next(result_view_t view) {
     if (result_view_is_empty(view)) {
         return;
     }
-    return cursor_next(view->cursor);
+    cursor_next(view->cursor);
 }
 
 table_scheme *result_view_scheme(result_view_t view) {

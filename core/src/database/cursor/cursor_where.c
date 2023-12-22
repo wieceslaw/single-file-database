@@ -13,8 +13,9 @@ static bool column_greater_than(column_t first, column_t second) {
             return first.value.val_int > second.value.val_int;
         case COLUMN_TYPE_FLOAT:
             return first.value.val_float > second.value.val_float;
+        default:
+            assert(0);
     }
-    return false;
 }
 
 static bool column_lesser_than(column_t first, column_t second) {
@@ -25,8 +26,9 @@ static bool column_lesser_than(column_t first, column_t second) {
             return first.value.val_int < second.value.val_int;
         case COLUMN_TYPE_FLOAT:
             return first.value.val_float < second.value.val_float;
+        default:
+            assert(0);
     }
-    return false;
 }
 
 static bool compare_columns(comparing_type compare_type, column_t first, column_t second) {
@@ -44,6 +46,8 @@ static bool compare_columns(comparing_type compare_type, column_t first, column_
             return column_greater_than(first, second) || columns_equals(first, second);
         case COMPARE_LE:
             return column_lesser_than(first, second) || columns_equals(first, second);
+        default:
+            assert(0);
     }
 }
 
@@ -53,6 +57,8 @@ static column_t operand_extract_column(operand op, cursor_t cur) {
             return op.literal;
         case OPERAND_VALUE_COLUMN:
             return cursor_get(cur, op.column.index.table_idx, op.column.index.column_idx);
+        default:
+            assert(0);
     }
 }
 
@@ -76,6 +82,8 @@ static bool where_condition_check(where_condition *condition, cursor_t cur) {
             return !where_condition_check(condition->not.first, cur);
         case CONDITION_COMPARE:
             return where_condition_check_compare(condition, cur);
+        default:
+            assert(0);
     }
 }
 

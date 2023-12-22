@@ -26,7 +26,7 @@ typedef struct updater_builder {
 column_updater *column_updater_of(char* target, column_t new_value);
 
 /// THROWS: [MALLOC_EXCEPTION]
-updater_builder_t updater_builder_init();
+updater_builder_t updater_builder_init(void);
 
 updater_builder_t updater_builder_translate(updater_builder_t old_updater, str_int_map_t map);
 

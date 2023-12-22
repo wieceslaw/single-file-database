@@ -20,7 +20,7 @@ typedef struct join_builder {
 } *join_builder_t;
 
 /// THROWS: [MALLOC_EXCEPTION]
-join_builder_t join_builder_init();
+join_builder_t join_builder_init(void);
 
 void join_builder_free(join_builder_t *set);
 
