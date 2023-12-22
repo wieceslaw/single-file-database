@@ -4,9 +4,9 @@
 
 #include <time.h>
 #include <stdio.h>
-#include "database/database.h"
+#include "database/Database.h"
 
-void update(database_t db) {
+static void update(Database db) {
     where_condition *condition = where_condition_compare(
             COMPARE_EQ,
             operand_column("test", "bool"),
@@ -33,7 +33,7 @@ void update(database_t db) {
     );
 
     clock_t begin = clock();
-    database_update(db, query, updater);
+    DatabaseUpdateQuery(db, query, updater);
     clock_t end = clock();
     double time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
     printf("%f", time_spent);
@@ -41,10 +41,10 @@ void update(database_t db) {
     updater_builder_free(&updater);
 }
 
-int main() {
+int main(void) {
     file_settings settings = {.path = "C:\\Users\\vyach\\CLionProjects\\llp-lab1\\test.bin", .open_mode = FILE_OPEN_EXIST};
-    database_t db = database_init(&settings);
+    Database db = DatabaseNew(&settings);
     update(db);
-    database_free(db);
+    DatabaseFree(db);
     return 0;
 }

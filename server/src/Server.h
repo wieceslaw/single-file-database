@@ -22,7 +22,7 @@ struct Server {
 
 struct Server *ServerNew(uint16_t port);
 
-void ServerFree(struct Server **pServer);
+void ServerFree(struct Server *server);
 
 int ServerStart(struct Server *server);
 

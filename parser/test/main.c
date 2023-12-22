@@ -3,17 +3,18 @@
 //
 
 #include <string.h>
+#include <assert.h>
 #include "ast.h"
 
 #define SINGLE_INDENT 2
 
-void PrintIndent(int n) {
+static void PrintIndent(int n) {
     for (int i = 0; i < n; i++) {
         printf(" ");
     }
 }
 
-char* CompareTypeToString(enum CompareType type) {
+static char* CompareTypeToString(enum CompareType type) {
     switch (type) {
         case CMP_LE:
             return "LESS EQUALS";
@@ -27,10 +28,12 @@ char* CompareTypeToString(enum CompareType type) {
             return "EQUALS";
         case CMP_NQ:
             return "NOT EQUALS";
+        default:
+            assert(0);
     }
 }
 
-char* ConditionTypeToString(enum ConditionType type) {
+static char* ConditionTypeToString(enum ConditionType type) {
     switch (type) {
         case COND_CMP:
             return "COMPARE";
@@ -40,10 +43,12 @@ char* ConditionTypeToString(enum ConditionType type) {
             return "AND";
         case COND_OR:
             return "OR";
+        default:
+            assert(0);
     }
 }
 
-char* DataTypeToString(enum DataType type) {
+static char* DataTypeToString(enum DataType type) {
     switch (type) {
         case TYPE_INT32:
             return "INT32";
@@ -53,10 +58,12 @@ char* DataTypeToString(enum DataType type) {
             return "TEXT";
         case TYPE_BOOL:
             return "BOOLEAN";
+        default:
+            assert(0);
     }
 }
 
-void PrintAst(struct AstNode *tree, int indent) {
+static void PrintAst(struct AstNode *tree, int indent) {
     if (tree == NULL) {
         return;
     }

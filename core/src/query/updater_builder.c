@@ -16,7 +16,7 @@ column_updater *column_updater_of(char* target, column_t new_value) {
 }
 
 /// THROWS: [MALLOC_EXCEPTION]
-updater_builder_t updater_builder_init() {
+updater_builder_t updater_builder_init(void) {
     updater_builder_t updater = rmalloc(sizeof(struct updater_builder));
     updater->column_updaters = list_init();
     return updater;
@@ -28,9 +28,7 @@ void updater_builder_free(updater_builder_t* updater_ptr) {
     if (NULL == updater) {
         return;
     }
-    FOR_LIST(updater->column_updaters, it, {
-        free(list_it_get(it));
-    })
+    list_clear(updater->column_updaters, free);
     list_free(&(updater->column_updaters));
     free(updater);
     *updater_ptr = NULL;

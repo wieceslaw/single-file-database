@@ -54,5 +54,5 @@
 "!="    { yylval.ival = CMP_NQ; return T_NEQUALS; }
 
 [ \n\t\r]	; // ignore all whitespace
-. { printf("Unknown symbol, len: %d, text[0]: %d \n", strlen(yytext), yytext[0]); };
+. { printf("Unknown symbol, len: %zu, text[0]: %d \n", strlen(yytext), yytext[0]); };
 %%

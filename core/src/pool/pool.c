@@ -36,12 +36,11 @@ static int suitable_heap_idx(uint64_t size) {
     return count;
 }
 
-/// THROWS: [POOL_EXCEPTION]
-offset_t pool_create(allocator_t *allocator) {
+int pool_create(allocator_t *allocator, offset_t *off) {
     assert(NULL != allocator);
     page_t *page = allocator_get_page(allocator);
     if (NULL == page) {
-        RAISE(POOL_EXCEPTION);
+        return -1;
     }
     uint64_t acc = POOL_START;
     offset_t offset = 0;
@@ -52,9 +51,10 @@ offset_t pool_create(allocator_t *allocator) {
     }
     offset_t pool_offset = page_offset(page);
     if (allocator_unmap_page(allocator, page) != ALLOCATOR_SUCCESS) {
-        RAISE(POOL_EXCEPTION);
+        return -1;
     }
-    return pool_offset;
+    *off = pool_offset;
+    return 0;
 }
 
 /// THROWS: [MALLOC_EXCEPTION, POOL_EXCEPTION]
@@ -113,23 +113,23 @@ void pool_clear(allocator_t *allocator, offset_t pool_offset) {
     }
 }
 
-/// THROWS: [POOL_EXCEPTION]
-void pool_append(pool_t *pool, buffer_t buffer) {
+int pool_append(pool_t *pool, buffer_t buffer) {
     assert(pool_is_valid(pool));
     int idx = suitable_heap_idx(buffer->size);
     if (heap_append(pool->heaps[idx], buffer) != HEAP_OP_SUCCESS) {
-        RAISE(POOL_EXCEPTION);
+        return -1;
     }
+    return 0;
 }
 
-/// THROWS: [POOL_EXCEPTION]
-void pool_flush(pool_t *pool) {
+int pool_flush(pool_t *pool) {
     assert(pool_is_valid(pool));
     for (int i = 0; i < POOL_SIZE; i++) {
         if (heap_flush(pool->heaps[i]) != HEAP_OP_SUCCESS) {
-            RAISE(POOL_EXCEPTION);
+            return -1;
         }
     }
+    return 0;
 }
 
 /// THROWS: [MALLOC_EXCEPTION, POOL_EXCEPTION]

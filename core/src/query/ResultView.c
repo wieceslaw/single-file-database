@@ -2,14 +2,11 @@
 // Created by vyach on 12.10.2023.
 //
 
-#include <assert.h>
 #include <malloc.h>
 #include "exceptions/exceptions.h"
-#include "result_view.h"
+#include "ResultView.h"
 
-void result_view_free(result_view_t *view_ptr) {
-    assert(view_ptr != NULL);
-    result_view_t view = *view_ptr;
+void ResultViewFree(ResultView view) {
     if (NULL == view) {
         return;
     }
@@ -17,14 +14,13 @@ void result_view_free(result_view_t *view_ptr) {
     cursor_free(&(view->cursor));
     table_scheme_free(view->view_scheme);
     free(view);
-    *view_ptr = NULL;
 }
 
-bool result_view_is_empty(result_view_t view) {
+bool ResultViewIsEmpty(ResultView view) {
     return cursor_is_empty(view->cursor);
 }
 
-row_t result_view_get(result_view_t view) {
+row_t ResultViewGetRow(ResultView view) {
     size_t size = view->view_scheme->size;
     row_t result;
     result.size = size;
@@ -37,13 +33,13 @@ row_t result_view_get(result_view_t view) {
     return result;
 }
 
-void result_view_next(result_view_t view) {
-    if (result_view_is_empty(view)) {
+void ResultViewNext(ResultView view) {
+    if (ResultViewIsEmpty(view)) {
         return;
     }
     cursor_next(view->cursor);
 }
 
-table_scheme *result_view_scheme(result_view_t view) {
+table_scheme *ResultViewGetScheme(ResultView view) {
     return view->view_scheme;
 }

@@ -69,7 +69,7 @@ static uint64_t row_size(row_t row) {
 }
 
 void row_free(row_t row) {
-    if (NULL == row.columns) {
+    if (row.columns == NULL) {
         return;
     }
     for (uint32_t i = 0; i < row.size; i++) {

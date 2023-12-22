@@ -53,7 +53,9 @@ static void cursor_restart_from(cursor_t cur) {
 
 static void cursor_flush_from(cursor_t cur) {
     cursor_free_cached_row(cur);
-    pool_flush(cur->from.table->data_pool);
+    if (pool_flush(cur->from.table->data_pool) != 0) {
+        RAISE(POOL_EXCEPTION);
+    }
 }
 
 static column_t cursor_get_from(cursor_t cur, size_t table_idx, size_t column_idx) {
@@ -86,7 +88,9 @@ static void cursor_update_from(cursor_t cur, size_t table_idx, updater_builder_t
         row_t row = cursor_get_row_from(cur);
         row_t updated_row = updater_builder_update(updater, row);
         buffer_t serialized = row_serialize(updated_row);
-        pool_append(cur->from.table->data_pool, serialized);
+        if (pool_append(cur->from.table->data_pool, serialized) != 0) {
+            RAISE(POOL_EXCEPTION);
+        }
         pool_iterator_delete(cur->from.it);
         row_free(updated_row);
         buffer_free(&serialized);

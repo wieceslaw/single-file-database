@@ -19,7 +19,7 @@ struct Connection {
 
 struct Connection *ConnectionNew(struct Server *server);
 
-void ConnectionFree(struct Connection **pConnection);
+void ConnectionFree(struct Connection *connection);
 
 int ConnectionStart(struct Connection *connection);
 

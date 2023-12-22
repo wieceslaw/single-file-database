@@ -5,26 +5,27 @@
 #include <stddef.h>
 #include <string.h>
 #include <assert.h>
+#include <malloc.h>
 #include "buffer/buffer.h"
-#include "exceptions/exceptions.h"
 
-// THROWS: [MALLOC_EXCEPTION]
 buffer_t buffer_init(uint64_t size) {
     buffer_t buffer = NULL;
-    TRY({
-        buffer = rmalloc(sizeof(struct buffer));
-        buffer->size = size;
-        buffer->rcur = 0;
-        buffer->wcur = 0;
-        if (size == 0) {
-            buffer->data = NULL;
-        } else {
-            buffer->data = rmalloc(size);
+    buffer = malloc(sizeof(struct buffer));
+    if (buffer == NULL) {
+        assert(0);
+    }
+    buffer->size = size;
+    buffer->rcur = 0;
+    buffer->wcur = 0;
+    if (size == 0) {
+        buffer->data = NULL;
+    } else {
+        buffer->data = malloc(size);
+        if (buffer->data == NULL) {
+            free(buffer);
+            assert(0);
         }
-    }) CATCH(exception >= EXCEPTION, {
-        free(buffer);
-        RAISE(exception);
-    }) FINALLY()
+    }
     return buffer;
 }
 
@@ -43,7 +44,6 @@ void buffer_free(buffer_t *buffer_ptr) {
     *buffer_ptr = NULL;
 }
 
-// THROWS: [MALLOC_EXCEPTION]
 buffer_t buffer_copy(buffer_t buffer) {
     assert(buffer != NULL);
     buffer_t result = buffer_init(buffer->size);
@@ -69,7 +69,10 @@ char *buffer_read_string(buffer_t buffer) {
     if (moved > buffer->size) {
         return NULL;
     }
-    char *string = rmalloc(length);
+    char *string = malloc(length);
+    if (string == NULL) {
+        assert(0);
+    }
     memcpy(string, buffer->data + buffer->rcur, length);
     buffer->rcur = moved;
     return string;

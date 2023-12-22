@@ -1,0 +1,22 @@
+CREATE TABLE user (
+    id INT32,
+    account FLOAT32,
+    is_banned BOOLEAN
+);
+
+SELECT user.id, user.account, user.is_banned
+    FROM user
+    JOIN subscription ON subscription.user_id = user.id
+    JOIN service ON service.id = subscription.service_id
+    WHERE user.account >= 2.0 AND user.is_banned = FALSE;
+
+INSERT INTO user (id, account, is_banned) VALUES (1, 0.0, FALSE);
+
+DELETE FROM user
+    WHERE user.account >= 2.0 AND user.is_banned = FALSE;
+
+UPDATE user
+    SET account = 100.0, is_banned = FALSE
+    WHERE user.account = 0.0 AND user.is_banned = TRUE;
+
+DELETE TABLE user;

@@ -6,9 +6,18 @@ message BatchCollect {
   int32 max = 1;
 }
 
+message SchemeColumn {
+  string name = 1;
+  ColumnType type = 2;
+}
+
+message TableScheme {
+  repeated SchemeColumn columns = 1;
+}
+
 message CreateTableQuery {
   string name = 1;
-  repeated RowType scheme = 2;
+  TableScheme scheme = 2;
 }
 
 message DeleteTableQuery {

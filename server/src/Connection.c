@@ -39,7 +39,7 @@ static void *ConnectionRun(struct Connection *connection) {
     } else {
         loginfo("Client disconnect");
     }
-    ConnectionFree(&connection);
+    ConnectionFree(connection);
     return NULL;
 }
 
@@ -66,17 +66,15 @@ int ConnectionStart(struct Connection *connection) {
     return 0;
 }
 
-void ConnectionFree(struct Connection **pConnection) {
-    if (pConnection == NULL) {
+void ConnectionFree(struct Connection *connection) {
+    if (connection == NULL) {
         return;
     }
-    struct Connection *connection = *pConnection;
     close(connection->sockfd);
     pthread_mutex_lock(&connection->server->lock);
     list_it_delete(connection->node);
     pthread_mutex_unlock(&connection->server->lock);
     free(connection);
-    *pConnection = NULL;
     debug("Connection free");
 }
 

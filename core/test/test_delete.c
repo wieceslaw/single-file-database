@@ -4,9 +4,10 @@
 
 #include <stdio.h>
 #include <time.h>
-#include "database/database.h"
+#include "database/Database.h"
+#include "query/where_condition.h"
 
-void delete(database_t db) {
+static void delete(Database db) {
     where_condition *condition = where_condition_compare(
             COMPARE_EQ,
             operand_column("test", "bool"),
@@ -19,17 +20,17 @@ void delete(database_t db) {
     };
 
     clock_t begin = clock();
-    database_delete(db, query);
+    DatabaseDeleteQuery(db, query);
     clock_t end = clock();
     double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
     where_condition_free(condition);
     printf("%f", time_spent);
 }
 
-int main() {
+int main(void) {
     file_settings settings = {.path = "C:\\Users\\vyach\\CLionProjects\\llp-lab1\\test.bin", .open_mode = FILE_OPEN_EXIST};
-    database_t db = database_init(&settings);
+    Database db = DatabaseNew(&settings);
     delete(db);
-    database_free(db);
+    DatabaseFree(db);
     return 0;
 }

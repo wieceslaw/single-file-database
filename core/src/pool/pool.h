@@ -13,7 +13,7 @@ typedef struct pool_t pool_t;
 
 typedef struct pool_it *pool_it;
 
-offset_t pool_create(allocator_t *); // create on file memory
+int pool_create(allocator_t *allocator, offset_t *off); // create on file memory
 
 void pool_clear(allocator_t *, offset_t); // remove from file memory
 
@@ -21,9 +21,9 @@ pool_t *pool_init(allocator_t *, offset_t);
 
 void pool_free(pool_t *);
 
-void pool_append(pool_t *, buffer_t);
+int pool_append(pool_t *pool, buffer_t buffer);
 
-void pool_flush(pool_t *); // all data modifications will only be applied after flush call
+int pool_flush(pool_t *pool); // all data modifications will only be applied after flush call
 
 pool_it pool_iterator(pool_t *);
 

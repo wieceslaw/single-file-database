@@ -6,11 +6,11 @@
 #include <assert.h>
 #include <time.h>
 #include "allocator/allocator.h"
-#include "database/database.h"
-#include "database/query/scheme_builder.h"
+#include "database/Database.h"
+#include "query/RowBuilder.h"
 
-void insert(database_t db, int n, char* table_name) {
-    batch_builder_t batch = batch_builder_init(n);
+static void insert(Database db, int n, char* table_name) {
+    RowBatch batch = RowBatchNew(n);
     for (int i = 0; i < n; i++) {
         int integer;
         float floating;
@@ -20,31 +20,32 @@ void insert(database_t db, int n, char* table_name) {
         scanf("%s", string);
         scanf("%d", &boolean);
         scanf("%f", &floating);
-        row_builder_t row = row_builder_init(4);
-        row_builder_add(&row, column_int(integer));
-        row_builder_add(&row, column_string(string));
-        row_builder_add(&row, column_bool(!!boolean));
-        row_builder_add(&row, column_float(floating));
-        batch_builder_add(&batch, row);
+        RowBuilder builder = RowBuilderNew(4);
+        RowBuilderAdd(&builder, column_int(integer));
+        RowBuilderAdd(&builder, column_string(string));
+        RowBuilderAdd(&builder, column_bool(!!boolean));
+        RowBuilderAdd(&builder, column_float(floating));
+        RowBatchAddRow(&batch, RowBuilderToRow(&builder));
+        RowBuilderFree(&builder);
     }
 
     clock_t begin = clock();
-    database_insert(db, table_name, batch);
+    DatabaseInsertQuery(db, table_name, batch);
     clock_t end = clock();
     double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
     printf("%f", time_spent);
 
-    batch_builder_free(&batch);
+    RowBatchFree(&batch);
 }
 
-void create_table(database_t db, char* table_name) {
-    scheme_builder_t scheme_builder = scheme_builder_init(table_name);
-    scheme_builder_add_column(scheme_builder, "int", COLUMN_TYPE_INT);
-    scheme_builder_add_column(scheme_builder, "string", COLUMN_TYPE_STRING);
-    scheme_builder_add_column(scheme_builder, "bool", COLUMN_TYPE_BOOL);
-    scheme_builder_add_column(scheme_builder, "float", COLUMN_TYPE_FLOAT);
-    database_create_table(db, scheme_builder);
-    scheme_builder_free(&scheme_builder);
+static void create_table(Database db, char* table_name) {
+    SchemeBuilder scheme_builder = SchemeBuilderNew(table_name);
+    SchemeBuilderAddColumn(scheme_builder, "int", COLUMN_TYPE_INT);
+    SchemeBuilderAddColumn(scheme_builder, "string", COLUMN_TYPE_STRING);
+    SchemeBuilderAddColumn(scheme_builder, "bool", COLUMN_TYPE_BOOL);
+    SchemeBuilderAddColumn(scheme_builder, "float", COLUMN_TYPE_FLOAT);
+    DatabaseCreateTable(db, scheme_builder);
+    SchemeBuilderFree(scheme_builder);
 }
 
 int main(int argc, char *argv[]) {
@@ -53,13 +54,13 @@ int main(int argc, char *argv[]) {
     file_open_mode mode = atoi(argv[2]);
     char* table_name = argv[3];
     file_settings settings = {.path = "C:\\Users\\vyach\\CLionProjects\\llp-lab1\\test.bin", .open_mode = mode};
-    database_t db = database_init(&settings);
+    Database db = DatabaseNew(&settings);
     if (mode == FILE_OPEN_CLEAR) {
-        create_table(db, table_name);
+        createTable(db, table_name);
     }
 
     insert(db, n, table_name);
 
-    database_free(db);
+    DatabaseFree(db);
     return 0;
 }

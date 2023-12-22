@@ -1,19 +1,29 @@
 set(TARGET_NAME NetworkLib)
 
-set(PROTO_PATH proto)
 file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/**.c)
-file(GLOB_RECURSE PROTO_FILES ${PROTO_PATH}/**.proto)
-file(GLOB_RECURSE PROTO_HEADERS ${CMAKE_CURRENT_BINARY_DIR}/**.pb-c.h)
-file(GLOB_RECURSE PROTO_OUTPUTS ${CMAKE_CURRENT_BINARY_DIR}/**.pb-c.c)
-message("PROTO_HEADERS=${PROTO_HEADERS}")
-message("PROTO_OUTPUTS=${PROTO_OUTPUTS}")
+file(GLOB_RECURSE PROTO_FILES **.proto)
 
-add_library(${TARGET_NAME} STATIC ${SOURCES} ${PROTO_OUTPUTS})
+set(PROTO_HEADERS)
+set(PROTO_SOURCES)
+foreach (PROTO_FILE ${PROTO_FILES})
+    string(REGEX MATCH "^.*/(.*).proto$" _ ${PROTO_FILE})
+    set(PROTO_NAME ${CMAKE_MATCH_1})
+    message("PROTO_NAME=${PROTO_NAME}")
+    set(PROTO_SOURCES "${PROTO_SOURCES};${PROTO_NAME}.pb-c.c")
+    set(PROTO_HEADERS "${PROTO_HEADERS};${PROTO_NAME}.pb-c.h")
+endforeach ()
+
+message("PROTO_HEADERS=${PROTO_HEADERS}")
+message("PROTO_SOURCES=${PROTO_SOURCES}")
+message("PROTO_FILES=${PROTO_FILES}")
+message("SOURCES=${SOURCES}")
+
+add_library(${TARGET_NAME} STATIC ${SOURCES} ${PROTO_SOURCES})
 
 # proto generator begin
-add_custom_target(ProtoGenerator DEPENDS ${PROTO_HEADERS} ${PROTO_OUTPUTS}
+add_custom_target(ProtoGenerator DEPENDS ${PROTO_HEADERS} ${PROTO_SOURCES}
         COMMENT "Checking if re-generation is required")
-add_custom_command(OUTPUT ${PROTO_HEADERS} ${PROTO_OUTPUTS}
+add_custom_command(OUTPUT ${PROTO_HEADERS} ${PROTO_SOURCES}
         COMMAND protoc -I=${CMAKE_CURRENT_LIST_DIR}/proto --c_out=. ${PROTO_FILES}
         DEPENDS ${PROTO_FILES}
         COMMENT "Generating proto files")

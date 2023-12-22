@@ -3,11 +3,9 @@
 //
 
 #include <stdio.h>
-#include <time.h>
-#include "database/database.h"
-#include "database/query/scheme_builder.h"
+#include "database/Database.h"
 
-void print_row(row_t row) {
+static void print_row(row_t row) {
     for (size_t i = 0; i < row.size; i++) {
         column_t column = row.columns[i];
         switch (column.type) {
@@ -28,32 +26,32 @@ void print_row(row_t row) {
     printf(" \n");
 }
 
-void selecting(database_t db) {
+static void selecting(Database db) {
     query_t query = {.table = "test", .where = NULL, .joins = NULL};
-    selector_builder selector = selector_builder_init();
-    selector_builder_add(selector, "test", "int");
-    selector_builder_add(selector, "test", "string");
-    selector_builder_add(selector, "test", "bool");
-    selector_builder_add(selector, "test", "float");
-    result_view_t view = database_select(db, query, selector);
+    SelectorBuilder selector = SelectorBuilderNew();
+    SelectorBuilderAdd(selector, "test", "int");
+    SelectorBuilderAdd(selector, "test", "string");
+    SelectorBuilderAdd(selector, "test", "bool");
+    SelectorBuilderAdd(selector, "test", "float");
+    ResultView view = DatabaseSelectQuery(db, query, selector);
     if (NULL == view) {
         printf("Can't create select \n");
         return;
     }
-    while (!result_view_is_empty(view)) {
-        row_t row = result_view_get(view);
+    while (!ResultViewIsEmpty(view)) {
+        row_t row = ResultViewGetRow(view);
         print_row(row);
         row_free(row);
-        result_view_next(view);
+        ResultViewNext(view);
     }
-    result_view_free(&view);
-    selector_builder_free(&selector);
+    ResultViewFree(view);
+    SelectorBuilderFree(selector);
 }
 
 int main(void) {
     file_settings settings = {.path = "C:\\Users\\vyach\\CLionProjects\\llp-lab1\\test.bin", .open_mode = FILE_OPEN_EXIST};
-    database_t db = database_init(&settings);
+    Database db = DatabaseNew(&settings);
     selecting(db);
-    database_free(db);
+    DatabaseFree(db);
     return 0;
 }

@@ -7,7 +7,7 @@
 #include <stdarg.h>
 #include "ast.h"
 
-struct AstNode *NewAstNode() {
+struct AstNode *NewAstNode(void) {
     struct AstNode *node = malloc(sizeof(struct AstNode));
     if (node == NULL) {
         return NULL;

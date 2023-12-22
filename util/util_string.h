@@ -7,7 +7,6 @@
 
 #include <util_string.h>
 
-/// THROWS: [MALLOC_EXCEPTION]
 char* string_copy(char* src);
 
 #endif //LLP_LAB1_STRING_H

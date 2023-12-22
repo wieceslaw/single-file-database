@@ -5,6 +5,8 @@
 #ifndef LLP_LAB1_DEFINES_H
 #define LLP_LAB1_DEFINES_H
 
+#include <stdio.h>
+
 #ifndef __FILE_NAME__
 #define __FILE_NAME__ (__builtin_strrchr(__FILE__, '/') ? __builtin_strrchr(__FILE__, '/') + 1 : __FILE__)
 #endif

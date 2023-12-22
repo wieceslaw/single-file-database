@@ -12,29 +12,6 @@
 #include "Connection.h"
 #include "defines.h"
 
-/*
-void create_table(database_t db, char* table_name) {
-    scheme_builder_t scheme_builder = scheme_builder_init(table_name);
-    scheme_builder_add_column(scheme_builder, "int", COLUMN_TYPE_INT);
-    scheme_builder_add_column(scheme_builder, "string", COLUMN_TYPE_STRING);
-    scheme_builder_add_column(scheme_builder, "bool", COLUMN_TYPE_BOOL);
-    scheme_builder_add_column(scheme_builder, "float", COLUMN_TYPE_FLOAT);
-    database_create_table(db, scheme_builder);
-    scheme_builder_free(&scheme_builder);
-}
-
-int main(int argc, char *argv[]) {
-    assert(argc == 3);
-    file_open_mode mode = atoi(argv[1]);
-    char* table_name = argv[2];
-    file_settings settings = {.path = "C:\\Users\\vyach\\CLionProjects\\llp-lab1\\test.bin", .open_mode = mode};
-    database_t db = database_init(&settings);
-    create_table(db, table_name);
-    database_free(db);
-    return 0;
-}
- */
-
 struct Server *ServerNew(uint16_t port) {
     struct Server *server = malloc(sizeof(struct Server));
     if (server == NULL) {
@@ -73,18 +50,16 @@ struct Server *ServerNew(uint16_t port) {
     return server;
 }
 
-void ServerFree(struct Server **pServer) {
-    if (pServer == NULL) {
+void ServerFree(struct Server *server) {
+    if (server == NULL) {
         return;
     }
-    struct Server *server = *pServer;
-
     // close/clear connections
     list_it it = list_head_iterator(server->connections);
     while (!list_it_is_empty(it)) {
         struct Connection *connection = list_it_get(it);
         ConnectionStop(connection);
-        ConnectionFree(&connection);
+        ConnectionFree(connection);
         list_it_next(it);
     }
     list_it_free(&(it));
@@ -95,7 +70,6 @@ void ServerFree(struct Server **pServer) {
     close(server->sockfd);
     list_free(&(server->connections));
     free(server);
-    *pServer = NULL;
 }
 
 static int ServerAcceptConnection(struct Server *server) {
@@ -106,7 +80,7 @@ static int ServerAcceptConnection(struct Server *server) {
     connection->sockfd = accept(server->sockfd, (struct sockaddr *) &(connection->dest), &(connection->socksize));
     if (connection->sockfd < 0) {
         logerr("Server accept failed");
-        ConnectionFree(&connection);
+        ConnectionFree(connection);
         return -1;
     }
     pthread_mutex_lock(&server->lock);

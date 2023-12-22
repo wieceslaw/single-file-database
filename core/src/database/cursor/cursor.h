@@ -7,9 +7,9 @@
 
 #include <stdbool.h>
 #include "database/table/table.h"
-#include "database/query/join_builder.h"
-#include "database/query/where_condition.h"
-#include "database/query/updater_builder.h"
+#include "query/updater_builder.h"
+#include "query/where_condition.h"
+#include "query/JoinBuilder.h"
 
 typedef enum {
     CURSOR_FROM = 0,

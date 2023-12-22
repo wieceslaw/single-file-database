@@ -135,7 +135,7 @@ struct AstNode *ParseFile(FILE *file);
 
 void FreeAstNode(struct AstNode *node);
 
-struct AstNode *NewAstNode();
+struct AstNode *NewAstNode(void);
 
 struct AstNode *NewIntAstNode(int value);
 

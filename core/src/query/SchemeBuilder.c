@@ -3,28 +3,28 @@
 //
 
 #include <assert.h>
-#include "scheme_builder.h"
+#include <malloc.h>
+#include "SchemeBuilder.h"
 #include "list/list.h"
-#include "exceptions/exceptions.h"
 #include "util_string.h"
 
-struct scheme_builder {
+struct SchemeBuilder {
     char *name;
     list_t column_list;
 };
 
-/// THROWS: [MALLOC_EXCEPTION]
-scheme_builder_t scheme_builder_init(char *name) {
-    assert(name != NULL);
-    scheme_builder_t builder = rmalloc(sizeof(struct scheme_builder));
+SchemeBuilder SchemeBuilderNew(char *tableName) {
+    assert(tableName != NULL);
+    SchemeBuilder builder = malloc(sizeof(struct SchemeBuilder));
+    if (builder == NULL) {
+        return NULL;
+    }
     builder->column_list = list_init();
-    builder->name = string_copy(name);
+    builder->name = string_copy(tableName);
     return builder;
 }
 
-void scheme_builder_free(scheme_builder_t *builder_ptr) {
-    assert(builder_ptr != NULL);
-    scheme_builder_t builder = *builder_ptr;
+void SchemeBuilderFree(SchemeBuilder builder) {
     if (NULL == builder) {
         return;
     }
@@ -34,26 +34,39 @@ void scheme_builder_free(scheme_builder_t *builder_ptr) {
     list_free(&builder->column_list);
     free(builder->name);
     free(builder);
-    *builder_ptr = NULL;
 }
 
-/// THROWS: [MALLOC_EXCEPTION]
-void scheme_builder_add_column(scheme_builder_t builder, char *name, column_type type) {
+int SchemeBuilderAddColumn(SchemeBuilder builder, char *name, column_type type) {
     assert(builder != NULL && name != NULL);
-    table_scheme_column *column = rmalloc(sizeof(table_scheme_column));
+    table_scheme_column *column = malloc(sizeof(table_scheme_column));
+    if (column == NULL) {
+        return -1;
+    }
     column->type = type;
     column->name = name;
     list_append_tail(builder->column_list, column);
+    return 0;
 }
 
-/// THROWS: [MALLOC_EXCEPTION]
-table_scheme *scheme_builder_build(scheme_builder_t builder) {
+table_scheme *SchemeBuilderBuild(SchemeBuilder builder) {
     assert(builder != NULL);
-    table_scheme *scheme = rmalloc(sizeof(table_scheme));
+    table_scheme *scheme = malloc(sizeof(table_scheme));
+    if (scheme == NULL) {
+        assert(0);
+    }
     scheme->size = list_size(builder->column_list);
     scheme->pool_offset = 0;
     scheme->name = string_copy(builder->name);
-    scheme->columns = rmalloc(sizeof(table_scheme_column) * scheme->size);
+    if (scheme->name == NULL) {
+        free(scheme);
+        assert(0);
+    }
+    scheme->columns = malloc(sizeof(table_scheme_column) * scheme->size);
+    if (scheme->columns == NULL) {
+        free(scheme->name);
+        free(scheme);
+        assert(0);
+    }
     int i = 0;
     FOR_LIST(builder->column_list, it, {
         table_scheme_column *column = list_it_get(it);

@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
 
     struct Server *server = ServerNew(port);
     if (ServerStart(server) != 0) {
-        ServerFree(&server);
+        ServerFree(server);
         return EXIT_FAILURE;
     }
     loginfo("Server started with port: %d", server->port);
@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
     }
     free(line);
 
-    ServerFree(&server);
+    ServerFree(server);
     loginfo("Server stopped");
     return EXIT_SUCCESS;
 }
