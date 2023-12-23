@@ -6,11 +6,11 @@
 #include <string.h>
 #include <assert.h>
 #include <malloc.h>
-#include "buffer/buffer.h"
+#include "buffer/Buffer.h"
 
-buffer_t buffer_init(uint64_t size) {
-    buffer_t buffer = NULL;
-    buffer = malloc(sizeof(struct buffer));
+Buffer BufferNew(uint64_t size) {
+    Buffer buffer = NULL;
+    buffer = malloc(sizeof(struct Buffer));
     if (buffer == NULL) {
         assert(0);
     }
@@ -29,9 +29,9 @@ buffer_t buffer_init(uint64_t size) {
     return buffer;
 }
 
-void buffer_free(buffer_t *buffer_ptr) {
-    assert(buffer_ptr != NULL);
-    buffer_t buffer = *buffer_ptr;
+void BufferFree(Buffer *pBuffer) {
+    assert(pBuffer != NULL);
+    Buffer buffer = *pBuffer;
     if (NULL == buffer) {
         return;
     }
@@ -41,28 +41,28 @@ void buffer_free(buffer_t *buffer_ptr) {
     buffer->rcur = 0;
     buffer->wcur = 0;
     free(buffer);
-    *buffer_ptr = NULL;
+    *pBuffer = NULL;
 }
 
-buffer_t buffer_copy(buffer_t buffer) {
+Buffer BufferCopy(Buffer buffer) {
     assert(buffer != NULL);
-    buffer_t result = buffer_init(buffer->size);
+    Buffer result = BufferNew(buffer->size);
     memcpy(result->data, buffer->data, buffer->size);
     return result;
 }
 
-void buffer_reset(buffer_t buffer) {
+void BufferReset(Buffer buffer) {
     assert(buffer != NULL);
     buffer->rcur = 0;
     buffer->wcur = 0;
 }
 
-bool buffer_is_empty(buffer_t buffer) {
+bool BufferIsEmpty(Buffer buffer) {
     assert(buffer != NULL);
     return buffer->rcur >= buffer->size;
 }
 
-char *buffer_read_string(buffer_t buffer) {
+char *BufferReadString(Buffer buffer) {
     assert(buffer != NULL);
     size_t length = strlen(buffer->data + buffer->rcur) + 1;
     uint64_t moved = buffer->rcur + length;
@@ -78,7 +78,7 @@ char *buffer_read_string(buffer_t buffer) {
     return string;
 }
 
-b64_t buffer_read_b64(buffer_t buffer) {
+b64_t BufferReadB64(Buffer buffer) {
     assert(buffer != NULL);
     uint64_t moved = buffer->rcur + sizeof(b64_t);
     if (moved > buffer->size) {
@@ -89,7 +89,7 @@ b64_t buffer_read_b64(buffer_t buffer) {
     return num;
 }
 
-b32_t buffer_read_b32(buffer_t buffer) {
+b32_t BufferReadB32(Buffer buffer) {
     assert(buffer != NULL);
     uint64_t moved = buffer->rcur + sizeof(b32_t);
     if (moved > buffer->size) {
@@ -100,7 +100,7 @@ b32_t buffer_read_b32(buffer_t buffer) {
     return num;
 }
 
-b8_t buffer_read_b8(buffer_t buffer) {
+b8_t BufferReadB8(Buffer buffer) {
     assert(buffer != NULL);
     uint64_t moved = buffer->rcur + sizeof(b8_t);
     if (moved > buffer->size) {
@@ -111,7 +111,7 @@ b8_t buffer_read_b8(buffer_t buffer) {
     return num;
 }
 
-void buffer_write_string(buffer_t buffer, const char *const string) {
+void BufferWriteString(Buffer buffer, const char *string) {
     assert(buffer != NULL && string != NULL);
     size_t length = strlen(string) + 1;
     uint64_t moved = buffer->wcur + length;
@@ -122,7 +122,7 @@ void buffer_write_string(buffer_t buffer, const char *const string) {
     buffer->wcur = moved;
 }
 
-void buffer_write_b64(buffer_t buffer, b64_t num) {
+void BufferWriteB64(Buffer buffer, b64_t num) {
     assert(buffer != NULL);
     uint64_t moved = buffer->wcur + sizeof(num);
     if (moved > buffer->size) {
@@ -133,7 +133,7 @@ void buffer_write_b64(buffer_t buffer, b64_t num) {
     buffer->wcur = moved;
 }
 
-void buffer_write_b32(buffer_t buffer, b32_t num) {
+void BufferWriteB32(Buffer buffer, b32_t num) {
     assert(buffer != NULL);
     uint64_t moved = buffer->wcur + sizeof(num);
     if (moved > buffer->size) {
@@ -144,7 +144,7 @@ void buffer_write_b32(buffer_t buffer, b32_t num) {
     buffer->wcur = moved;
 }
 
-void buffer_write_b8(buffer_t buffer, b8_t num) {
+void BufferWriteB8(Buffer buffer, b8_t num) {
     assert(buffer != NULL);
     uint64_t moved = buffer->wcur + sizeof(num);
     if (moved > buffer->size) {

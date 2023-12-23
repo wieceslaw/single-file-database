@@ -10,9 +10,9 @@ static Row cursor_get_row_from(Cursor cur) {
     if (NULL != cur->from.cached_row.columns) {
         return cur->from.cached_row;
     }
-    buffer_t buffer = pool_iterator_get(cur->from.it);
+    Buffer buffer = pool_iterator_get(cur->from.it);
     Row row = row_deserialize(cur->from.table->scheme, buffer);
-    buffer_free(&buffer);
+    BufferFree(&buffer);
     cur->from.cached_row = row;
     return row;
 }
@@ -95,7 +95,7 @@ static void CursorUpdate_FROM(Cursor cur, size_t table_idx, updater_builder_t up
     if (cur->from.table_idx == table_idx) {
         Row row = cursor_get_row_from(cur);
         Row updated_row = updater_builder_update(updater, row);
-        buffer_t serialized = RowSerialize(updated_row);
+        Buffer serialized = RowSerialize(updated_row);
         if (pool_append(cur->from.table->data_pool, serialized) != 0) {
             RAISE(POOL_EXCEPTION);
         }
@@ -103,7 +103,7 @@ static void CursorUpdate_FROM(Cursor cur, size_t table_idx, updater_builder_t up
             RAISE(POOL_EXCEPTION);
         }
         RowFree(updated_row);
-        buffer_free(&serialized);
+        BufferFree(&serialized);
     }
 }
 

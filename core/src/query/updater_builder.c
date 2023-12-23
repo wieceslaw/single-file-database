@@ -18,7 +18,7 @@ column_updater *column_updater_of(char* target, Column new_value) {
 /// THROWS: [MALLOC_EXCEPTION]
 updater_builder_t updater_builder_init(void) {
     updater_builder_t updater = rmalloc(sizeof(struct updater_builder));
-    updater->column_updaters = list_init();
+    updater->column_updaters = ListNew();
     return updater;
 }
 
@@ -28,22 +28,23 @@ void updater_builder_free(updater_builder_t* updater_ptr) {
     if (NULL == updater) {
         return;
     }
-    list_foreach(updater->column_updaters, free);
-    list_free(&(updater->column_updaters));
+    ListApply(updater->column_updaters, free);
+    ListFree(updater->column_updaters);
+    updater->column_updaters = NULL;
     free(updater);
     *updater_ptr = NULL;
 }
 
 /// THROWS: [MALLOC_EXCEPTION]
 void updater_builder_add(updater_builder_t updater, column_updater *col_updater) {
-    list_append_tail(updater->column_updaters, col_updater);
+    ListAppendTail(updater->column_updaters, col_updater);
 }
 
 /// THROWS: [MALLOC_EXCEPTION]
 Row updater_builder_update(updater_builder_t updater, Row row) {
     Row copy = RowCopy(row);
     FOR_LIST(updater->column_updaters, it, {
-        column_updater *col_updater = list_it_get(it);
+        column_updater *col_updater = ListIteratorGet(it);
         assert(col_updater->translated);
         size_t column_idx = col_updater->target.idx;
         if (copy.columns[column_idx].type == COLUMN_TYPE_STRING) {
@@ -58,9 +59,9 @@ Row updater_builder_update(updater_builder_t updater, Row row) {
 /// THROWS: [DATABASE_TRANSLATION_EXCEPTION]
 updater_builder_t updater_builder_translate(updater_builder_t old_updater, str_int_map_t map) {
     updater_builder_t new_updater = rmalloc(sizeof(struct updater_builder));
-    new_updater->column_updaters = list_init();
+    new_updater->column_updaters = ListNew();
     FOR_LIST(old_updater->column_updaters, it, {
-        column_updater *col_upd = list_it_get(it);
+        column_updater *col_upd = ListIteratorGet(it);
         assert(!col_upd->translated);
         int *idx = MAP_GET(map, col_upd->target.name);
         if (idx == NULL) {

@@ -8,7 +8,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include "../defines.h"
-#include "../list/list.h"
+#include "../list/List.h"
 
 #define MAP_START_CAPACITY 8
 #define MAP_EXTENSION_RATIO 2
@@ -60,7 +60,7 @@ typedef struct generic_map {
 
     MAP_REMOVE_SIGNATURE(struct generic_map*, map_key, map_value, remove);
 
-    list_t *buckets;
+    List *buckets;
     size_t capacity;
     size_t size;
     hash_f key_hash;

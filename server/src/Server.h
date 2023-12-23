@@ -8,7 +8,7 @@
 #include <stdint-gcc.h>
 #include <pthread.h>
 #include <netinet/in.h>
-#include "list/list.h"
+#include "list/List.h"
 
 struct Server {
     struct sockaddr_in serv;
@@ -17,7 +17,7 @@ struct Server {
     int sockfd;
     pthread_t loopThread;
     pthread_mutex_t lock;
-    list_t connections;
+    List connections;
 };
 
 struct Server *ServerNew(uint16_t port);

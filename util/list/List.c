@@ -4,24 +4,24 @@
 
 #include <assert.h>
 #include <malloc.h>
-#include "list.h"
+#include "List.h"
 
 typedef struct list_node {
     void *value;
     struct list_node *next, *prev;
 } *list_node_t;
 
-struct list {
+struct List {
     list_node_t head, tail;
     size_t size;
 };
 
-struct list_iterator {
-    list_t list;
+struct ListIterator {
+    List list;
     list_node_t node;
 };
 
-static list_node_t list_node_init(list_value value) {
+static list_node_t list_node_init(ListValue value) {
     list_node_t node = malloc(sizeof(struct list_node));
     if (node == NULL) {
         assert(0);
@@ -39,26 +39,26 @@ static void list_node_free(list_node_t *node_ptr) {
     *node_ptr = NULL;
 }
 
-list_t list_init(void) {
-    list_t list = malloc(sizeof(struct list));
+List ListNew(void) {
+    List list = malloc(sizeof(struct List));
     if (list == NULL) {
         assert(0);
     }
-    *list = (struct list) {.size = 0, .head = NULL, .tail = NULL};
+    *list = (struct List) {.size = 0, .head = NULL, .tail = NULL};
     return list;
 }
 
-size_t list_size(list_t list) {
+size_t ListSize(List list) {
     assert(list != NULL);
     return list->size;
 }
 
-bool list_is_empty(list_t list) {
+bool ListIsEmpty(List list) {
     assert(list != NULL);
-    return 0 == list_size(list);
+    return 0 == ListSize(list);
 }
 
-void list_append_head(list_t list, list_value value) {
+void ListAppendHead(List list, ListValue value) {
     assert(list != NULL);
     list_node_t node = list_node_init(value);
     if (NULL == list->head) {
@@ -72,7 +72,7 @@ void list_append_head(list_t list, list_value value) {
     list->size++;
 }
 
-void list_append_tail(list_t list, list_value value) {
+void ListAppendTail(List list, ListValue value) {
     assert(list != NULL);
     list_node_t node = list_node_init(value);
     if (NULL == list->head) {
@@ -86,9 +86,9 @@ void list_append_tail(list_t list, list_value value) {
     list->size++;
 }
 
-void list_remove_head(list_t list) {
+void ListRemoveHead(List list) {
     assert(list != NULL);
-    if (list_is_empty(list)) {
+    if (ListIsEmpty(list)) {
         return;
     }
     list_node_t head = list->head;
@@ -104,9 +104,9 @@ void list_remove_head(list_t list) {
     list->size--;
 }
 
-void list_remove_tail(list_t list) {
+void ListRemoveTail(List list) {
     assert(list != NULL);
-    if (list_is_empty(list)) {
+    if (ListIsEmpty(list)) {
         return;
     }
     list_node_t tail = list->tail;
@@ -122,25 +122,25 @@ void list_remove_tail(list_t list) {
     list->size--;
 }
 
-list_value list_get_head(list_t list) {
+ListValue ListGetHead(List list) {
     assert(list != NULL);
-    if (list_is_empty(list)) {
+    if (ListIsEmpty(list)) {
         return NULL;
     }
     return list->head->value;
 }
 
-list_value list_get_tail(list_t list) {
+ListValue ListGetTail(List list) {
     assert(list != NULL);
-    if (list_is_empty(list)) {
+    if (ListIsEmpty(list)) {
         return NULL;
     }
     return list->tail->value;
 }
 
-list_it list_head_iterator(list_t list) {
+ListIterator ListHeadIterator(List list) {
     assert(list != NULL);
-    list_it it = malloc(sizeof(struct list_iterator));
+    ListIterator it = malloc(sizeof(struct ListIterator));
     if (it == NULL) {
         assert(0);
     }
@@ -149,9 +149,9 @@ list_it list_head_iterator(list_t list) {
     return it;
 }
 
-list_it list_tail_iterator(list_t list) {
+ListIterator ListTailIterator(List list) {
     assert(list != NULL);
-    list_it it = malloc(sizeof(struct list_iterator));
+    ListIterator it = malloc(sizeof(struct ListIterator));
     if (it == NULL) {
         assert(0);
     }
@@ -160,20 +160,20 @@ list_it list_tail_iterator(list_t list) {
     return it;
 }
 
-bool list_it_is_empty(list_it it) {
+bool ListIteratorIsEmpty(ListIterator it) {
     assert(it != NULL);
     return NULL == it->node;
 }
 
-list_value list_it_get(list_it it) {
+ListValue ListIteratorGet(ListIterator it) {
     assert(it != NULL);
-    if (list_it_is_empty(it)) {
+    if (ListIteratorIsEmpty(it)) {
         return NULL;
     }
     return it->node->value;
 }
 
-void list_it_free(list_it *it) {
+void ListIteratorFree(ListIterator *it) {
     assert(it != NULL);
     if (NULL == *it) {
         return;
@@ -184,32 +184,32 @@ void list_it_free(list_it *it) {
     *it = NULL;
 }
 
-void list_it_next(list_it it) {
+void ListIteratorNext(ListIterator it) {
     assert(it != NULL);
-    if (list_it_is_empty(it)) {
+    if (ListIteratorIsEmpty(it)) {
         return;
     }
     it->node = it->node->next;
 }
 
-void list_it_prev(list_it it) {
+void ListIteratorPrev(ListIterator it) {
     assert(it != NULL);
-    if (list_it_is_empty(it)) {
+    if (ListIteratorIsEmpty(it)) {
         return;
     }
     it->node = it->node->prev;
 }
 
-void list_it_delete(list_it it) {
+void ListIteratorDeleteNode(ListIterator it) {
     assert(it != NULL && it->list != NULL);
-    if (list_it_is_empty(it)) {
+    if (ListIteratorIsEmpty(it)) {
         return;
     }
-    list_t list = it->list;
+    List list = it->list;
     list_node_t cur = it->node;
     list_node_t next = cur->next;
     list_node_t prev = cur->prev;
-    list_it_next(it);
+    ListIteratorNext(it);
     if (prev != NULL && next != NULL) {
         prev->next = next;
         next->prev = prev;
@@ -230,31 +230,29 @@ void list_it_delete(list_it it) {
     list->size--;
 }
 
-void list_foreach(list_t list, applier_t applier) {
+void ListApply(List list, Applier applier) {
     assert(list != NULL && applier != NULL);
-    list_it it = list_head_iterator(list);
-    while (!list_it_is_empty(it)) {
-        applier(list_it_get(it));
-        list_it_next(it);
+    ListIterator it = ListHeadIterator(list);
+    while (!ListIteratorIsEmpty(it)) {
+        applier(ListIteratorGet(it));
+        ListIteratorNext(it);
     }
-    list_it_free(&it);
+    ListIteratorFree(&it);
 }
 
-static void list_clear(list_t list) {
+static void ListClear(List list) {
     assert(list != NULL);
-    list_it it = list_head_iterator(list);
-    while (!list_it_is_empty(it)) {
-        list_it_delete(it);
+    ListIterator it = ListHeadIterator(list);
+    while (!ListIteratorIsEmpty(it)) {
+        ListIteratorDeleteNode(it);
     }
-    list_it_free(&it);
+    ListIteratorFree(&it);
 }
 
-void list_free(list_t *list_ptr) {
-    assert(NULL != list_ptr);
-    if (NULL == *list_ptr) {
+void ListFree(List list) {
+    if (list == NULL) {
         return;
     }
-    list_clear(*list_ptr);
-    free(*list_ptr);
-    *list_ptr = NULL;
+    ListClear(list);
+    free(list);
 }

@@ -5,11 +5,11 @@
 #ifndef LLP_LAB1_SELECTOR_BUILDER_H
 #define LLP_LAB1_SELECTOR_BUILDER_H
 
-#include "list/list.h"
+#include "list/List.h"
 #include "database/table/table.h"
 
 typedef struct SelectorBuilder {
-    list_t columns;
+    List columns;
 } *SelectorBuilder;
 
 SelectorBuilder SelectorBuilderNew(void);

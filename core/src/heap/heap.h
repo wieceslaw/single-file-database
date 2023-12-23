@@ -7,7 +7,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include "buffer/buffer.h"
+#include "buffer/Buffer.h"
 #include "../allocator/allocator.h"
 
 typedef struct heap_t heap_t;
@@ -33,7 +33,7 @@ offset_t heap_size(void);
 
 heap_result heap_flush(heap_t *heap);
 
-heap_result heap_append(heap_t *heap, buffer_t data_buffer);
+heap_result heap_append(heap_t *heap, Buffer data_buffer);
 
 heap_it *heap_iterator(heap_t *heap);
 
@@ -43,7 +43,7 @@ bool heap_iterator_is_empty(heap_it *it);
 
 heap_result heap_iterator_next(heap_it *it);
 
-buffer_t heap_iterator_get(heap_it *it);
+Buffer heap_iterator_get(heap_it *it);
 
 heap_result heap_iterator_delete(heap_it *it);
 

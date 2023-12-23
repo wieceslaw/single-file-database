@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <malloc.h>
 #include "SchemeBuilder.h"
-#include "list/list.h"
+#include "list/List.h"
 #include "util_string.h"
 
 SchemeBuilder SchemeBuilderNew(char *tableName) {
@@ -14,7 +14,7 @@ SchemeBuilder SchemeBuilderNew(char *tableName) {
     if (builder == NULL) {
         return NULL;
     }
-    builder->column_list = list_init();
+    builder->column_list = ListNew();
     builder->name = string_copy(tableName);
     return builder;
 }
@@ -23,10 +23,9 @@ void SchemeBuilderFree(SchemeBuilder builder) {
     if (NULL == builder) {
         return;
     }
-    FOR_LIST(builder->column_list, it, {
-        free(list_it_get(it));
-    })
-    list_free(&builder->column_list);
+    ListApply(builder->column_list, free);
+    ListFree(builder->column_list);
+    builder->column_list = NULL;
     free(builder->name);
     free(builder);
 }
@@ -39,7 +38,7 @@ int SchemeBuilderAddColumn(SchemeBuilder builder, char *name, ColumnType type) {
     }
     column->type = type;
     column->name = name;
-    list_append_tail(builder->column_list, column);
+    ListAppendTail(builder->column_list, column);
     return 0;
 }
 
@@ -49,7 +48,7 @@ table_scheme *SchemeBuilderBuild(SchemeBuilder builder) {
     if (scheme == NULL) {
         assert(0);
     }
-    scheme->size = list_size(builder->column_list);
+    scheme->size = ListSize(builder->column_list);
     scheme->pool_offset = 0;
     scheme->name = string_copy(builder->name);
     if (scheme->name == NULL) {
@@ -64,7 +63,7 @@ table_scheme *SchemeBuilderBuild(SchemeBuilder builder) {
     }
     int i = 0;
     FOR_LIST(builder->column_list, it, {
-        table_scheme_column *column = list_it_get(it);
+        table_scheme_column *column = ListIteratorGet(it);
         scheme->columns[i].type = column->type;
         scheme->columns[i].name = string_copy(column->name);
         i++;

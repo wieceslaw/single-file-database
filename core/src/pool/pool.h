@@ -7,7 +7,7 @@
 
 #include <stdbool.h>
 #include "allocator/allocator.h"
-#include "buffer/buffer.h"
+#include "buffer/Buffer.h"
 
 typedef struct pool_t pool_t;
 
@@ -21,7 +21,7 @@ pool_t *pool_init(allocator_t *, offset_t);
 
 int pool_free(pool_t *);
 
-int pool_append(pool_t *pool, buffer_t buffer);
+int pool_append(pool_t *pool, Buffer buffer);
 
 int pool_flush(pool_t *pool); // all data modifications will only be applied after flush call
 
@@ -33,7 +33,7 @@ bool pool_iterator_is_empty(pool_it);
 
 int pool_iterator_next(pool_it);
 
-buffer_t pool_iterator_get(pool_it);
+Buffer pool_iterator_get(pool_it);
 
 int pool_iterator_delete(pool_it);
 

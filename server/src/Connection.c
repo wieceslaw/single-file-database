@@ -82,7 +82,7 @@ void ConnectionFree(struct Connection *connection) {
     }
     close(connection->sockfd);
     pthread_mutex_lock(&connection->server->lock);
-    list_it_delete(connection->node);
+    ListIteratorDeleteNode(connection->node);
     pthread_mutex_unlock(&connection->server->lock);
     free(connection);
     debug("Connection free");

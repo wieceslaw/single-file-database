@@ -8,7 +8,7 @@
 
 #include <stdbool.h>
 #include "database/table/table.h"
-#include "list/list.h"
+#include "list/List.h"
 
 typedef struct join_condition {
     column_description left;
@@ -16,7 +16,7 @@ typedef struct join_condition {
 } join_condition;
 
 typedef struct JoinBuilder {
-    list_t conditions;
+    List conditions;
 } *JoinBuilder;
 
 JoinBuilder JoinBuilderNew(void);

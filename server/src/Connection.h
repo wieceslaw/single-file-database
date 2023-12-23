@@ -12,7 +12,7 @@ struct Connection {
     struct sockaddr_in dest;
     socklen_t socksize;
     pthread_t thread;
-    list_it node;
+    ListIterator node;
     int sockfd;
     struct Server *server;
 };

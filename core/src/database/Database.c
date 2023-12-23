@@ -32,14 +32,14 @@ static StrTableSchemeMap LoadTables(pool_t *tablesPool) {
         return NULL;
     }
     while (!pool_iterator_is_empty(it)) {
-        buffer_t buffer = pool_iterator_get(it);
+        Buffer buffer = pool_iterator_get(it);
         if (buffer == NULL) {
             pool_iterator_free(&it);
             MAP_FREE(tables);
             return NULL;
         }
         table_scheme *table = table_scheme_deserialize(buffer);
-        buffer_free(&buffer);
+        BufferFree(&buffer);
         if (table == NULL) {
             pool_iterator_free(&it);
             MAP_FREE(tables);
@@ -131,22 +131,22 @@ int DatabaseCreateTable(Database database, SchemeBuilder builder) {
         return -1;
     }
     newTable->pool_offset = offset;
-    buffer_t serialized = table_scheme_serialize(newTable);
+    Buffer serialized = table_scheme_serialize(newTable);
     if (pool_append(database->tablesPool, serialized) != 0) {
         debug("Unable to append to pool");
         table_scheme_free(newTable);
-        buffer_free(&serialized);
+        BufferFree(&serialized);
         return -1;
     }
     if (pool_flush(database->tablesPool) != 0) {
         debug("File corruption");
         table_scheme_free(newTable);
-        buffer_free(&serialized);
+        BufferFree(&serialized);
         return -1;
     }
     MAP_PUT(tables, newTable->name, newTable);
     table_scheme_free(newTable);
-    buffer_free(&serialized);
+    BufferFree(&serialized);
     return 0;
 }
 
@@ -156,13 +156,13 @@ int DatabaseDeleteTable(Database database, char *tableName) {
         return -1;
     }
     while (!pool_iterator_is_empty(it)) {
-        buffer_t buffer = pool_iterator_get(it);
+        Buffer buffer = pool_iterator_get(it);
         if (buffer == NULL) {
             pool_iterator_free(&it);
             return -1;
         }
         table_scheme *table = table_scheme_deserialize(buffer);
-        buffer_free(&buffer);
+        BufferFree(&buffer);
         if (table == NULL) {
             pool_iterator_free(&it);
             return -1;
@@ -250,13 +250,13 @@ int DatabaseInsertQuery(Database database, char *tableName, RowBatch batch) {
     }
     for (size_t i = 0; i < batch.size; i++) {
         Row row = batch.rows[i];
-        buffer_t buffer = RowSerialize(row);
+        Buffer buffer = RowSerialize(row);
         if (pool_append(table->data_pool, buffer) != 0) {
             debug("Unsaved inserts. File is corrupted");
-            buffer_free(&buffer);
+            BufferFree(&buffer);
             return -1;
         }
-        buffer_free(&buffer);
+        BufferFree(&buffer);
     }
     if (pool_flush(table->data_pool) != 0) {
         debug("Unable to save inserts. File is corrupted");
@@ -335,7 +335,7 @@ static indexed_maps query_mapping(Database database, query_t query) {
     assert(query.table != NULL);
     size_t size = 1;
     if (query.joins != NULL) {
-        size += list_size(query.joins->conditions);
+        size += ListSize(query.joins->conditions);
     }
     str_map_str_int_map_t columns_maps = MAP_NEW_STR_MAP_STR_INT(size);
     str_int_map_t table_maps = MAP_NEW_STR_INT(size);
@@ -349,7 +349,7 @@ static indexed_maps query_mapping(Database database, query_t query) {
     if (query.joins != NULL) {
         FOR_LIST(query.joins->conditions, it, {
             count++;
-            join_condition *condition = list_it_get(it);
+            join_condition *condition = ListIteratorGet(it);
             assert(condition != NULL);
             assert(condition->left.type == COLUMN_DESC_NAME && condition->right.type == COLUMN_DESC_NAME);
             str_int_map_t left_columns_map = MAP_GET(columns_maps, condition->left.name.table_name);
@@ -400,7 +400,7 @@ static Cursor query_cursor(Database database, query_t query, indexed_maps maps) 
     if (query.joins != NULL) {
         FOR_LIST(query.joins->conditions, it, {
             TRY({
-                join_condition *condition = list_it_get(it);
+                join_condition *condition = ListIteratorGet(it);
                 assert(condition != NULL);
                 join_condition translated_condition;
                 translated_condition.right = indexed_maps_translate(maps, condition->right);
@@ -416,7 +416,7 @@ static Cursor query_cursor(Database database, query_t query, indexed_maps maps) 
                 }
                 result = joined;
             }) CATCH(exception >= EXCEPTION, {
-                list_it_free(&it);
+                    ListIteratorFree(&it);
                 CursorFree(&result);
                 indexed_maps_free(maps);
                 RAISE(exception);
@@ -495,7 +495,7 @@ static table_scheme *create_view_scheme(Database database, SelectorBuilder selec
         RAISE(MALLOC_EXCEPTION);
     }
     FOR_LIST(selector->columns, it, {
-        column_description *description = list_it_get(it);
+        column_description *description = ListIteratorGet(it);
         assert(description != NULL);
         column_description indexed_description = indexed_maps_translate(maps, *description);
         table_scheme *scheme = DatabaseFindTableScheme(database, description->name.table_name);
@@ -511,10 +511,10 @@ static table_scheme *create_view_scheme(Database database, SelectorBuilder selec
 }
 
 static column_description *create_view_selector(SelectorBuilder selector, indexed_maps maps) {
-    column_description *result = rmalloc(sizeof(column_description) * list_size(selector->columns));
+    column_description *result = rmalloc(sizeof(column_description) * ListSize(selector->columns));
     int i = 0;
     FOR_LIST(selector->columns, it, {
-        column_description *description = list_it_get(it);
+        column_description *description = ListIteratorGet(it);
         assert(description != NULL);
         result[i] = indexed_maps_translate(maps, *description);
         i++;

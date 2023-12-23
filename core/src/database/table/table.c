@@ -49,7 +49,7 @@ void table_free(table_t *table_ptr) {
             })
 }
 
-Row row_deserialize(table_scheme *scheme, buffer_t buffer) {
+Row row_deserialize(table_scheme *scheme, Buffer buffer) {
     assert(scheme != NULL && buffer != NULL);
     Column *columns = malloc(sizeof(Column) * scheme->size);
     if (columns == NULL) {
@@ -59,17 +59,17 @@ Row row_deserialize(table_scheme *scheme, buffer_t buffer) {
         table_scheme_column scheme_col = scheme->columns[i];
         switch (scheme_col.type) {
             case COLUMN_TYPE_INT:
-                columns[i].value.i32 = buffer_read_b32(buffer).i32;
+                columns[i].value.i32 = BufferReadB32(buffer).i32;
                 break;
             case COLUMN_TYPE_FLOAT:
-                columns[i].value.f32 = buffer_read_b32(buffer).f32;
+                columns[i].value.f32 = BufferReadB32(buffer).f32;
                 break;
             case COLUMN_TYPE_STRING: {
-                columns[i].value.str = buffer_read_string(buffer);
+                columns[i].value.str = BufferReadString(buffer);
                 break;
             }
             case COLUMN_TYPE_BOOL:
-                columns[i].value.b8 = buffer_read_b8(buffer).ui8;
+                columns[i].value.b8 = BufferReadB8(buffer).ui8;
                 break;
         }
         columns[i].type = scheme_col.type;
@@ -80,25 +80,25 @@ Row row_deserialize(table_scheme *scheme, buffer_t buffer) {
     };
 }
 
-static void read_columns(table_scheme *schema, buffer_t buffer) {
+static void read_columns(table_scheme *schema, Buffer buffer) {
     for (uint32_t i = 0; i < schema->size; i++) {
-        ColumnType col_type = buffer_read_b32(buffer).ui32;
-        char *col_name = buffer_read_string(buffer);
+        ColumnType col_type = BufferReadB32(buffer).ui32;
+        char *col_name = BufferReadString(buffer);
         schema->columns[i] = (table_scheme_column) {.type = col_type, .name = col_name};
     }
 }
 
-table_scheme *table_scheme_deserialize(buffer_t buffer) {
+table_scheme *table_scheme_deserialize(Buffer buffer) {
     assert(buffer != NULL);
     // table[offset_t pool_offset, name*, table_scheme[size, values[type, name*]*]*]*
-    buffer_reset(buffer);
+    BufferReset(buffer);
     table_scheme *scheme = malloc(sizeof(table_scheme));
     if (scheme == NULL) {
         return NULL;
     }
-    scheme->pool_offset = buffer_read_b64(buffer).ui64;
-    scheme->name = buffer_read_string(buffer); // TODO: may be null
-    scheme->size = buffer_read_b32(buffer).ui32;
+    scheme->pool_offset = BufferReadB64(buffer).ui64;
+    scheme->name = BufferReadString(buffer); // TODO: may be null
+    scheme->size = BufferReadB32(buffer).ui32;
     scheme->columns = malloc(sizeof(table_scheme_column) * scheme->size);
     if (scheme->columns == NULL) {
         free(scheme->name);
@@ -150,21 +150,21 @@ table_scheme *table_scheme_copy(table_scheme *src) {
     return copy;
 }
 
-buffer_t table_scheme_serialize(table_scheme *table_scheme) {
+Buffer table_scheme_serialize(table_scheme *table_scheme) {
     assert(table_scheme != NULL);
     uint64_t size = table_scheme_size(table_scheme);
-    buffer_t buffer = buffer_init(size);
-    buffer_reset(buffer);
+    Buffer buffer = BufferNew(size);
+    BufferReset(buffer);
     if (NULL == buffer) {
         return NULL;
     }
-    buffer_write_b64(buffer, (b64_t) {.ui64 = table_scheme->pool_offset});
-    buffer_write_string(buffer, table_scheme->name);
-    buffer_write_b32(buffer, (b32_t) {.ui32 = table_scheme->size});
+    BufferWriteB64(buffer, (b64_t) {.ui64 = table_scheme->pool_offset});
+    BufferWriteString(buffer, table_scheme->name);
+    BufferWriteB32(buffer, (b32_t) {.ui32 = table_scheme->size});
     for (uint32_t i = 0; i < table_scheme->size; i++) {
         table_scheme_column col = table_scheme->columns[i];
-        buffer_write_b32(buffer, (b32_t) {.i32 = col.type});
-        buffer_write_string(buffer, col.name);
+        BufferWriteB32(buffer, (b32_t) {.i32 = col.type});
+        BufferWriteString(buffer, col.name);
     }
     return buffer;
 }

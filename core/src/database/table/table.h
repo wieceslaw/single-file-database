@@ -50,14 +50,14 @@ void table_scheme_free(table_scheme *scheme);
 
 table_scheme* table_scheme_copy(table_scheme* table_scheme);
 
-table_scheme *table_scheme_deserialize(buffer_t buffer);
+table_scheme *table_scheme_deserialize(Buffer buffer);
 
-buffer_t table_scheme_serialize(table_scheme *table_scheme);
+Buffer table_scheme_serialize(table_scheme *table_scheme);
 
 void table_free(table_t *table);
 
 column_description table_column_of(char *table_name, char *column_name);
 
-Row row_deserialize(table_scheme *scheme, buffer_t buffer);
+Row row_deserialize(table_scheme *scheme, Buffer buffer);
 
 #endif //LLP_LAB1_TABLE_H

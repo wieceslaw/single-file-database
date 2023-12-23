@@ -46,7 +46,7 @@ struct Server *ServerNew(uint16_t port) {
     listen(sockfd, 1);
     server->port = ntohs(server->serv.sin_port);
     server->sockfd = sockfd;
-    server->connections = list_init();
+    server->connections = ListNew();
     return server;
 }
 
@@ -55,20 +55,21 @@ void ServerFree(struct Server *server) {
         return;
     }
     // close/clear connections
-    list_it it = list_head_iterator(server->connections);
-    while (!list_it_is_empty(it)) {
-        struct Connection *connection = list_it_get(it);
+    ListIterator it = ListHeadIterator(server->connections);
+    while (!ListIteratorIsEmpty(it)) {
+        struct Connection *connection = ListIteratorGet(it);
         ConnectionStop(connection);
         ConnectionFree(connection);
-        list_it_next(it);
+        ListIteratorNext(it);
     }
-    list_it_free(&(it));
+    ListIteratorFree(&(it));
     // stop accept loop
     pthread_cancel(server->loopThread);
 
     // free resources
     close(server->sockfd);
-    list_free(&(server->connections));
+    ListFree(server->connections);
+    server->connections = NULL;
     free(server);
 }
 
@@ -84,8 +85,8 @@ static int ServerAcceptConnection(struct Server *server) {
         return -1;
     }
     pthread_mutex_lock(&server->lock);
-    list_append_tail(server->connections, connection);
-    connection->node = list_tail_iterator(server->connections);
+    ListAppendTail(server->connections, connection);
+    connection->node = ListTailIterator(server->connections);
     pthread_mutex_unlock(&server->lock);
     if (ConnectionStart(connection) != 0) {
         free(connection);

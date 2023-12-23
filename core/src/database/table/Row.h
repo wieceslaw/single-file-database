@@ -5,7 +5,7 @@
 #ifndef SINGLE_FILE_DATABASE_ROW_H
 #define SINGLE_FILE_DATABASE_ROW_H
 
-#include "buffer/buffer.h"
+#include "buffer/Buffer.h"
 
 typedef enum ColumnType {
     COLUMN_TYPE_INT = 0,
@@ -47,6 +47,6 @@ Row RowCopy(Row row);
 
 size_t RowSize(Row row);
 
-buffer_t RowSerialize(Row row);
+Buffer RowSerialize(Row row);
 
 #endif //SINGLE_FILE_DATABASE_ROW_H

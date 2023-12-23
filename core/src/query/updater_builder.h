@@ -6,7 +6,7 @@
 #define LLP_LAB1_UPDATER_BUILDER_H
 
 #include "database/table/table.h"
-#include "list/list.h"
+#include "list/List.h"
 #include "map/map_impl.h"
 
 typedef struct column_updater {
@@ -19,7 +19,7 @@ typedef struct column_updater {
 } column_updater;
 
 typedef struct updater_builder {
-    list_t column_updaters;
+    List column_updaters;
 } *updater_builder_t;
 
 /// THROWS: [MALLOC_EXCEPTION]

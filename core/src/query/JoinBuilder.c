@@ -12,7 +12,7 @@ JoinBuilder JoinBuilderNew(void) {
     if (builder == NULL) {
         return NULL;
     }
-    builder->conditions = list_init();
+    builder->conditions = ListNew();
     return builder;
 }
 
@@ -20,8 +20,9 @@ void JoinBuilderFree(JoinBuilder builder) {
     if (NULL == builder) {
         return;
     }
-    list_foreach(builder->conditions, free);
-    list_free(&builder->conditions);
+    ListApply(builder->conditions, free);
+    ListFree(builder->conditions);
+    builder->conditions = NULL;
     free(builder);
 }
 
@@ -33,6 +34,6 @@ int JoinBuilderAddCondition(JoinBuilder builder, column_description left, column
     }
     condition->right = right;
     condition->left = left;
-    list_append_tail(builder->conditions, condition);
+    ListAppendTail(builder->conditions, condition);
     return 0;
 }

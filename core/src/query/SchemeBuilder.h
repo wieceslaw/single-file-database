@@ -6,11 +6,11 @@
 #define LLP_LAB1_SCHEME_BUILDER_H
 
 #include "database/table/table.h"
-#include "list/list.h"
+#include "list/List.h"
 
 typedef struct SchemeBuilder {
     char *name;
-    list_t column_list;
+    List column_list;
 } *SchemeBuilder;
 
 SchemeBuilder SchemeBuilderNew(char *tableName);

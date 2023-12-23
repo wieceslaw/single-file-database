@@ -4,7 +4,7 @@
 
 #include <malloc.h>
 #include "SelectorBuilder.h"
-#include "list/list.h"
+#include "list/List.h"
 #include "database/table/table.h"
 
 SelectorBuilder SelectorBuilderNew(void) {
@@ -12,7 +12,7 @@ SelectorBuilder SelectorBuilderNew(void) {
     if (selector == NULL) {
         return NULL;
     }
-    selector->columns = list_init();
+    selector->columns = ListNew();
     return selector;
 }
 
@@ -20,10 +20,9 @@ void SelectorBuilderFree(SelectorBuilder selector) {
     if (NULL == selector) {
         return;
     }
-    FOR_LIST(selector->columns, it, {
-        free(list_it_get(it));
-    })
-    list_free(&selector->columns);
+    ListApply(selector->columns, free);
+    ListFree(selector->columns);
+    selector->columns = NULL;
     free(selector);
 }
 
@@ -35,6 +34,6 @@ int SelectorBuilderAdd(SelectorBuilder selector, char *tableName, char *columnNa
     column->type = COLUMN_DESC_NAME;
     column->name.table_name = tableName;
     column->name.column_name = columnName;
-    list_append_tail(selector->columns, column);
+    ListAppendTail(selector->columns, column);
     return 0;
 }

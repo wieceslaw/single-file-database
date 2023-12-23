@@ -51,23 +51,23 @@ void RowFree(Row row) {
     row.columns = NULL;
 }
 
-buffer_t RowSerialize(Row row) {
+Buffer RowSerialize(Row row) {
     assert(row.columns != NULL);
-    buffer_t buffer = buffer_init(RowSize(row));
+    Buffer buffer = BufferNew(RowSize(row));
     for (uint32_t i = 0; i < row.size; i++) {
         Column col = row.columns[i];
         switch (col.type) {
             case COLUMN_TYPE_INT:
-                buffer_write_b32(buffer, (b32_t) {.i32 = col.value.i32});
+                BufferWriteB32(buffer, (b32_t) {.i32 = col.value.i32});
                 break;
             case COLUMN_TYPE_FLOAT:
-                buffer_write_b32(buffer, (b32_t) {.f32 = col.value.f32});
+                BufferWriteB32(buffer, (b32_t) {.f32 = col.value.f32});
                 break;
             case COLUMN_TYPE_STRING:
-                buffer_write_string(buffer, col.value.str);
+                BufferWriteString(buffer, col.value.str);
                 break;
             case COLUMN_TYPE_BOOL:
-                buffer_write_b8(buffer, (b8_t) {.ui8 = col.value.b8});
+                BufferWriteB8(buffer, (b8_t) {.ui8 = col.value.b8});
                 break;
         }
     }
