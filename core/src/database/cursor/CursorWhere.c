@@ -3,8 +3,9 @@
 //
 
 #include <assert.h>
-#include "cursor.h"
+#include "Cursor.h"
 
+// THROWS: ?
 static bool column_greater_than(Column first, Column second) {
     assert(first.type == second.type);
     assert(first.type == COLUMN_TYPE_FLOAT || first.type == COLUMN_TYPE_INT);
@@ -18,6 +19,7 @@ static bool column_greater_than(Column first, Column second) {
     }
 }
 
+// THROWS: ?
 static bool column_lesser_than(Column first, Column second) {
     assert(first.type == second.type);
     assert(first.type == COLUMN_TYPE_FLOAT || first.type == COLUMN_TYPE_INT);
@@ -31,6 +33,7 @@ static bool column_lesser_than(Column first, Column second) {
     }
 }
 
+// THROWS: ?
 static bool compare_columns(comparing_type compare_type, Column first, Column second) {
     assert(first.type == second.type);
     switch (compare_type) {
@@ -51,25 +54,28 @@ static bool compare_columns(comparing_type compare_type, Column first, Column se
     }
 }
 
-static Column operand_extract_column(operand op, cursor_t cur) {
+// THROWS: ?
+static Column operand_extract_column(operand op, Cursor cur) {
     switch (op.type) {
         case OPERAND_VALUE_LITERAL:
             return op.literal;
         case OPERAND_VALUE_COLUMN:
-            return cursor_get(cur, op.column.index.table_idx, op.column.index.column_idx);
+            return CursorGetColumn(cur, op.column.index.table_idx, op.column.index.column_idx);
         default:
             assert(0);
     }
 }
 
-static bool where_condition_check_compare(where_condition *condition, cursor_t cur) {
+// THROWS: ?
+static bool where_condition_check_compare(where_condition *condition, Cursor cur) {
     assert(condition != NULL && condition->type == CONDITION_COMPARE);
     Column first_column = operand_extract_column(condition->compare.first, cur);
     Column second_column = operand_extract_column(condition->compare.second, cur);
     return compare_columns(condition->compare.type, first_column, second_column);
 }
 
-static bool where_condition_check(where_condition *condition, cursor_t cur) {
+// THROWS: ?
+static bool where_condition_check(where_condition *condition, Cursor cur) {
     assert(condition != NULL);
     switch (condition->type) {
         case CONDITION_AND:
@@ -87,66 +93,71 @@ static bool where_condition_check(where_condition *condition, cursor_t cur) {
     }
 }
 
-static void cursor_free_where(cursor_t cur) {
+// THROWS: ?
+static void CursorFree_WHERE(Cursor cur) {
     where_condition_free(cur->where.condition);
-    cursor_free(&(cur->where.base));
+    CursorFree(&(cur->where.base));
     free(cur);
 }
 
-static bool cursor_is_empty_where(cursor_t cur) {
-    return cursor_is_empty(cur->where.base);
+// THROWS: ?
+static bool CursorIsEmpty_WHERE(Cursor cur) {
+    return CursorIsEmpty(cur->where.base);
 }
 
-static void cursor_next_where(cursor_t cur) {
-    cursor_t base = cur->where.base;
-    cursor_next(base);
-    while (!cursor_is_empty(base) && !where_condition_check(cur->where.condition, cur)) {
-        cursor_next(base);
+// THROWS: ?
+static void CursorNext_WHERE(Cursor cur) {
+    Cursor base = cur->where.base;
+    CursorNext(base);
+    while (!CursorIsEmpty(base) && !where_condition_check(cur->where.condition, cur)) {
+        CursorNext(base);
     }
 }
 
-static void cursor_restart_where(cursor_t cur) {
-    cursor_restart(cur->where.base);
+// THROWS: ?
+static void CursorRestart_WHERE(Cursor cur) {
+    CursorRestart(cur->where.base);
     while (!where_condition_check(cur->where.condition, cur)) {
-        cursor_next(cur->where.base);
+        CursorNext(cur->where.base);
     }
 }
 
-static void cursor_flush_where(cursor_t cur) {
-    cursor_flush(cur->where.base);
+// THROWS: ?
+static void CursorFlush_WHERE(Cursor cur) {
+    CursorFlush(cur->where.base);
 }
 
-static Column cursor_get_where(cursor_t cur, size_t table_idx, size_t column_idx) {
-    return cursor_get(cur->where.base, table_idx, column_idx);
+// THROWS: ?
+static Column CursorGet_WHERE(Cursor cur, size_t table_idx, size_t column_idx) {
+    return CursorGetColumn(cur->where.base, table_idx, column_idx);
 }
 
-static void cursor_delete_where(cursor_t cur, size_t table_idx) {
-    cursor_delete(cur->where.base, table_idx);
+// THROWS: ?
+static void CursorDelete_WHERE(Cursor cur, size_t table_idx) {
+    CursorDeleteRow(cur->where.base, table_idx);
 }
 
-static void cursor_update_where(cursor_t cur, size_t table_idx, updater_builder_t updater) {
-    cursor_update(cur->where.base, table_idx, updater);
+// THROWS: ?
+static void CursorUpdate_WHERE(Cursor cur, size_t table_idx, updater_builder_t updater) {
+    CursorUpdateRow(cur->where.base, table_idx, updater);
 }
 
-/// THROWS: [MALLOC_EXCEPTION]
-cursor_t cursor_init_where(cursor_t base, where_condition *condition) {
+Cursor CursorNew_WHERE(Cursor base, where_condition *condition) {
     assert(base != NULL && condition != NULL);
-
-    cursor_t cur = rmalloc(sizeof(struct cursor));
+    Cursor cur = malloc(sizeof(struct Cursor));
     cur->type = CURSOR_WHERE;
     cur->where.condition = condition;
     cur->where.base = base;
-    cur->free = cursor_free_where;
-    cur->is_empty = cursor_is_empty_where;
-    cur->next = cursor_next_where;
-    cur->restart = cursor_restart_where;
-    cur->flush = cursor_flush_where;
-    cur->get = cursor_get_where;
-    cur->delete = cursor_delete_where;
-    cur->update = cursor_update_where;
-
-    while (!cursor_is_empty(cur) && !where_condition_check(cur->where.condition, cur)) {
-        cursor_next(cur->where.base);
+    cur->free = CursorFree_WHERE;
+    cur->is_empty = CursorIsEmpty_WHERE;
+    cur->next = CursorNext_WHERE;
+    cur->restart = CursorRestart_WHERE;
+    cur->flush = CursorFlush_WHERE;
+    cur->get = CursorGet_WHERE;
+    cur->delete = CursorDelete_WHERE;
+    cur->update = CursorUpdate_WHERE;
+    while (!CursorIsEmpty(cur) && !where_condition_check(cur->where.condition, cur)) {
+        CursorNext(cur->where.base);
     }
     return cur;
 }

@@ -3,10 +3,10 @@
 //
 
 #include <assert.h>
-#include "cursor.h"
+#include "Cursor.h"
 #include "util_string.h"
 
-static Row cursor_get_row_from(cursor_t cur) {
+static Row cursor_get_row_from(Cursor cur) {
     if (NULL != cur->from.cached_row.columns) {
         return cur->from.cached_row;
     }
@@ -17,7 +17,7 @@ static Row cursor_get_row_from(cursor_t cur) {
     return row;
 }
 
-static void cursor_free_cached_row(cursor_t cur) {
+static void cursor_free_cached_row(Cursor cur) {
     if (NULL == cur->from.cached_row.columns) {
         return;
     }
@@ -26,19 +26,20 @@ static void cursor_free_cached_row(cursor_t cur) {
     cur->from.cached_row.columns = NULL;
 }
 
-static void cursor_free_from(cursor_t cur) {
+static void CursorFree_FROM(Cursor cur) {
     cursor_free_cached_row(cur);
     table_free(&(cur->from.table));
     pool_iterator_free(&(cur->from.it));
     free(cur);
 }
 
-static bool cursor_is_empty_from(cursor_t cur) {
+static bool CursorIsEmpty_FROM(Cursor cur) {
     return pool_iterator_is_empty(cur->from.it);
 }
 
-static void cursor_next_from(cursor_t cur) {
-    if (cursor_is_empty(cur)) {
+// THROWS:
+static void CursorNext_FROM(Cursor cur) {
+    if (CursorIsEmpty(cur)) {
         return;
     }
     cursor_free_cached_row(cur);
@@ -47,20 +48,21 @@ static void cursor_next_from(cursor_t cur) {
     }
 }
 
-static void cursor_restart_from(cursor_t cur) {
+static void CursorRestart_FROM(Cursor cur) {
     pool_iterator_free(&(cur->from.it));
     cur->from.it = pool_iterator(cur->from.table->data_pool);
     cursor_free_cached_row(cur);
 }
 
-static void cursor_flush_from(cursor_t cur) {
+// THROWS:
+static void CursorFlush_FROM(Cursor cur) {
     cursor_free_cached_row(cur);
     if (pool_flush(cur->from.table->data_pool) != 0) {
         RAISE(POOL_EXCEPTION);
     }
 }
 
-static Column cursor_get_from(cursor_t cur, size_t table_idx, size_t column_idx) {
+static Column CursorGet_FROM(Cursor cur, size_t table_idx, size_t column_idx) {
     if (cur->from.table_idx == table_idx) {
         Row row = cursor_get_row_from(cur);
         Column column = row.columns[column_idx];
@@ -79,7 +81,8 @@ static Column cursor_get_from(cursor_t cur, size_t table_idx, size_t column_idx)
     return (Column) {0};
 }
 
-static void cursor_delete_from(cursor_t cur, size_t table_idx) {
+// THROWS:
+static void CursorDelete_FROM(Cursor cur, size_t table_idx) {
     if (cur->from.table_idx == table_idx) {
         if (pool_iterator_delete(cur->from.it) != 0) {
             RAISE(POOL_EXCEPTION);
@@ -87,7 +90,8 @@ static void cursor_delete_from(cursor_t cur, size_t table_idx) {
     }
 }
 
-static void cursor_update_from(cursor_t cur, size_t table_idx, updater_builder_t updater) {
+// THROWS:
+static void CursorUpdate_FROM(Cursor cur, size_t table_idx, updater_builder_t updater) {
     if (cur->from.table_idx == table_idx) {
         Row row = cursor_get_row_from(cur);
         Row updated_row = updater_builder_update(updater, row);
@@ -103,31 +107,28 @@ static void cursor_update_from(cursor_t cur, size_t table_idx, updater_builder_t
     }
 }
 
-/// THROWS: [MALLOC_EXCEPTION, POOL_EXCEPTION]
-cursor_t cursor_init_from(table_t table, size_t table_idx) {
+Cursor CursorNew_FROM(table_t table, size_t table_idx) {
     assert(table != NULL);
-    cursor_t cur = NULL;
-    TRY({
-        cur = rmalloc(sizeof(struct cursor));
-        cur->type = CURSOR_FROM;
-        cur->from.table_idx = table_idx;
-        cur->from.table = table;
-        cur->from.it = pool_iterator(table->data_pool);
-        cur->from.cached_row = (Row) {0};
-    }) CATCH(exception >= EXCEPTION, {
+    Cursor cur = malloc(sizeof(struct Cursor));
+    if (cur == NULL) {
+        return NULL;
+    }
+    cur->from.it = pool_iterator(table->data_pool);
+    if (cur->from.it == NULL) {
         free(cur);
-        RAISE(exception);
-    }) FINALLY()
-
-    cur->free = cursor_free_from;
-    cur->is_empty = cursor_is_empty_from;
-    cur->next = cursor_next_from;
-    cur->restart = cursor_restart_from;
-    cur->flush = cursor_flush_from;
-    cur->get = cursor_get_from;
-    cur->delete = cursor_delete_from;
-    cur->update = cursor_update_from;
+        return NULL;
+    }
+    cur->type = CURSOR_FROM;
+    cur->from.table_idx = table_idx;
+    cur->from.table = table;
+    cur->from.cached_row = (Row) {0};
+    cur->free = CursorFree_FROM;
+    cur->is_empty = CursorIsEmpty_FROM;
+    cur->next = CursorNext_FROM;
+    cur->restart = CursorRestart_FROM;
+    cur->flush = CursorFlush_FROM;
+    cur->get = CursorGet_FROM;
+    cur->delete = CursorDelete_FROM;
+    cur->update = CursorUpdate_FROM;
     return cur;
 }
-
-

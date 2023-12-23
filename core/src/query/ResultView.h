@@ -6,12 +6,12 @@
 #define LLP_LAB1_RESULT_VIEW_H
 
 #include "database/table/table.h"
-#include "database/cursor/cursor.h"
+#include "database/cursor/Cursor.h"
 
 typedef struct ResultView {
     table_scheme *view_scheme;
     column_description *view_selector;
-    cursor_t cursor;
+    Cursor cursor;
 } *ResultView;
 
 void ResultViewFree(ResultView view);

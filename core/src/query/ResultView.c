@@ -11,13 +11,13 @@ void ResultViewFree(ResultView view) {
         return;
     }
     free(view->view_selector);
-    cursor_free(&(view->cursor));
+    CursorFree(&(view->cursor));
     table_scheme_free(view->view_scheme);
     free(view);
 }
 
 bool ResultViewIsEmpty(ResultView view) {
-    return cursor_is_empty(view->cursor);
+    return CursorIsEmpty(view->cursor);
 }
 
 Row ResultViewGetRow(ResultView view) {
@@ -27,7 +27,7 @@ Row ResultViewGetRow(ResultView view) {
     result.columns = rmalloc(sizeof(Column) * size);
     for (size_t i = 0; i < size; i++) {
         column_description description = view->view_selector[i];
-        Column col = cursor_get(view->cursor, description.index.table_idx, description.index.column_idx);
+        Column col = CursorGetColumn(view->cursor, description.index.table_idx, description.index.column_idx);
         result.columns[i] = col;
     }
     return result;
@@ -37,7 +37,7 @@ void ResultViewNext(ResultView view) {
     if (ResultViewIsEmpty(view)) {
         return;
     }
-    cursor_next(view->cursor);
+    CursorNext(view->cursor);
 }
 
 table_scheme *ResultViewGetScheme(ResultView view) {

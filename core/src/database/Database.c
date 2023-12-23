@@ -10,7 +10,7 @@
 #include "table/table.h"
 #include "Database.h"
 #include "exceptions/exceptions.h"
-#include "database/cursor/cursor.h"
+#include "database/cursor/Cursor.h"
 #include "map/map_impl.h"
 #include "defines.h"
 
@@ -266,15 +266,18 @@ int DatabaseInsertQuery(Database database, char *tableName, RowBatch batch) {
     return 0;
 }
 
-static cursor_t database_build_base_cursor(Database database, char* table_name, size_t table_idx) {
-    cursor_t cur = NULL;
-    TRY({
-        table_t table = DatabaseFindTable(database, table_name);
-        cur = cursor_init_from(table, table_idx);
-    }) CATCH(exception >= EXCEPTION, {
-        cursor_free(&cur);
-        RAISE(exception);
-    }) FINALLY()
+static Cursor DatabaseBuildBaseCursor(Database database, char* tableName, size_t tableIdx) {
+    table_t table = DatabaseFindTable(database, tableName);
+    if (table == NULL) {
+        debug("Unable to find table for base cursor");
+        return NULL;
+    }
+    Cursor cur = CursorNew_FROM(table, tableIdx);
+    if (cur == NULL) {
+        debug("Unable to create base cursor");
+        table_free(&table);
+        return NULL;
+    }
     return cur;
 }
 
@@ -391,9 +394,9 @@ void indexed_maps_free(indexed_maps maps) {
 }
 
 // THROWS: [DATABASE_TRANSLATION_EXCEPTION]
-static cursor_t query_cursor(Database database, query_t query, indexed_maps maps) {
+static Cursor query_cursor(Database database, query_t query, indexed_maps maps) {
     assert(database != NULL && query.table != NULL);
-    cursor_t result = database_build_base_cursor(database, query.table, 0);
+    Cursor result = DatabaseBuildBaseCursor(database, query.table, 0);
     if (query.joins != NULL) {
         FOR_LIST(query.joins->conditions, it, {
             TRY({
@@ -402,16 +405,19 @@ static cursor_t query_cursor(Database database, query_t query, indexed_maps maps
                 join_condition translated_condition;
                 translated_condition.right = indexed_maps_translate(maps, condition->right);
                 translated_condition.left = indexed_maps_translate(maps, condition->left);
-                cursor_t right = database_build_base_cursor(
+                Cursor right = DatabaseBuildBaseCursor(
                         database,
                         condition->right.name.table_name,
                         translated_condition.right.index.table_idx
                 );
-                cursor_t joined = cursor_init_join(result, right, translated_condition);
+                Cursor joined = CursorNew_JOIN(result, right, translated_condition);
+                if (joined == NULL) {
+                    RAISE(DATABASE_INTERNAL_ERROR);
+                }
                 result = joined;
             }) CATCH(exception >= EXCEPTION, {
                 list_it_free(&it);
-                cursor_free(&result);
+                CursorFree(&result);
                 indexed_maps_free(maps);
                 RAISE(exception);
             }) FINALLY()
@@ -421,11 +427,13 @@ static cursor_t query_cursor(Database database, query_t query, indexed_maps maps
         where_condition *translated_condition;
         TRY({
             translated_condition = where_condition_translate(query.where, maps);
-            cursor_t tmp = cursor_init_where(result, translated_condition);
-            result = tmp;
+            result = CursorNew_WHERE(result, translated_condition);
+            if (result == NULL) {
+                RAISE(DATABASE_INTERNAL_ERROR);
+            }
         }) CATCH(exception >= exception, {
             where_condition_free(translated_condition);
-            cursor_free(&result);
+            CursorFree(&result);
             RAISE(exception);
         }) FINALLY()
     }
@@ -435,16 +443,16 @@ static cursor_t query_cursor(Database database, query_t query, indexed_maps maps
 void DatabaseDeleteQuery(Database database, query_t query) {
     assert(database != NULL);
     indexed_maps maps = {0};
-    cursor_t cur = NULL;
+    Cursor cur = NULL;
     TRY({
         maps = query_mapping(database, query);
         cur = query_cursor(database, query, maps);
-        while (!cursor_is_empty(cur)) {
-            cursor_delete(cur, 0);
-            cursor_next(cur);
+        while (!CursorIsEmpty(cur)) {
+            CursorDeleteRow(cur, 0);
+            CursorNext(cur);
         }
-        cursor_flush(cur);
-        cursor_free(&cur);
+        CursorFlush(cur);
+        CursorFree(&cur);
     }) CATCH(exception == DATABASE_TRANSLATION_EXCEPTION, {
         RAISE(DATABASE_QUERY_EXCEPTION);
     }) CATCH (exception >= EXCEPTION, {
@@ -457,7 +465,7 @@ void DatabaseDeleteQuery(Database database, query_t query) {
 void DatabaseUpdateQuery(Database database, query_t query, updater_builder_t updater) {
     assert(database != NULL);
     indexed_maps maps = {0};
-    cursor_t cur = NULL;
+    Cursor cur = NULL;
     str_int_map_t map = NULL;
     updater_builder_t translated_updater = NULL;
     TRY({
@@ -465,12 +473,12 @@ void DatabaseUpdateQuery(Database database, query_t query, updater_builder_t upd
         cur = query_cursor(database, query, maps);
         map = MAP_GET(maps.columns_maps, query.table);
         translated_updater = updater_builder_translate(updater, map);
-        while (!cursor_is_empty(cur)) {
-            cursor_update(cur, 0, translated_updater);
-            cursor_next(cur);
+        while (!CursorIsEmpty(cur)) {
+            CursorUpdateRow(cur, 0, translated_updater);
+            CursorNext(cur);
         }
-        cursor_flush(cur);
-        cursor_free(&cur);
+        CursorFlush(cur);
+        CursorFree(&cur);
     }) CATCH(exception == DATABASE_TRANSLATION_EXCEPTION, {
         RAISE(DATABASE_QUERY_EXCEPTION);
     }) CATCH (exception >= EXCEPTION, {
@@ -490,7 +498,6 @@ static table_scheme *create_view_scheme(Database database, SelectorBuilder selec
         column_description *description = list_it_get(it);
         assert(description != NULL);
         column_description indexed_description = indexed_maps_translate(maps, *description);
-        // add schemes cache?
         table_scheme *scheme = DatabaseFindTableScheme(database, description->name.table_name);
         table_scheme_column column = scheme->columns[indexed_description.index.column_idx];
         if (SchemeBuilderAddColumn(view_scheme_builder, column.name, column.type) != 0) {
@@ -519,7 +526,7 @@ ResultView DatabaseSelectQuery(Database database, query_t query, SelectorBuilder
     assert(database != NULL && selector != NULL);
     ResultView result = NULL;
     indexed_maps maps = {0};
-    cursor_t cur = NULL;
+    Cursor cur = NULL;
     TRY({
         result = rmalloc(sizeof(struct ResultView));
         maps = query_mapping(database, query);
