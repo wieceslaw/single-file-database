@@ -7,14 +7,15 @@ message Batch {
   repeated RowData rows = 2;
 }
 
-message QueryStart {
-
+message TablesListResponse {
+  repeated TableScheme tables = 1;
 }
 
 message Response {
   bool ok = 1;
   oneof data {
     string message = 2;
+    TablesListResponse tableList = 3;
 //      InsertData insert = 3;
 //      UpdateData update = 4;
 //      DeleteData delete = 5;

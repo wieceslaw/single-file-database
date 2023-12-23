@@ -3,6 +3,7 @@
 %{
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "parser.h"
 #include "ast.h"
 %}
@@ -11,7 +12,7 @@
 
 [0-9]+\.[0-9]+          { yylval.fval = atof(yytext); return T_FLOAT; }
 [0-9]+                  { yylval.ival = atoi(yytext); return T_INT; }
-\"(\\.|[^"\\])*\"       { yylval.sval = strdup(yytext); return T_STRING; }
+\'(\\.|[^'\\])*\'       { yytext[strlen(yytext) - 1] = '\0'; yylval.sval = strdup(yytext + 1); return T_STRING; }
 (?i:true)               { yylval.bval = 1; return T_BOOL; }
 (?i:false)              { yylval.bval = 0; return T_BOOL; }
 
@@ -54,5 +55,5 @@
 "!="    { yylval.ival = CMP_NQ; return T_NEQUALS; }
 
 [ \n\t\r]	; // ignore all whitespace
-. { printf("Unknown symbol, len: %zu, text[0]: %d \n", strlen(yytext), yytext[0]); };
+. {};
 %%

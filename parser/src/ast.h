@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#define SINGLE_INDENT 2
+
 enum CompareType {
     CMP_LE = 0,
     CMP_GE,
@@ -191,5 +193,15 @@ struct AstNode *NewUpdateQueryAstNode(
 );
 
 struct AstNode* NewListAstNode(struct AstNode *item, struct AstNode *next);
+
+void PrintIndent(int n);
+
+char* CompareTypeToString(enum CompareType type);
+
+char* ConditionTypeToString(enum ConditionType type);
+
+char* DataTypeToString(enum DataType type);
+
+void PrintAst(struct AstNode *tree, int indent);
 
 #endif //LLP_LAB1_AST_H

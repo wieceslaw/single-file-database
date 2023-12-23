@@ -78,15 +78,18 @@ Message *receiveMessage(int sockfd) {
     return message;
 }
 
-// TODO: remove
-int respond(int sockfd, char *msg) {
+int sendResponse(int sockfd, Response *response) {
     Message message;
     message__init(&message);
-    Response response;
-    response__init(&response);
-    message.response = &response;
+    message.response = response;
     message.content_case = MESSAGE__CONTENT_RESPONSE;
-    response.data_case = RESPONSE__DATA_MESSAGE;
-    response.message = msg;
+    return sendMessage(sockfd, &message);
+}
+
+int sendRequest(int sockfd, Request *request) {
+    Message message;
+    message__init(&message);
+    message.request = request;
+    message.content_case = MESSAGE__CONTENT_REQUEST;
     return sendMessage(sockfd, &message);
 }

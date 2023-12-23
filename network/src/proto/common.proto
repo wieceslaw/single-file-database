@@ -1,10 +1,10 @@
 syntax = "proto3";
 
 enum MsgColumnType {
-  MSG_COLUMN_TYPE_INT32 = 0;
-  MSG_COLUMN_TYPE_FLOAT32 = 1;
-  MSG_COLUMN_TYPE_STRING = 2;
-  MSG_COLUMN_TYPE_BOOL = 3;
+  INT32 = 0;
+  FLOAT32 = 1;
+  STRING = 2;
+  BOOL = 3;
 }
 
 message MsgColumnData {
@@ -32,4 +32,14 @@ message RowData {
 
 message RowDataType {
   repeated ColumnDataType data = 1;
+}
+
+message SchemeColumn {
+  string name = 1;
+  MsgColumnType type = 2;
+}
+
+message TableScheme {
+  string name = 1;
+  repeated SchemeColumn columns = 2;
 }

@@ -6,17 +6,7 @@ message BatchCollect {
   int32 max = 1;
 }
 
-message SchemeColumn {
-  string name = 1;
-  MsgColumnType type = 2;
-}
-
-message TableScheme {
-  repeated SchemeColumn columns = 1;
-}
-
 message CreateTableQuery {
-  string name = 1;
   TableScheme scheme = 2;
 }
 
@@ -30,12 +20,17 @@ message InsertQuery {
   repeated RowDataType values = 3;
 }
 
+message TablesListRequest {
+  int32 max = 1;
+}
+
 message Request {
   oneof data {
-    string message = 42;
-    BatchCollect batch = 2;
-    CreateTableQuery createTableQuery = 3;
-    DeleteTableQuery deleteTableQuery = 4;
-    InsertQuery insertQuery = 5;
+      string message = 42;
+      BatchCollect batch = 2;
+      CreateTableQuery createTableQuery = 3;
+      DeleteTableQuery deleteTableQuery = 4;
+      InsertQuery insertQuery = 5;
+      TablesListRequest tablesList = 6;
   }
 }

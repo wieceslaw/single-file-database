@@ -16,7 +16,8 @@ int sendMessage(int sockfd, Message *message);
 
 Message *receiveMessage(int sockfd);
 
+int sendResponse(int sockfd, Response *response);
 
-int respond(int sockfd, char *msg);
+int sendRequest(int sockfd, Request *request);
 
 #endif //SINGLE_FILE_DATABASE_NETWORK_H

@@ -7,9 +7,135 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <string.h>
 
 #include "network.h"
+#include "DynamicBuffer.h"
+#include "ast.h"
+#include "defines.h"
+
+static char *MsgColumnTypeToStr(MsgColumnType type) {
+    switch (type) {
+        case MSG_COLUMN_TYPE__INT32:
+            return "int";
+        case MSG_COLUMN_TYPE__FLOAT32:
+            return "float";
+        case MSG_COLUMN_TYPE__STRING:
+            return "text";
+        case MSG_COLUMN_TYPE__BOOL:
+            return "boolean";
+        default:
+            debug("Unknown value of MsgColumnType");
+            assert(0);
+    }
+}
+
+static void printTable(TableScheme *table) {
+    printf("Table \"%s\"", table->name);
+    printf("Column | Type");
+    for (size_t i = 0; i < table->n_columns; i++) {
+        SchemeColumn *column = table->columns[i];
+        printf("%s | %s", column->name, MsgColumnTypeToStr(column->type));
+    }
+}
+
+static void printTables(TablesListResponse *response) {
+    for (size_t i = 0; i < response->n_tables; i++) {
+        TableScheme *table = response->tables[i];
+        printTable(table);
+    }
+}
+
+static int receive(int sockfd) {
+    Message *message = receiveMessage(sockfd);
+    if (message == NULL) {
+        printf("Receiving response error \n");
+        return -1;
+    }
+    if (message->content_case == MESSAGE__CONTENT_RESPONSE) {
+        message__free_unpacked(message, NULL);
+        debug("Wrong message type");
+        return -1;
+    }
+    Response *response = message->response;
+    switch (response->data_case) {
+        case RESPONSE__DATA_MESSAGE:
+            printf("Message response: \"%s\" \n", message->response->message);
+            break;
+        case RESPONSE__DATA_TABLE_LIST:
+            printTables(response->tablelist);
+            break;
+        default:
+            debug("Wrong response type");
+            assert(0);
+    }
+    message__free_unpacked(message, NULL);
+    return 0;
+}
+
+static int requestTablesList(int sockfd) {
+    Request request;
+    request__init(&request);
+    request.data_case = REQUEST__DATA_TABLES_LIST;
+    TablesListRequest tablesList;
+    tables_list_request__init(&tablesList);
+    tablesList.max = 128;
+    request.tableslist = &tablesList;
+    return sendRequest(sockfd, &request);
+}
+
+static void cli(int sockfd) {
+    int c;
+    int query = 0;
+    struct DynamicBuffer buffer = {0};
+    printf("database=# ");
+    while ((c = getchar()) != 0) {
+        if (c == '\n') {
+            if (query) {
+                printf("database-# ");
+            } else {
+                printf("database=# ");
+            }
+        }
+        if (query) {
+            DynamicBufferPut(&buffer, (char) c);
+            if (c == ';') {
+                query = 0;
+                DynamicBufferPut(&buffer, '\0');
+                DynamicBufferReset(&buffer);
+                struct AstNode *tree = ParseString(buffer.data);
+                if (tree != NULL) {
+                    PrintAst(tree, 2);
+                }
+            }
+        } else {
+            if (c == '\\') {
+                c = getchar();
+                switch (c) {
+                    case 'd': {
+                        if (requestTablesList(sockfd) != 0) {
+                            debug("Unable to make request");
+                            goto out;
+                        }
+                        printf("List of relations \n");
+                        receive(sockfd);
+                        break;
+                    }
+                    case 'q': {
+                        goto out;
+                    }
+                    default: {
+                        printf("Try \\? for help. \n");
+                    }
+                }
+            } else if (c != ';' && c != '\n') {
+                query = 1;
+                DynamicBufferPut(&buffer, (char) c);
+            }
+        }
+    }
+    out:
+    DynamicBufferFree(&buffer);
+}
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
@@ -34,34 +160,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-
-    Message message;
-    message__init(&message);
-    Request request;
-    request__init(&request);
-    message.request = &request;
-    message.content_case = MESSAGE__CONTENT_REQUEST;
-    request.data_case = REQUEST__DATA_MESSAGE;
-
-    char *line = NULL;
-    size_t len = 0;
-    ssize_t nread;
-    while ((nread = getline(&line, &len, stdin)) != -1) {
-        line[strlen(line) - 1] = '\0';
-        request.message = line;
-        if (sendMessage(sockfd, &message)) {
-            printf("Sending response error \n");
-            return EXIT_FAILURE;
-        }
-        Message *response = receiveMessage(sockfd);
-        if (response == NULL) {
-            printf("Receiving response error \n");
-            return EXIT_FAILURE;
-        }
-        printf("Server response: \"%s\" \n", response->response->message);
-        message__free_unpacked(response, NULL);
-    }
-    free(line);
+    cli(sockfd);
 
     close(sockfd);
     return EXIT_SUCCESS;

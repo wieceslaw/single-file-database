@@ -15,17 +15,27 @@ static int handle(struct Connection *connection) {
         if (message == NULL) {
             return 0;
         }
+        if (message->content_case != MESSAGE__CONTENT_REQUEST) {
+            debug("Wrong request type");
+            return -1;
+        }
         pthread_mutex_lock(&(connection->server->lock));
         // begin
-        
-        char *str = message->request->message;
-        loginfo("Client message: \"%s\"", str);
+        Request *request = message->request;
+        switch (request->data_case) {
+            case REQUEST__DATA_MESSAGE:
+                loginfo("REQUEST MESSAGE: %s", request->message);
+                break;
+            case REQUEST__DATA_TABLES_LIST:
+                loginfo("REQUEST TABLES_LIST");
+                break;
+            default:
+                debug("Unknown request type");
+                return -1;
+        }
 
         // end
         pthread_mutex_unlock(&(connection->server->lock));
-        if (respond(connection->sockfd, str) == -1) {
-            return -1;
-        }
         message__free_unpacked(message, NULL);
     }
     return 0;
