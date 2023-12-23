@@ -10,7 +10,7 @@ RowBatch RowBatchNew(size_t capacity) {
     return (RowBatch) {
         .capacity = capacity,
         .size = 0,
-        .rows = rmalloc(sizeof(row_t) * capacity)
+        .rows = rmalloc(sizeof(Row) * capacity)
     };
 }
 
@@ -20,13 +20,13 @@ void RowBatchFree(RowBatch *batch) {
         return;
     }
     for (size_t i = 0; i < batch->size; i++) {
-        row_free(batch->rows[i]);
+        RowFree(batch->rows[i]);
     }
     free(batch->rows);
     batch->rows = NULL;
 }
 
-void RowBatchAddRow(RowBatch *batch, row_t row) {
+void RowBatchAddRow(RowBatch *batch, Row row) {
     assert(batch != NULL);
     if (batch->size == batch->capacity) {
         return;

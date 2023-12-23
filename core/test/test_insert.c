@@ -21,10 +21,10 @@ static void insert(Database db, int n, char* table_name) {
         scanf("%d", &boolean);
         scanf("%f", &floating);
         RowBuilder builder = RowBuilderNew(4);
-        RowBuilderAdd(&builder, column_int(integer));
-        RowBuilderAdd(&builder, column_string(string));
-        RowBuilderAdd(&builder, column_bool(!!boolean));
-        RowBuilderAdd(&builder, column_float(floating));
+        RowBuilderAdd(&builder, ColumnOfInt32(integer));
+        RowBuilderAdd(&builder, ColumnOfString(string));
+        RowBuilderAdd(&builder, ColumnOfBool(!!boolean));
+        RowBuilderAdd(&builder, ColumnOfFloat32(floating));
         RowBatchAddRow(&batch, RowBuilderToRow(&builder));
         RowBuilderFree(&builder);
     }
@@ -61,6 +61,8 @@ int main(int argc, char *argv[]) {
 
     insert(db, n, table_name);
 
-    DatabaseFree(db);
+    if (DatabaseFree(db) != 0) {
+        printf("Unable to close database \n");
+    }
     return 0;
 }

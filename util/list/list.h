@@ -22,13 +22,13 @@ typedef struct list_iterator *list_it;
 
 typedef void *list_value;
 
-typedef void(*clearer_t)(void *);
+typedef void(*applier_t)(void *);
 
 list_t list_init(void);
 
 void list_free(list_t *list_ptr);
 
-void list_clear(list_t list, clearer_t clearer);
+void list_foreach(list_t list, applier_t applier);
 
 size_t list_size(list_t list);
 

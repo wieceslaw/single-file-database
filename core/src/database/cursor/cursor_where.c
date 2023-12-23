@@ -5,33 +5,33 @@
 #include <assert.h>
 #include "cursor.h"
 
-static bool column_greater_than(column_t first, column_t second) {
+static bool column_greater_than(Column first, Column second) {
     assert(first.type == second.type);
     assert(first.type == COLUMN_TYPE_FLOAT || first.type == COLUMN_TYPE_INT);
     switch (first.type) {
         case COLUMN_TYPE_INT:
-            return first.value.val_int > second.value.val_int;
+            return first.value.i32 > second.value.i32;
         case COLUMN_TYPE_FLOAT:
-            return first.value.val_float > second.value.val_float;
+            return first.value.f32 > second.value.f32;
         default:
             assert(0);
     }
 }
 
-static bool column_lesser_than(column_t first, column_t second) {
+static bool column_lesser_than(Column first, Column second) {
     assert(first.type == second.type);
     assert(first.type == COLUMN_TYPE_FLOAT || first.type == COLUMN_TYPE_INT);
     switch (first.type) {
         case COLUMN_TYPE_INT:
-            return first.value.val_int < second.value.val_int;
+            return first.value.i32 < second.value.i32;
         case COLUMN_TYPE_FLOAT:
-            return first.value.val_float < second.value.val_float;
+            return first.value.f32 < second.value.f32;
         default:
             assert(0);
     }
 }
 
-static bool compare_columns(comparing_type compare_type, column_t first, column_t second) {
+static bool compare_columns(comparing_type compare_type, Column first, Column second) {
     assert(first.type == second.type);
     switch (compare_type) {
         case COMPARE_EQ:
@@ -51,7 +51,7 @@ static bool compare_columns(comparing_type compare_type, column_t first, column_
     }
 }
 
-static column_t operand_extract_column(operand op, cursor_t cur) {
+static Column operand_extract_column(operand op, cursor_t cur) {
     switch (op.type) {
         case OPERAND_VALUE_LITERAL:
             return op.literal;
@@ -64,8 +64,8 @@ static column_t operand_extract_column(operand op, cursor_t cur) {
 
 static bool where_condition_check_compare(where_condition *condition, cursor_t cur) {
     assert(condition != NULL && condition->type == CONDITION_COMPARE);
-    column_t first_column = operand_extract_column(condition->compare.first, cur);
-    column_t second_column = operand_extract_column(condition->compare.second, cur);
+    Column first_column = operand_extract_column(condition->compare.first, cur);
+    Column second_column = operand_extract_column(condition->compare.second, cur);
     return compare_columns(condition->compare.type, first_column, second_column);
 }
 
@@ -116,7 +116,7 @@ static void cursor_flush_where(cursor_t cur) {
     cursor_flush(cur->where.base);
 }
 
-static column_t cursor_get_where(cursor_t cur, size_t table_idx, size_t column_idx) {
+static Column cursor_get_where(cursor_t cur, size_t table_idx, size_t column_idx) {
     return cursor_get(cur->where.base, table_idx, column_idx);
 }
 

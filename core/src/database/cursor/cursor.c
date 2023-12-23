@@ -35,7 +35,7 @@ void cursor_flush(cursor_t cur) {
     cur->flush(cur);
 }
 
-column_t cursor_get(cursor_t cur, size_t table_idx, size_t column_idx) {
+Column cursor_get(cursor_t cur, size_t table_idx, size_t column_idx) {
     assert(cur != NULL);
     assert(!cursor_is_empty(cur));
     return cur->get(cur, table_idx, column_idx);

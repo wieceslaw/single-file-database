@@ -230,13 +230,20 @@ void list_it_delete(list_it it) {
     list->size--;
 }
 
-void list_clear(list_t list, clearer_t clearer) {
+void list_foreach(list_t list, applier_t applier) {
+    assert(list != NULL && applier != NULL);
+    list_it it = list_head_iterator(list);
+    while (!list_it_is_empty(it)) {
+        applier(list_it_get(it));
+        list_it_next(it);
+    }
+    list_it_free(&it);
+}
+
+static void list_clear(list_t list) {
     assert(list != NULL);
     list_it it = list_head_iterator(list);
     while (!list_it_is_empty(it)) {
-        if (clearer != NULL) {
-            clearer(list_it_get(it));
-        }
         list_it_delete(it);
     }
     list_it_free(&it);
@@ -247,7 +254,7 @@ void list_free(list_t *list_ptr) {
     if (NULL == *list_ptr) {
         return;
     }
-    list_clear(*list_ptr, NULL);
+    list_clear(*list_ptr);
     free(*list_ptr);
     *list_ptr = NULL;
 }

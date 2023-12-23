@@ -31,5 +31,4 @@ add_dependencies(${TARGET_NAME} ProtoGenerator)
 # proto generator end
 
 target_include_directories(${TARGET_NAME} PUBLIC . ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(${TARGET_NAME} protobuf-c)
-target_link_libraries(${TARGET_NAME} UtilLib)
+target_link_libraries(${TARGET_NAME} protobuf-c UtilLib)

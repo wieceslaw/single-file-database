@@ -8,7 +8,7 @@ message BatchCollect {
 
 message SchemeColumn {
   string name = 1;
-  ColumnType type = 2;
+  MsgColumnType type = 2;
 }
 
 message TableScheme {

@@ -26,13 +26,13 @@ typedef struct cursor {
     void (*flush)(struct cursor* cur);
     void (*delete)(struct cursor* cur, size_t table_idx);
     void (*update)(struct cursor* cur, size_t table_idx, updater_builder_t updater);
-    column_t (*get)(struct cursor* cur, size_t table_idx, size_t column_idx);
+    Column (*get)(struct cursor* cur, size_t table_idx, size_t column_idx);
     union {
         struct {
             table_t table;
             pool_it it;
             size_t table_idx;
-            row_t cached_row;
+            Row cached_row;
         } from;
         struct {
             join_condition condition;
@@ -71,7 +71,7 @@ void cursor_restart(cursor_t cur);
 void cursor_flush(cursor_t cur);
 
 /// THROWS: [EXCEPTION]
-column_t cursor_get(cursor_t cur, size_t table_idx, size_t column_idx);
+Column cursor_get(cursor_t cur, size_t table_idx, size_t column_idx);
 
 /// THROWS: [EXCEPTION]
 void cursor_delete(cursor_t cur, size_t table_idx);

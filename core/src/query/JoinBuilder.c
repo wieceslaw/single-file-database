@@ -20,7 +20,7 @@ void JoinBuilderFree(JoinBuilder builder) {
     if (NULL == builder) {
         return;
     }
-    list_clear(builder->conditions, free);
+    list_foreach(builder->conditions, free);
     list_free(&builder->conditions);
     free(builder);
 }

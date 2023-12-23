@@ -9,7 +9,7 @@
 #include <sys/socket.h>
 #include <string.h>
 
-#include "lib.h"
+#include "network.h"
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {

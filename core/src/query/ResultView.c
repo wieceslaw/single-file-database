@@ -20,14 +20,14 @@ bool ResultViewIsEmpty(ResultView view) {
     return cursor_is_empty(view->cursor);
 }
 
-row_t ResultViewGetRow(ResultView view) {
+Row ResultViewGetRow(ResultView view) {
     size_t size = view->view_scheme->size;
-    row_t result;
+    Row result;
     result.size = size;
-    result.columns = rmalloc(sizeof(column_t) * size);
+    result.columns = rmalloc(sizeof(Column) * size);
     for (size_t i = 0; i < size; i++) {
         column_description description = view->view_selector[i];
-        column_t col = cursor_get(view->cursor, description.index.table_idx, description.index.column_idx);
+        Column col = cursor_get(view->cursor, description.index.table_idx, description.index.column_idx);
         result.columns[i] = col;
     }
     return result;

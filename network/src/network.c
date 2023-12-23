@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "lib.h"
+#include "network.h"
 
 #define PORTMAX 65535
 #define PORTMIN 1
@@ -78,6 +78,7 @@ Message *receiveMessage(int sockfd) {
     return message;
 }
 
+// TODO: remove
 int respond(int sockfd, char *msg) {
     Message message;
     message__init(&message);

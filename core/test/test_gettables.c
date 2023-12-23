@@ -1,7 +1,7 @@
 #include "allocator/allocator.h"
 #include "database/Database.h"
 
-static char *columnTypeToStr(column_type type) {
+static char *columnTypeToStr(ColumnType type) {
     switch (type) {
         case COLUMN_TYPE_INT:
             return "COLUMN_TYPE_INT";
@@ -26,14 +26,17 @@ int main(void) {
     file_open_mode mode = FILE_OPEN_EXIST;
     file_settings settings = {.path = "/home/wieceslaw/CLionProjects/single-file-database/test.db", .open_mode = mode};
     Database db = DatabaseNew(&settings);
-    list_t tables = DatabaseGetTables(db);
-    list_it it = list_head_iterator(tables);
-    while (!list_it_is_empty(it)) {
-        table_scheme *scheme = list_it_get(it);
-        printTable(scheme);
-        list_it_next(it);
+    if (db == NULL) {
+        printf("Unable to init database \n");
     }
-    list_it_free(&(it));
-    DatabaseFree(db);
+    StrTableSchemeMap tables = DatabaseGetTablesSchemes(db);
+    FOR_MAP(tables, entry, {
+        printTable(entry->val);
+        free(entry->key);
+        table_scheme_free(entry->val);
+    })
+    if (DatabaseFree(db) != 0) {
+        printf("Unable to close database \n");
+    }
     return 0;
 }

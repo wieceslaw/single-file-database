@@ -25,21 +25,21 @@ operand operand_column(char *table, char *column) {
 operand operand_literal_float(float value) {
     return (operand) {
             .type = OPERAND_VALUE_LITERAL,
-            .literal = {.type = COLUMN_TYPE_FLOAT, .value = {.val_float = value}}
+            .literal = {.type = COLUMN_TYPE_FLOAT, .value = {.f32 = value}}
     };
 }
 
 operand operand_literal_int(int32_t value) {
     return (operand) {
             .type = OPERAND_VALUE_LITERAL,
-            .literal = {.type = COLUMN_TYPE_INT, .value = {.val_int = value}}
+            .literal = {.type = COLUMN_TYPE_INT, .value = {.i32 = value}}
     };
 }
 
 operand operand_literal_bool(bool value) {
     return (operand) {
             .type = OPERAND_VALUE_LITERAL,
-            .literal = {.type = COLUMN_TYPE_BOOL, .value = {.val_bool = value}}
+            .literal = {.type = COLUMN_TYPE_BOOL, .value = {.b8 = value}}
     };
 }
 
@@ -47,7 +47,7 @@ operand operand_literal_bool(bool value) {
 operand operand_literal_string(char *value) {
     return (operand) {
             .type = OPERAND_VALUE_LITERAL,
-            .literal = {.type = COLUMN_TYPE_STRING, .value = {.val_string = string_copy(value)}}
+            .literal = {.type = COLUMN_TYPE_STRING, .value = {.str = string_copy(value)}}
     };
 }
 
@@ -129,17 +129,17 @@ void where_condition_free(where_condition *condition) {
     free(condition);
 }
 
-bool columns_equals(column_t first, column_t second) {
+bool columns_equals(Column first, Column second) {
     assert(first.type == second.type);
     switch (first.type) {
         case COLUMN_TYPE_INT:
-            return first.value.val_int == second.value.val_int;
+            return first.value.i32 == second.value.i32;
         case COLUMN_TYPE_FLOAT:
-            return first.value.val_float == second.value.val_float;
+            return first.value.f32 == second.value.f32;
         case COLUMN_TYPE_STRING:
-            return 0 == strcmp(first.value.val_string, second.value.val_string);
+            return 0 == strcmp(first.value.str, second.value.str);
         case COLUMN_TYPE_BOOL:
-            return first.value.val_bool == second.value.val_bool;
+            return first.value.b8 == second.value.b8;
     }
     assert(0);
 }

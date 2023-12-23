@@ -33,7 +33,7 @@ typedef enum {
 typedef struct {
     operand_value_type type;
     union {
-        column_t literal;
+        Column literal;
         column_description column;
     };
 } operand;
@@ -85,6 +85,6 @@ where_condition *where_condition_or(where_condition *first, where_condition *sec
 /// THROWS: [MALLOC_EXCEPTION]
 where_condition *where_condition_not(where_condition *first);
 
-bool columns_equals(column_t first, column_t second);
+bool columns_equals(Column first, Column second);
 
 #endif //LLP_LAB1_WHERE_CONDITION_H

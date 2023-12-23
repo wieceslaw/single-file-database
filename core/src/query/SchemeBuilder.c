@@ -8,11 +8,6 @@
 #include "list/list.h"
 #include "util_string.h"
 
-struct SchemeBuilder {
-    char *name;
-    list_t column_list;
-};
-
 SchemeBuilder SchemeBuilderNew(char *tableName) {
     assert(tableName != NULL);
     SchemeBuilder builder = malloc(sizeof(struct SchemeBuilder));
@@ -36,7 +31,7 @@ void SchemeBuilderFree(SchemeBuilder builder) {
     free(builder);
 }
 
-int SchemeBuilderAddColumn(SchemeBuilder builder, char *name, column_type type) {
+int SchemeBuilderAddColumn(SchemeBuilder builder, char *name, ColumnType type) {
     assert(builder != NULL && name != NULL);
     table_scheme_column *column = malloc(sizeof(table_scheme_column));
     if (column == NULL) {

@@ -6,12 +6,12 @@
 #include "cursor.h"
 #include "util_string.h"
 
-static row_t cursor_get_row_from(cursor_t cur) {
+static Row cursor_get_row_from(cursor_t cur) {
     if (NULL != cur->from.cached_row.columns) {
         return cur->from.cached_row;
     }
     buffer_t buffer = pool_iterator_get(cur->from.it);
-    row_t row = row_deserialize(cur->from.table->scheme, buffer);
+    Row row = row_deserialize(cur->from.table->scheme, buffer);
     buffer_free(&buffer);
     cur->from.cached_row = row;
     return row;
@@ -21,7 +21,7 @@ static void cursor_free_cached_row(cursor_t cur) {
     if (NULL == cur->from.cached_row.columns) {
         return;
     }
-    row_free(cur->from.cached_row);
+    RowFree(cur->from.cached_row);
     cur->from.cached_row.size = 0;
     cur->from.cached_row.columns = NULL;
 }
@@ -42,7 +42,9 @@ static void cursor_next_from(cursor_t cur) {
         return;
     }
     cursor_free_cached_row(cur);
-    pool_iterator_next(cur->from.it);
+    if (pool_iterator_next(cur->from.it) != 0) {
+        RAISE(POOL_EXCEPTION);
+    }
 }
 
 static void cursor_restart_from(cursor_t cur) {
@@ -58,41 +60,45 @@ static void cursor_flush_from(cursor_t cur) {
     }
 }
 
-static column_t cursor_get_from(cursor_t cur, size_t table_idx, size_t column_idx) {
+static Column cursor_get_from(cursor_t cur, size_t table_idx, size_t column_idx) {
     if (cur->from.table_idx == table_idx) {
-        row_t row = cursor_get_row_from(cur);
-        column_t column = row.columns[column_idx];
-        column_type type = column.type;
-        column_value value;
+        Row row = cursor_get_row_from(cur);
+        Column column = row.columns[column_idx];
+        ColumnType type = column.type;
+        ColumnValue value;
         if (type == COLUMN_TYPE_STRING) {
-            value.val_string = string_copy(column.value.val_string);
+            value.str = string_copy(column.value.str);
         } else {
             value = column.value;
         }
-        return (column_t) {
+        return (Column) {
                 .type = type,
                 .value = value
         };
     }
-    return (column_t) {0};
+    return (Column) {0};
 }
 
 static void cursor_delete_from(cursor_t cur, size_t table_idx) {
     if (cur->from.table_idx == table_idx) {
-        pool_iterator_delete(cur->from.it);
+        if (pool_iterator_delete(cur->from.it) != 0) {
+            RAISE(POOL_EXCEPTION);
+        }
     }
 }
 
 static void cursor_update_from(cursor_t cur, size_t table_idx, updater_builder_t updater) {
     if (cur->from.table_idx == table_idx) {
-        row_t row = cursor_get_row_from(cur);
-        row_t updated_row = updater_builder_update(updater, row);
-        buffer_t serialized = row_serialize(updated_row);
+        Row row = cursor_get_row_from(cur);
+        Row updated_row = updater_builder_update(updater, row);
+        buffer_t serialized = RowSerialize(updated_row);
         if (pool_append(cur->from.table->data_pool, serialized) != 0) {
             RAISE(POOL_EXCEPTION);
         }
-        pool_iterator_delete(cur->from.it);
-        row_free(updated_row);
+        if (pool_iterator_delete(cur->from.it) != 0) {
+            RAISE(POOL_EXCEPTION);
+        }
+        RowFree(updated_row);
         buffer_free(&serialized);
     }
 }
@@ -107,7 +113,7 @@ cursor_t cursor_init_from(table_t table, size_t table_idx) {
         cur->from.table_idx = table_idx;
         cur->from.table = table;
         cur->from.it = pool_iterator(table->data_pool);
-        cur->from.cached_row = (row_t) {0};
+        cur->from.cached_row = (Row) {0};
     }) CATCH(exception >= EXCEPTION, {
         free(cur);
         RAISE(exception);

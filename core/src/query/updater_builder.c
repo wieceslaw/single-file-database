@@ -7,7 +7,7 @@
 #include "exceptions/exceptions.h"
 
 /// THROWS: [MALLOC_EXCEPTION]
-column_updater *column_updater_of(char* target, column_t new_value) {
+column_updater *column_updater_of(char* target, Column new_value) {
     column_updater *updater = rmalloc(sizeof(column_updater));
     updater->new_value = new_value;
     updater->target.name = target;
@@ -28,7 +28,7 @@ void updater_builder_free(updater_builder_t* updater_ptr) {
     if (NULL == updater) {
         return;
     }
-    list_clear(updater->column_updaters, free);
+    list_foreach(updater->column_updaters, free);
     list_free(&(updater->column_updaters));
     free(updater);
     *updater_ptr = NULL;
@@ -40,17 +40,17 @@ void updater_builder_add(updater_builder_t updater, column_updater *col_updater)
 }
 
 /// THROWS: [MALLOC_EXCEPTION]
-row_t updater_builder_update(updater_builder_t updater, row_t row) {
-    row_t copy = row_copy(row);
+Row updater_builder_update(updater_builder_t updater, Row row) {
+    Row copy = RowCopy(row);
     FOR_LIST(updater->column_updaters, it, {
         column_updater *col_updater = list_it_get(it);
         assert(col_updater->translated);
         size_t column_idx = col_updater->target.idx;
         if (copy.columns[column_idx].type == COLUMN_TYPE_STRING) {
-            free(copy.columns[column_idx].value.val_string);
-            copy.columns[column_idx].value.val_string = NULL;
+            free(copy.columns[column_idx].value.str);
+            copy.columns[column_idx].value.str = NULL;
         }
-        copy.columns[column_idx] = column_copy(col_updater->new_value);
+        copy.columns[column_idx] = ColumnCopy(col_updater->new_value);
     })
     return copy;
 }

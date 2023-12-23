@@ -18,7 +18,7 @@ void ResultViewFree(ResultView view);
 
 bool ResultViewIsEmpty(ResultView view);
 
-row_t ResultViewGetRow(ResultView view);
+Row ResultViewGetRow(ResultView view);
 
 void ResultViewNext(ResultView view);
 

@@ -19,7 +19,7 @@ void pool_clear(allocator_t *, offset_t); // remove from file memory
 
 pool_t *pool_init(allocator_t *, offset_t);
 
-void pool_free(pool_t *);
+int pool_free(pool_t *);
 
 int pool_append(pool_t *pool, buffer_t buffer);
 
@@ -31,10 +31,10 @@ void pool_iterator_free(pool_it*);
 
 bool pool_iterator_is_empty(pool_it);
 
-void pool_iterator_next(pool_it);
+int pool_iterator_next(pool_it);
 
 buffer_t pool_iterator_get(pool_it);
 
-void pool_iterator_delete(pool_it);
+int pool_iterator_delete(pool_it);
 
 #endif //LLP_LAB1_POOL_H

@@ -8,7 +8,7 @@
 #include "util_string.h"
 
 RowBuilder RowBuilderNew(size_t capacity) {
-    column_t *columns = malloc(sizeof(column_t) * capacity);
+    Column *columns = malloc(sizeof(Column) * capacity);
     if (columns == NULL) {
         return (RowBuilder) {0};
     }
@@ -25,24 +25,24 @@ void RowBuilderFree(RowBuilder *builder) {
         return;
     }
     for (size_t i = 0; i < builder->size; i++) {
-        column_t col = builder->columns[i];
+        Column col = builder->columns[i];
         if (col.type == COLUMN_TYPE_STRING) {
-            free(col.value.val_string);
+            free(col.value.str);
         }
     }
     free(builder->columns);
     builder->columns = NULL;
 }
 
-void RowBuilderAdd(RowBuilder *builder, column_t col) {
+void RowBuilderAdd(RowBuilder *builder, Column col) {
     assert(builder != NULL);
     if (builder->size == builder->capacity) {
         return;
     }
-    column_t copy;
+    Column copy;
     copy.type = col.type;
     if (col.type == COLUMN_TYPE_STRING) {
-        copy.value.val_string = string_copy(col.value.val_string);
+        copy.value.str = string_copy(col.value.str);
     } else {
         copy.value = col.value;
     }
@@ -50,10 +50,10 @@ void RowBuilderAdd(RowBuilder *builder, column_t col) {
     builder->size++;
 }
 
-row_t RowBuilderToRow(RowBuilder *builder) {
+Row RowBuilderToRow(RowBuilder *builder) {
     debug("Fix (allocate new row)");
     assert(0);
-    return (row_t) {
+    return (Row) {
             .size = builder->size,
             .columns = builder->columns
     };

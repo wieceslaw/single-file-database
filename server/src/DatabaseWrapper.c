@@ -3,9 +3,9 @@
 //
 
 #include "database/Database.h"
-#include "lib.h"
+#include "network.h"
 
-static column_type MapColumnType(ColumnType columnType) {
+static ColumnType MapColumnType(ColumnType columnType) {
     switch (columnType) {
         case COLUMN_TYPE__COLUMN_TYPE_INT:
             return COLUMN_TYPE_INT;
@@ -34,7 +34,7 @@ static SchemeBuilder CreateTableQueryToBuilder(CreateTableQuery query) {
     for (size_t i = 0; i < scheme->n_columns; i++) {
         SchemeColumn *column = scheme->columns[i];
         char* columnName = column->name;
-        column_type columnType = MapColumnType(column->type);
+        ColumnType columnType = MapColumnType(column->type);
         if (SchemeBuilderAddColumn(schemeBuilder, columnName, columnType) != 0) {
             SchemeBuilderFree(schemeBuilder);
             return NULL;

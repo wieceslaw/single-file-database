@@ -7,8 +7,8 @@
 
 static bool join_condition_check(join_condition *condition, cursor_t cur) {
     assert(condition->right.type == COLUMN_DESC_INDEX && condition->left.type == COLUMN_DESC_INDEX);
-    column_t right_column = cursor_get(cur->join.right, condition->right.index.table_idx, condition->right.index.column_idx);
-    column_t left_column = cursor_get(cur->join.left, condition->left.index.table_idx, condition->left.index.column_idx);
+    Column right_column = cursor_get(cur->join.right, condition->right.index.table_idx, condition->right.index.column_idx);
+    Column left_column = cursor_get(cur->join.left, condition->left.index.table_idx, condition->left.index.column_idx);
     return columns_equals(right_column, left_column);
 }
 
@@ -56,9 +56,9 @@ static void cursor_flush_join(cursor_t cur) {
     cursor_flush(cur->join.right);
 }
 
-static column_t cursor_get_join(cursor_t cur, size_t table_idx, size_t column_idx) {
-    column_t left_column = cursor_get(cur->join.left, table_idx, column_idx);
-    column_t right_column = cursor_get(cur->join.right, table_idx, column_idx);
+static Column cursor_get_join(cursor_t cur, size_t table_idx, size_t column_idx) {
+    Column left_column = cursor_get(cur->join.left, table_idx, column_idx);
+    Column right_column = cursor_get(cur->join.right, table_idx, column_idx);
     if (left_column.type != 0) {
         assert(right_column.type == 0);
         return left_column;

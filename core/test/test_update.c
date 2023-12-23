@@ -22,13 +22,13 @@ static void update(Database db) {
     updater_builder_add(updater,
                         column_updater_of(
                                 "bool",
-                                column_bool(true)
+                                ColumnOfBool(true)
                         )
     );
     updater_builder_add(updater,
                         column_updater_of(
                                 "string",
-                                column_string("updated")
+                                ColumnOfString("updated")
                         )
     );
 

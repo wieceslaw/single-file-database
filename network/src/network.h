@@ -2,8 +2,8 @@
 // Created by wieceslaw on 18.12.23.
 //
 
-#ifndef SINGLE_FILE_DATABASE_LIB_H
-#define SINGLE_FILE_DATABASE_LIB_H
+#ifndef SINGLE_FILE_DATABASE_NETWORK_H
+#define SINGLE_FILE_DATABASE_NETWORK_H
 
 #include <netinet/in.h>
 #include "message.pb-c.h"
@@ -19,4 +19,4 @@ Message *receiveMessage(int sockfd);
 
 int respond(int sockfd, char *msg);
 
-#endif //SINGLE_FILE_DATABASE_LIB_H
+#endif //SINGLE_FILE_DATABASE_NETWORK_H

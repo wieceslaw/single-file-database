@@ -7,7 +7,7 @@
 #include <string.h>
 #include <getopt.h>
 
-#include "lib.h"
+#include "network.h"
 #include "Server.h"
 #include "defines.h"
 

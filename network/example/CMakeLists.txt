@@ -1,4 +1,4 @@
-set(TARGET_NAME NetworkTest)
+set(TARGET_NAME NetworkExample)
 
 file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/**.c)
 add_executable(${TARGET_NAME} ${SOURCES})

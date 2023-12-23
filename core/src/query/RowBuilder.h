@@ -9,7 +9,7 @@
 #include "database/table/table.h"
 
 typedef struct RowBuilder {
-    column_t *columns;
+    Column *columns;
     size_t size;
     size_t capacity;
 } RowBuilder;
@@ -18,8 +18,8 @@ RowBuilder RowBuilderNew(size_t capacity);
 
 void RowBuilderFree(RowBuilder *builder);
 
-void RowBuilderAdd(RowBuilder *builder, column_t col);
+void RowBuilderAdd(RowBuilder *builder, Column col);
 
-row_t RowBuilderToRow(RowBuilder *builder);
+Row RowBuilderToRow(RowBuilder *builder);
 
 #endif //SINGLE_FILE_DATABASE_ROWBUILDER_H

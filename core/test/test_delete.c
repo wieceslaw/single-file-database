@@ -30,7 +30,12 @@ static void delete(Database db) {
 int main(void) {
     file_settings settings = {.path = "C:\\Users\\vyach\\CLionProjects\\llp-lab1\\test.bin", .open_mode = FILE_OPEN_EXIST};
     Database db = DatabaseNew(&settings);
+    if (db == NULL) {
+        printf("Unable to init database \n");
+    }
     delete(db);
-    DatabaseFree(db);
+    if (DatabaseFree(db) != 0) {
+        printf("Unable to close database \n");
+    }
     return 0;
 }

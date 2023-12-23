@@ -14,6 +14,7 @@
 #include "query/ResultView.h"
 #include "query/SchemeBuilder.h"
 #include "query/SelectorBuilder.h"
+#include "StrTableSchemeMap.h"
 
 typedef struct indexed_maps {
     str_map_str_int_map_t columns_maps;
@@ -35,16 +36,7 @@ column_description indexed_maps_translate(indexed_maps maps, column_description 
 where_condition *where_condition_translate(where_condition *condition, indexed_maps maps);
 
 /// THROWS: [DATABASE_INTERNAL_ERROR]
-Database DatabaseNew(file_settings *settings);
-
-/// THROWS: [DATABASE_INTERNAL_ERROR]
-void DatabaseFree(Database database);
-
-/// THROWS: [DATABASE_INTERNAL_ERROR]
-void DatabaseDeleteTable(Database database, char *tableName);
-
-/// THROWS: [DATABASE_INTERNAL_ERROR, DATABASE_QUERY_EXCEPTION]
-void DatabaseInsertQuery(Database database, char *tableName, RowBatch batch);
+int DatabaseFree(Database database);
 
 /// THROWS: [DATABASE_INTERNAL_ERROR, DATABASE_QUERY_EXCEPTION]
 void DatabaseDeleteQuery(Database database, query_t query);
@@ -55,8 +47,17 @@ void DatabaseUpdateQuery(Database database, query_t query, updater_builder_t upd
 /// THROWS: [DATABASE_INTERNAL_ERROR, DATABASE_QUERY_EXCEPTION]
 ResultView DatabaseSelectQuery(Database database, query_t query, SelectorBuilder selector);
 
-list_t DatabaseGetTables(Database database);
+
+Database DatabaseNew(file_settings *settings);
+
+StrTableSchemeMap DatabaseGetTablesSchemes(Database database);
+
+table_scheme *DatabaseFindTableScheme(Database database, char *tableName);
 
 int DatabaseCreateTable(Database database, SchemeBuilder builder);
+
+int DatabaseDeleteTable(Database database, char *tableName);
+
+int DatabaseInsertQuery(Database database, char *tableName, RowBatch batch);
 
 #endif //LLP_LAB1_DATABASE_H

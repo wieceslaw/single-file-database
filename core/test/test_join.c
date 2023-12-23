@@ -6,21 +6,21 @@
 #include <time.h>
 #include "database/Database.h"
 
-static void print_row(row_t row) {
+static void print_row(Row row) {
     for (size_t i = 0; i < row.size; i++) {
-        column_t column = row.columns[i];
+        Column column = row.columns[i];
         switch (column.type) {
             case COLUMN_TYPE_INT:
-                printf("%d ", column.value.val_int);
+                printf("%d ", column.value.i32);
                 break;
             case COLUMN_TYPE_FLOAT:
-                printf("%f ", column.value.val_float);
+                printf("%f ", column.value.f32);
                 break;
             case COLUMN_TYPE_STRING:
-                printf("%s ", column.value.val_string);
+                printf("%s ", column.value.str);
                 break;
             case COLUMN_TYPE_BOOL:
-                printf("%d ", column.value.val_bool);
+                printf("%d ", column.value.b8);
                 break;
         }
     }
@@ -62,9 +62,9 @@ static void selecting(Database db) {
         return;
     }
     while (!ResultViewIsEmpty(view)) {
-        row_t row = ResultViewGetRow(view);
+        Row row = ResultViewGetRow(view);
         print_row(row);
-        row_free(row);
+        RowFree(row);
         ResultViewNext(view);
     }
     ResultViewFree(view);

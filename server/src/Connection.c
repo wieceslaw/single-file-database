@@ -5,7 +5,7 @@
 #include <malloc.h>
 #include <unistd.h>
 #include "Connection.h"
-#include "lib.h"
+#include "network.h"
 #include "defines.h"
 
 // TODO: change

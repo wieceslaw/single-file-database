@@ -16,138 +16,114 @@
 
 struct Database {
     allocator_t *allocator;
-    pool_t *table_pool;
+    pool_t *tablesPool;
+    StrTableSchemeMap tables;
 };
 
-static void read_columns(table_scheme *schema, buffer_t buffer) {
-    for (uint32_t i = 0; i < schema->size; i++) {
-        column_type col_type = buffer_read_b32(buffer).ui32;
-        char *col_name = buffer_read_string(buffer);
-        schema->columns[i] = (table_scheme_column) {.type = col_type, .name = col_name};
-    }
-}
-
-/// THROWS: [MALLOC_EXCEPTION]
-static table_scheme *table_schema_deserialize(buffer_t buffer) {
-    assert(buffer != NULL);
-    // table[offset_t pool_offset, name*, table_scheme[size, values[type, name*]*]*]*
-    table_scheme *schema;
-    buffer_reset(buffer);
-    schema = rmalloc(sizeof(table_scheme));
-    schema->pool_offset = buffer_read_b64(buffer).ui64;
-    schema->name = buffer_read_string(buffer);
-    schema->size = buffer_read_b32(buffer).ui32;
-    schema->columns = rmalloc(sizeof(table_scheme_column) * schema->size);
-    read_columns(schema, buffer);
-    return schema;
-}
-
-static uint64_t table_schema_length(const table_scheme *const table_schema) {
-    assert(table_schema != NULL);
-    uint64_t size = sizeof(table_schema->pool_offset) + (strlen(table_schema->name) + 1) + sizeof(table_schema->size);
-    for (uint32_t i = 0; i < table_schema->size; i++) {
-        table_scheme_column col = table_schema->columns[i];
-        size += (strlen(col.name) + 1) + sizeof(col.type);
-    }
-    return size;
-}
-
-static buffer_t table_serialize(const table_scheme *const table_schema) {
-    assert(table_schema != NULL);
-    uint64_t size = table_schema_length(table_schema);
-    buffer_t buffer = buffer_init(size);
-    buffer_reset(buffer);
-    if (NULL == buffer) {
+static StrTableSchemeMap LoadTables(pool_t *tablesPool) {
+    assert(tablesPool != NULL);
+    StrTableSchemeMap tables = MAP_NEW_STR_TABLE_SCHEME(8);
+    if (tables == NULL) {
         return NULL;
     }
-    buffer_write_b64(buffer, (b64_t) {.ui64 = table_schema->pool_offset});
-    buffer_write_string(buffer, table_schema->name);
-    buffer_write_b32(buffer, (b32_t) {.ui32 = table_schema->size});
-    for (uint32_t i = 0; i < table_schema->size; i++) {
-        table_scheme_column col = table_schema->columns[i];
-        buffer_write_b32(buffer, (b32_t) {.i32 = col.type});
-        buffer_write_string(buffer, col.name);
+    pool_it it = pool_iterator(tablesPool);
+    if (it == NULL) {
+        MAP_FREE(tables);
+        return NULL;
     }
-    return buffer;
+    while (!pool_iterator_is_empty(it)) {
+        buffer_t buffer = pool_iterator_get(it);
+        if (buffer == NULL) {
+            pool_iterator_free(&it);
+            MAP_FREE(tables);
+            return NULL;
+        }
+        table_scheme *table = table_scheme_deserialize(buffer);
+        buffer_free(&buffer);
+        if (table == NULL) {
+            pool_iterator_free(&it);
+            MAP_FREE(tables);
+            return NULL;
+        }
+        MAP_PUT(tables, table->name, table);
+        table_scheme_free(table);
+        if (pool_iterator_next(it) != 0) {
+            pool_iterator_free(&it);
+            MAP_FREE(tables);
+            return NULL;
+        }
+    }
+    pool_iterator_free(&it);
+    return tables;
 }
 
-/// THROWS: [MALLOC_EXCEPTION]
+StrTableSchemeMap DatabaseGetTablesSchemes(Database database) {
+    assert(database != NULL);
+    return database->tables;
+}
+
 Database DatabaseNew(file_settings *settings) {
     Database database;
-    TRY({
-        database = rmalloc(sizeof(struct Database));
-        allocator_t *allocator;
-        if (allocator_init(settings, &allocator) != FILE_ST_OK) {
-            RAISE(DATABASE_INTERNAL_ERROR);
-        }
-        if (settings->open_mode == FILE_OPEN_CLEAR || settings->open_mode == FILE_OPEN_CREATE) {
-            offset_t offset;
-            if (pool_create(allocator, &offset) != 0) {
-                RAISE(DATABASE_INTERNAL_ERROR);
-            }
-            allocator_set_entrypoint(allocator, offset);
-        }
-        pool_t *table_pool = pool_init(allocator, allocator_get_entrypoint(allocator));
-        database->table_pool = table_pool;
-        database->allocator = allocator;
-    }) CATCH(exception >= EXCEPTION, {
+    database = malloc(sizeof(struct Database));
+    if (database == NULL) {
+        return NULL;
+    }
+    allocator_t *allocator;
+    if (allocator_init(settings, &allocator) != FILE_ST_OK) {
         free(database);
-        RAISE(DATABASE_INTERNAL_ERROR);
-    }) FINALLY()
+        return NULL;
+    }
+    if (settings->open_mode == FILE_OPEN_CLEAR || settings->open_mode == FILE_OPEN_CREATE) {
+        offset_t offset;
+        if (pool_create(allocator, &offset) != 0) {
+            free(database);
+            allocator_free(allocator);
+            return NULL;
+        }
+        allocator_set_entrypoint(allocator, offset);
+    }
+    database->tablesPool = pool_init(allocator, allocator_get_entrypoint(allocator));
+    if (database->tablesPool == NULL) {
+        free(database);
+        allocator_free(allocator);
+        return NULL;
+    }
+    database->allocator = allocator;
+    database->tables = LoadTables(database->tablesPool);
+    if (database->tables == NULL) {
+        pool_free(database->tablesPool);
+        free(database);
+        allocator_free(allocator);
+        return NULL;
+    }
     return database;
 }
 
-void DatabaseFree(Database database) {
-    TRY({
-        pool_free(database->table_pool);
+int DatabaseFree(Database database) {
+    if (pool_free(database->tablesPool) != 0) {
         allocator_free(database->allocator);
         free(database);
-    }) CATCH(exception >= EXCEPTION, {
-        allocator_free(database->allocator);
+        return -1;
+    }
+    if (allocator_free(database->allocator) != 0) {
         free(database);
-        RAISE(DATABASE_INTERNAL_ERROR);
-    }) FINALLY()
-}
-
-// TODO: remove exceptions
-list_t DatabaseGetTables(Database database) {
-    assert(database != NULL);
-    list_t tables = list_init();
-//    TRY({
-        pool_it it = pool_iterator(database->table_pool);
-        while (!pool_iterator_is_empty(it)) {
-            buffer_t buffer = pool_iterator_get(it);
-            table_scheme *table = table_schema_deserialize(buffer);
-            list_append_tail(tables, table);
-            buffer_free(&buffer);
-            pool_iterator_next(it);
-        }
-        pool_iterator_free(&it);
-        return tables;
-//    }) CATCH(exception >= EXCEPTION, {assert(0);}) FINALLY()
-    return tables;
+        return -1;
+    }
+    free(database);
+    return 0;
 }
 
 int DatabaseCreateTable(Database database, SchemeBuilder builder) {
     assert(database != NULL && builder != NULL);
+    StrTableSchemeMap tables = database->tables;
+    if (MAP_EXISTS(tables, builder->name)) {
+        debug("Table already exists");
+        return -1;
+    }
     table_scheme *newTable = SchemeBuilderBuild(builder);
     if (newTable == NULL) {
         return -1;
     }
-    list_t tables = DatabaseGetTables(database);
-    list_it it;
-    for (it = list_head_iterator(tables); !list_it_is_empty(it); list_it_next(it)) {
-        table_scheme *table = list_it_get(it);
-        if (strcmp(table->name, newTable->name) == 0) {
-            debug("Table already exists");
-            list_it_free(&it);
-            list_clear(tables, (clearer_t) table_scheme_free);
-            list_free(&tables);
-            table_scheme_free(newTable);
-            return -1;
-        }
-    }
-    list_it_free(&it);
     offset_t offset;
     if (pool_create(database->allocator, &offset)) {
         debug("Unable to create pool");
@@ -155,99 +131,95 @@ int DatabaseCreateTable(Database database, SchemeBuilder builder) {
         return -1;
     }
     newTable->pool_offset = offset;
-    buffer_t serialized = table_serialize(newTable);
-    if (pool_append(database->table_pool, serialized) != 0) {
+    buffer_t serialized = table_scheme_serialize(newTable);
+    if (pool_append(database->tablesPool, serialized) != 0) {
         debug("Unable to append to pool");
         table_scheme_free(newTable);
         buffer_free(&serialized);
         return -1;
     }
-    if (pool_flush(database->table_pool) != 0) {
+    if (pool_flush(database->tablesPool) != 0) {
         debug("File corruption");
         table_scheme_free(newTable);
         buffer_free(&serialized);
         return -1;
     }
+    MAP_PUT(tables, newTable->name, newTable);
     table_scheme_free(newTable);
     buffer_free(&serialized);
     return 0;
 }
 
-void DatabaseDeleteTable(Database database, char *tableName) {
-    pool_it it = NULL;
-    buffer_t buffer = NULL;
-    table_scheme *schema = NULL;
-    TRY({
-        it = pool_iterator(database->table_pool);
-        while (!pool_iterator_is_empty(it)) {
-            buffer = pool_iterator_get(it);
-            assert(NULL != buffer);
-            schema = table_schema_deserialize(buffer);
-            if (0 == strcmp(schema->name, tableName)) {
-                pool_iterator_delete(it);
-                break;
-            }
-            table_scheme_free(schema);
-            buffer_free(&buffer);
-            pool_iterator_next(it);
+int DatabaseDeleteTable(Database database, char *tableName) {
+    pool_it it = pool_iterator(database->tablesPool);
+    if (it == NULL) {
+        return -1;
+    }
+    while (!pool_iterator_is_empty(it)) {
+        buffer_t buffer = pool_iterator_get(it);
+        if (buffer == NULL) {
+            pool_iterator_free(&it);
+            return -1;
         }
-        pool_flush(database->table_pool);
-    }) CATCH(exception >= EXCEPTION, {
-        RAISE(DATABASE_INTERNAL_ERROR);
-    }) FINALLY({
-        table_scheme_free(schema);
+        table_scheme *table = table_scheme_deserialize(buffer);
         buffer_free(&buffer);
-        pool_iterator_free(&it);
-    })
+        if (table == NULL) {
+            pool_iterator_free(&it);
+            return -1;
+        }
+        if (strcmp(table->name, tableName) == 0) {
+            table_scheme_free(table);
+            if (pool_iterator_delete(it) != 0) {
+                pool_iterator_free(&it);
+                debug("Unable to delete table from tables pool");
+                return -1;
+            }
+            pool_iterator_free(&it);
+            if (pool_flush(database->tablesPool) != 0) {
+                debug("Unable to flush table delete");
+                return -1;
+            }
+            MAP_REMOVE(database->tables, tableName);
+            return 0;
+        }
+        table_scheme_free(table);
+        if (pool_iterator_next(it) != 0) {
+            pool_iterator_free(&it);
+            return -1;
+        }
+    }
+    pool_iterator_free(&it);
+    debug("Unable to find table to delete");
+    return -1;
 }
 
-/// THROWS: [MALLOC_EXCEPTION, POOL_EXCEPTION]
-static table_scheme *database_find_table_scheme(Database database, const char *const name) {
-    assert(database != NULL && name != NULL);
-    pool_it it = NULL;
-    buffer_t buffer = NULL;
-    table_scheme *scheme = NULL;
-    TRY({
-        it = pool_iterator(database->table_pool);
-        while (!pool_iterator_is_empty(it)) {
-            buffer = pool_iterator_get(it);
-            assert(NULL != buffer);
-            scheme = table_schema_deserialize(buffer);
-            if (0 == strcmp(scheme->name, name)) {
-                break;
-            }
-            table_scheme_free(scheme);
-            buffer_free(&buffer);
-            pool_iterator_next(it);
-        }
-    }) FINALLY({
-        buffer_free(&buffer);
-        pool_iterator_free(&it);
-    })
-    return scheme;
+table_scheme *DatabaseFindTableScheme(Database database, char *tableName) {
+    assert(database != NULL && tableName != NULL);
+    StrTableSchemeMap tables = DatabaseGetTablesSchemes(database);
+    return MAP_GET(tables, tableName);
 }
 
-/// THROWS: [MALLOC_EXCEPTION, POOL_EXCEPTION]
-static table_t database_find_table(Database database, char *name) {
+static table_t DatabaseFindTable(Database database, char *name) {
     assert(database != NULL && name != NULL);
-    table_t table = NULL;
-    TRY({
-        table = rmalloc(sizeof(struct table));
-        table->scheme = database_find_table_scheme(database, name);
-        if (table->scheme == NULL) {
-            free(table);
-            return NULL;
-        }
-        table->data_pool = pool_init(database->allocator, table->scheme->pool_offset);
-    }) CATCH(exception >= EXCEPTION, {
+    table_t table = malloc(sizeof(struct table));
+    if (table == NULL) {
+        return NULL;
+    }
+    table->scheme = DatabaseFindTableScheme(database, name);
+    if (table->scheme == NULL) {
+        free(table);
+        return NULL;
+    }
+    table->data_pool = pool_init(database->allocator, table->scheme->pool_offset);
+    if (table->data_pool == NULL) {
         table_scheme_free(table->scheme);
         free(table);
-        RAISE(exception);
-    }) FINALLY()
+        return NULL;
+    }
     return table;
 }
 
-static bool row_is_valid(table_scheme *scheme, row_t row) {
+static bool RowIsValid(Row row, table_scheme *scheme) {
     for (size_t i = 0; i < row.size; i++) {
         if (scheme->columns[i].type != row.columns[i].type) {
             return false;
@@ -256,46 +228,48 @@ static bool row_is_valid(table_scheme *scheme, row_t row) {
     return true;
 }
 
-static bool batch_is_valid(table_scheme *scheme, RowBatch batch) {
+static bool RowBatchIsValid(RowBatch batch, table_scheme *scheme) {
     for (size_t i = 0; i < batch.size; i++) {
-        if (!row_is_valid(scheme, batch.rows[i])) {
+        if (!RowIsValid(batch.rows[i], scheme)) {
             return false;
         }
     }
     return true;
 }
 
-void DatabaseInsertQuery(Database database, char * tableName, RowBatch batch) {
+int DatabaseInsertQuery(Database database, char *tableName, RowBatch batch) {
     assert(database != NULL && tableName != NULL);
-    table_t table = NULL;
-    buffer_t buffer = NULL;
-    table = database_find_table(database, tableName);
-    if (NULL == table) {
-        RAISE(DATABASE_QUERY_EXCEPTION);
+    table_t table = DatabaseFindTable(database, tableName);
+    if (table == NULL) {
+        debug("Unable to find table to insert");
+        return -1;
     }
-    if (!batch_is_valid(table->scheme, batch)) {
-        RAISE(DATABASE_QUERY_EXCEPTION);
+    if (!RowBatchIsValid(batch, table->scheme)) {
+        debug("Row batch is corrupted");
+        return -1;
     }
-    TRY({
-        for (size_t i = 0; i < batch.size; i++) {
-            row_t row = batch.rows[i];
-            buffer = row_serialize(row);
-            if (pool_append(table->data_pool, buffer) != 0) {
-                RAISE(POOL_EXCEPTION);
-            }
+    for (size_t i = 0; i < batch.size; i++) {
+        Row row = batch.rows[i];
+        buffer_t buffer = RowSerialize(row);
+        if (pool_append(table->data_pool, buffer) != 0) {
+            debug("Unsaved inserts. File is corrupted");
             buffer_free(&buffer);
+            return -1;
         }
-        pool_flush(table->data_pool);
-        table_free(&table);
-    }) CATCH(exception >= EXCEPTION, {
-        RAISE(DATABASE_INTERNAL_ERROR);
-    }) FINALLY()
+        buffer_free(&buffer);
+    }
+    if (pool_flush(table->data_pool) != 0) {
+        debug("Unable to save inserts. File is corrupted");
+        return -1;
+    }
+    table_free(&table);
+    return 0;
 }
 
 static cursor_t database_build_base_cursor(Database database, char* table_name, size_t table_idx) {
     cursor_t cur = NULL;
     TRY({
-        table_t table = database_find_table(database, table_name);
+        table_t table = DatabaseFindTable(database, table_name);
         cur = cursor_init_from(table, table_idx);
     }) CATCH(exception >= EXCEPTION, {
         cursor_free(&cur);
@@ -304,7 +278,7 @@ static cursor_t database_build_base_cursor(Database database, char* table_name, 
     return cur;
 }
 
-/// THROWS: [MALLOC_EXCEPTION, DATABASE_TRANSLATION_EXCEPTION]
+// THROWS: [MALLOC_EXCEPTION, DATABASE_TRANSLATION_EXCEPTION]
 column_description indexed_maps_translate(indexed_maps maps, column_description description) {
     column_description result;
     int *column_idx = NULL;
@@ -332,13 +306,13 @@ column_description indexed_maps_translate(indexed_maps maps, column_description 
     return result;
 }
 
-/// THROWS: [MALLOC_EXCEPTION, POOL_EXCEPTION]
+// THROWS: [MALLOC_EXCEPTION, POOL_EXCEPTION]
 static str_int_map_t table_scheme_mapping(Database database, char* table_name) {
     // MAP[column_name, column_idx]
     table_scheme *scheme = NULL;
     str_int_map_t map = NULL;
     TRY({
-        scheme = database_find_table_scheme(database, table_name);
+        scheme = DatabaseFindTableScheme(database, table_name);
         if (NULL == scheme) {
             return NULL;
         }
@@ -353,7 +327,7 @@ static str_int_map_t table_scheme_mapping(Database database, char* table_name) {
     return map;
 }
 
-/// THROWS: [TRANSLATION_EXCEPTION, EXCEPTION]
+// THROWS: [TRANSLATION_EXCEPTION, EXCEPTION]
 static indexed_maps query_mapping(Database database, query_t query) {
     assert(query.table != NULL);
     size_t size = 1;
@@ -416,7 +390,7 @@ void indexed_maps_free(indexed_maps maps) {
     }
 }
 
-/// THROWS: [DATABASE_TRANSLATION_EXCEPTION]
+// THROWS: [DATABASE_TRANSLATION_EXCEPTION]
 static cursor_t query_cursor(Database database, query_t query, indexed_maps maps) {
     assert(database != NULL && query.table != NULL);
     cursor_t result = database_build_base_cursor(database, query.table, 0);
@@ -517,7 +491,7 @@ static table_scheme *create_view_scheme(Database database, SelectorBuilder selec
         assert(description != NULL);
         column_description indexed_description = indexed_maps_translate(maps, *description);
         // add schemes cache?
-        table_scheme *scheme = database_find_table_scheme(database, description->name.table_name);
+        table_scheme *scheme = DatabaseFindTableScheme(database, description->name.table_name);
         table_scheme_column column = scheme->columns[indexed_description.index.column_idx];
         if (SchemeBuilderAddColumn(view_scheme_builder, column.name, column.type) != 0) {
             RAISE(MALLOC_EXCEPTION);
