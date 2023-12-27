@@ -12,12 +12,12 @@
 #include "Connection.h"
 #include "defines.h"
 
-struct Server *ServerNew(uint16_t port) {
+struct Server *ServerNew(uint16_t port, char *filename, file_open_mode mode) {
     struct Server *server = malloc(sizeof(struct Server));
     if (server == NULL) {
         return NULL;
     }
-    *server = (struct Server) {0};
+    *server = (struct Server){0};
     server->serv.sin_family = AF_INET;
     server->serv.sin_addr.s_addr = INADDR_ANY;
     server->serv.sin_port = port;
@@ -27,50 +27,62 @@ struct Server *ServerNew(uint16_t port) {
         logerr("Unable to create server socket");
         return NULL;
     }
-    if (bind(sockfd, (struct sockaddr *) &(server->serv), sizeof(server->serv)) != 0) {
+    if (bind(sockfd, (struct sockaddr *) &server->serv, sizeof(server->serv)) != 0) {
         free(server);
+        close(sockfd);
         logerr("Unable to bind server socket");
         return NULL;
     }
     server->len = sizeof(server->serv);
-    if (getsockname(sockfd, (struct sockaddr *) &(server->serv), &(server->len)) != 0) {
+    if (getsockname(sockfd, (struct sockaddr *) &server->serv, &server->len) != 0) {
         free(server);
+        close(sockfd);
         logerr("Unable to get server socket info");
         return NULL;
     }
-    if (pthread_mutex_init(&(server->lock), NULL) != 0) {
+    if (pthread_mutex_init(&server->lock, NULL) != 0) {
         free(server);
+        close(sockfd);
         logerr("Mutex init has failed");
         return NULL;
     }
+    struct DatabaseWrapper *databaseWrapper = DatabaseWrapperNew(filename, mode);
+    if (databaseWrapper == NULL) {
+        free(server);
+        close(sockfd);
+        pthread_mutex_destroy(&server->lock);
+        logerr("Database init has failed");
+        return NULL;
+    }
     listen(sockfd, 1);
+    server->databaseWrapper = databaseWrapper;
     server->port = ntohs(server->serv.sin_port);
     server->sockfd = sockfd;
     server->connections = ListNew();
     return server;
 }
 
-void ServerFree(struct Server *server) {
+int ServerFree(struct Server *server) {
     if (server == NULL) {
-        return;
+        return 0;
     }
-    // close/clear connections
+    int err = 0;
+    err |= close(server->sockfd);
+    err |= pthread_cancel(server->loopThread);
     ListIterator it = ListHeadIterator(server->connections);
     while (!ListIteratorIsEmpty(it)) {
         struct Connection *connection = ListIteratorGet(it);
-        ConnectionStop(connection);
+        err |= ConnectionStop(connection);
         ConnectionFree(connection);
         ListIteratorNext(it);
     }
     ListIteratorFree(&(it));
-    // stop accept loop
-    pthread_cancel(server->loopThread);
-
-    // free resources
-    close(server->sockfd);
     ListFree(server->connections);
     server->connections = NULL;
+    err |= pthread_mutex_destroy(&server->lock);
+    err |= DatabaseWrapperFree(server->databaseWrapper);
     free(server);
+    return err;
 }
 
 static int ServerAcceptConnection(struct Server *server) {
@@ -89,7 +101,7 @@ static int ServerAcceptConnection(struct Server *server) {
     connection->node = ListTailIterator(server->connections);
     pthread_mutex_unlock(&server->lock);
     if (ConnectionStart(connection) != 0) {
-        free(connection);
+        ConnectionFree(connection);
         return -1;
     }
     return connection->sockfd;
@@ -100,7 +112,6 @@ static void *ServerLoop(struct Server *server) {
         int sockfd = ServerAcceptConnection(server);
         if (sockfd == -1) {
             logerr("Connection accept error");
-            // TODO: Free resources?
             return NULL;
         }
         loginfo("New client");

@@ -14,7 +14,7 @@ while (!ListIteratorIsEmpty(I)) { \
  CODE \
 ListIteratorNext(I); \
 } \
-ListIteratorFree(&(I)); }\
+ListIteratorFree(&(I)); }
 
 typedef struct List *List;
 
@@ -22,7 +22,7 @@ typedef struct ListIterator *ListIterator;
 
 typedef void *ListValue;
 
-typedef void(*Applier)(void *);
+typedef void (*Applier)(void *);
 
 List ListNew(void);
 

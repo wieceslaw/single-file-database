@@ -38,17 +38,17 @@ static bool compare_columns(comparing_type compare_type, Column first, Column se
     assert(first.type == second.type);
     switch (compare_type) {
         case COMPARE_EQ:
-            return columns_equals(first, second);
+            return ColumnEquals(first, second);
         case COMPARE_NE:
-            return !columns_equals(first, second);
+            return !ColumnEquals(first, second);
         case COMPARE_GT:
             return column_greater_than(first, second);
         case COMPARE_LT:
             return column_lesser_than(first, second);
         case COMPARE_GE:
-            return column_greater_than(first, second) || columns_equals(first, second);
+            return column_greater_than(first, second) || ColumnEquals(first, second);
         case COMPARE_LE:
-            return column_lesser_than(first, second) || columns_equals(first, second);
+            return column_lesser_than(first, second) || ColumnEquals(first, second);
         default:
             assert(0);
     }

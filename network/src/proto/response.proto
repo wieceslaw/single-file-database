@@ -2,24 +2,41 @@ syntax = "proto3";
 
 import "common.proto";
 
-message Batch {
-  int32 number = 1;
-  repeated RowData rows = 2;
+message ListTableResponse {
+  repeated MsgTableScheme tables = 1;
 }
 
-message TablesListResponse {
-  repeated TableScheme tables = 1;
+message CreateTableResponse {
+}
+
+message DeleteTableResponse {
+}
+
+message InsertResponse {
+}
+
+message DeleteResponse {
+  int32 count = 1;
+}
+
+message UpdateResponse {
+  int32 count = 1;
+}
+
+message SelectResponse {
+  // ?
 }
 
 message Response {
-  bool ok = 1;
-  oneof data {
-    string message = 2;
-    TablesListResponse tableList = 3;
-//      InsertData insert = 3;
-//      UpdateData update = 4;
-//      DeleteData delete = 5;
-//      SelectData select = 6;
+  string error = 1;
+  oneof content {
+    ListTableResponse tableList = 2;
+    CreateTableResponse createTable = 3;
+    DeleteTableResponse deleteTable = 4;
+    InsertResponse insert = 5;
+    DeleteResponse delete = 6;
+    UpdateResponse update = 7;
+    SelectResponse select = 8;
   }
 }
 

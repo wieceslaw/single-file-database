@@ -15,7 +15,7 @@
 #define MAP_LOAD_FACTOR 0.75
 
 #define FOR_MAP(M, E, CODE) { \
-    map_it __it = map_get_iterator((map_t)M); \
+    map_it __it = map_get_iterator((map_t)(M)); \
     while (!map_it_is_empty(__it)) { \
         map_entry_t E = map_it_get_entry(__it); \
         CODE                      \
@@ -78,7 +78,7 @@ map_t map_init(size_t capacity, hash_f key_hash, equals_f key_equals,
 
 void map_free(map_t *map);
 
-size_t generic_map_size(map_t map);
+size_t map_size(map_t map);
 
 bool map_is_empty(map_t map);
 
@@ -116,19 +116,19 @@ map_entry_t map_it_get_entry(map_it it);
 #define MAP_NEW(T, CAPACITY, HASH_F, EQUALS_F, KEY_COPY, KEY_FREE, VAL_COPY, VAL_FREE)        \
     ((T)map_init(CAPACITY, HASH_F, EQUALS_F, KEY_COPY, KEY_FREE, VAL_COPY, VAL_FREE)) \
 
-#define MAP_FREE(m) (map_free((map_t*)&m))
+#define MAP_FREE(m) (map_free((map_t*)&(m)))
 
-#define MAP_IS_EMPTY(m) (map_is_empty((map_t)m))
+#define MAP_IS_EMPTY(m) (map_is_empty((map_t)(m)))
 
-#define MAP_SIZE(m) (map_size((map_t)m))
+#define MAP_SIZE(m) (map_size((map_t)(m)))
 
 // THROWS: [MALLOC_EXCEPTION]
-#define MAP_PUT(m, k, v) (m->put(m, k, v))
+#define MAP_PUT(m, k, v) ((m)->put(m, k, v))
 
-#define MAP_GET(m, k) (m->get(m, k))
+#define MAP_GET(m, k) ((m)->get(m, k))
 
-#define MAP_EXISTS(m, k) (m->exists(m, k))
+#define MAP_EXISTS(m, k) ((m)->exists(m, k))
 
-#define MAP_REMOVE(m, k) (m->remove(m, k))
+#define MAP_REMOVE(m, k) ((m)->remove(m, k))
 
 #endif //LLP_LAB1_MAP_H

@@ -16,10 +16,10 @@ int main(int argc, char *argv[]) {
     char *fileValue = 0;
     const char *short_options = "hp:f:";
     const struct option long_options[] = {
-            {"help", no_argument,       NULL, 'h'},
-            {"port", optional_argument, NULL, 'p'},
-            {"file", required_argument, NULL, 'f'},
-            {NULL, 0,                   NULL, 0}
+        {"help", no_argument, NULL, 'h'},
+        {"port", optional_argument, NULL, 'p'},
+        {"file", required_argument, NULL, 'f'},
+        {NULL, 0, NULL, 0}
     };
     int rez;
     int option_index;
@@ -54,12 +54,12 @@ int main(int argc, char *argv[]) {
         loginfo("Port if not specified. Using available");
     } else {
         if (parsePort(portValue, &port) != 0) {
-            fprintf(stderr,"Incorrect port value");
+            fprintf(stderr, "Incorrect port value");
             return EXIT_FAILURE;
         }
     }
 
-    struct Server *server = ServerNew(port);
+    struct Server *server = ServerNew(port, fileValue, FILE_OPEN_EXIST);
     if (ServerStart(server) != 0) {
         ServerFree(server);
         return EXIT_FAILURE;

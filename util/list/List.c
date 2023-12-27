@@ -26,7 +26,7 @@ static list_node_t list_node_init(ListValue value) {
     if (node == NULL) {
         assert(0);
     }
-    *node = (struct list_node) {.value = value, .next = NULL, .prev = NULL};
+    *node = (struct list_node){.value = value, .next = NULL, .prev = NULL};
     return node;
 }
 
@@ -44,7 +44,7 @@ List ListNew(void) {
     if (list == NULL) {
         assert(0);
     }
-    *list = (struct List) {.size = 0, .head = NULL, .tail = NULL};
+    *list = (struct List){.size = 0, .head = NULL, .tail = NULL};
     return list;
 }
 

@@ -16,30 +16,21 @@ message MsgColumnData {
   }
 }
 
-message ColumnDataType {
-  MsgColumnType type = 1;
-  MsgColumnData data = 2;
-}
-
-message RowType {
-  repeated string names = 1;
-  repeated MsgColumnType types = 2;
-}
-
-message RowData {
+message MsgRowData {
   repeated MsgColumnData columns = 1;
 }
 
-message RowDataType {
-  repeated ColumnDataType data = 1;
-}
-
-message SchemeColumn {
+message MsgColumnScheme {
   string name = 1;
   MsgColumnType type = 2;
 }
 
-message TableScheme {
+message MsgTableScheme {
   string name = 1;
-  repeated SchemeColumn columns = 2;
+  repeated MsgColumnScheme columns = 2;
+}
+
+message ColumnReference {
+  string table = 1;
+  string column = 2;
 }

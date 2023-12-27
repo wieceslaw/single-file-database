@@ -5,7 +5,6 @@
 #ifndef SINGLE_FILE_DATABASE_CONNECTION_H
 #define SINGLE_FILE_DATABASE_CONNECTION_H
 
-#include <pthread.h>
 #include "Server.h"
 
 struct Connection {

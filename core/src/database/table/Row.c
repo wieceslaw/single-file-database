@@ -37,15 +37,8 @@ void RowFree(Row row) {
         return;
     }
     for (size_t i = 0; i < row.size; i++) {
-        Column col = row.columns[i];
-        switch (col.type) {
-            case COLUMN_TYPE_INT:
-            case COLUMN_TYPE_FLOAT:
-            case COLUMN_TYPE_BOOL:
-                break;
-            case COLUMN_TYPE_STRING:
-                free(col.value.str);
-        }
+        Column column = row.columns[i];
+        ColumnFree(column);
     }
     free(row.columns);
     row.columns = NULL;
@@ -75,6 +68,7 @@ Buffer RowSerialize(Row row) {
 }
 
 Row RowCopy(Row row) {
+    assert(row.columns != NULL);
     Row copy;
     copy.size = row.size;
     copy.columns = malloc(sizeof(Column) * copy.size);
@@ -85,43 +79,4 @@ Row RowCopy(Row row) {
         copy.columns[i] = ColumnCopy(row.columns[i]);
     }
     return copy;
-}
-
-Column ColumnCopy(Column column) {
-    Column copy;
-    if (column.type == COLUMN_TYPE_STRING) {
-        copy.value.str = string_copy(column.value.str);
-    } else {
-        copy.value = column.value;
-    }
-    copy.type = column.type;
-    return copy;
-}
-
-Column ColumnOfInt32(int32_t value) {
-    return (Column) {
-            .type = COLUMN_TYPE_INT,
-            .value = {.i32 = value}
-    };
-}
-
-Column ColumnOfFloat32(float value) {
-    return (Column) {
-            .type = COLUMN_TYPE_FLOAT,
-            .value = {.f32 = value}
-    };
-}
-
-Column ColumnOfString(char *value) {
-    return (Column) {
-            .type = COLUMN_TYPE_STRING,
-            .value = {.str = value}
-    };
-}
-
-Column ColumnOfBool(bool value) {
-    return (Column) {
-            .type = COLUMN_TYPE_BOOL,
-            .value = {.b8 = value}
-    };
 }

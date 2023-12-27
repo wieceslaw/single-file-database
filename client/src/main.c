@@ -29,18 +29,19 @@ static char *MsgColumnTypeToStr(MsgColumnType type) {
     }
 }
 
-static void printTable(TableScheme *table) {
-    printf("Table \"%s\"", table->name);
-    printf("Column | Type");
+static void printTable(MsgTableScheme *table) {
+    printf("Table \"%s\" \n\n", table->name);
+    printf("Column \t| Type \n");
+    printf("--------+-----\n");
     for (size_t i = 0; i < table->n_columns; i++) {
-        SchemeColumn *column = table->columns[i];
-        printf("%s | %s", column->name, MsgColumnTypeToStr(column->type));
+        MsgColumnScheme *column = table->columns[i];
+        printf("%s \t| %s \n", column->name, MsgColumnTypeToStr(column->type));
     }
 }
 
-static void printTables(TablesListResponse *response) {
+static void printTables(ListTableResponse *response) {
     for (size_t i = 0; i < response->n_tables; i++) {
-        TableScheme *table = response->tables[i];
+        MsgTableScheme *table = response->tables[i];
         printTable(table);
     }
 }
@@ -51,17 +52,14 @@ static int receive(int sockfd) {
         printf("Receiving response error \n");
         return -1;
     }
-    if (message->content_case == MESSAGE__CONTENT_RESPONSE) {
+    if (message->content_case != MESSAGE__CONTENT_RESPONSE) {
         message__free_unpacked(message, NULL);
         debug("Wrong message type");
         return -1;
     }
     Response *response = message->response;
-    switch (response->data_case) {
-        case RESPONSE__DATA_MESSAGE:
-            printf("Message response: \"%s\" \n", message->response->message);
-            break;
-        case RESPONSE__DATA_TABLE_LIST:
+    switch (response->content_case) {
+        case RESPONSE__CONTENT_TABLE_LIST:
             printTables(response->tablelist);
             break;
         default:
@@ -75,9 +73,9 @@ static int receive(int sockfd) {
 static int requestTablesList(int sockfd) {
     Request request;
     request__init(&request);
-    request.data_case = REQUEST__DATA_TABLES_LIST;
-    TablesListRequest tablesList;
-    tables_list_request__init(&tablesList);
+    request.content_case = REQUEST__CONTENT_TABLES_LIST;
+    ListTableRequest tablesList;
+    list_table_request__init(&tablesList);
     tablesList.max = 128;
     request.tableslist = &tablesList;
     return sendRequest(sockfd, &request);
@@ -133,7 +131,7 @@ static void cli(int sockfd) {
             }
         }
     }
-    out:
+out:
     DynamicBufferFree(&buffer);
 }
 

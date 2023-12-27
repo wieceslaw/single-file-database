@@ -1,36 +1,60 @@
 syntax = "proto3";
 
 import "common.proto";
+import "predicate.proto";
 
-message BatchCollect {
+message Request {
+  oneof content {
+    ListTableRequest tablesList = 1;
+    CreateTableRequest createTable = 2;
+    DeleteTableRequest deleteTable = 3;
+    InsertRequest insert = 4;
+    DeleteRequest delete = 5;
+    UpdateRequest update = 6;
+  }
+}
+
+message ListTableRequest {
   int32 max = 1;
 }
 
-message CreateTableQuery {
-  TableScheme scheme = 2;
+message CreateTableRequest {
+  MsgTableScheme scheme = 2;
 }
 
-message DeleteTableQuery {
+message DeleteTableRequest {
   string name = 1;
 }
 
-message InsertQuery {
+message InsertRequest {
   string table = 1;
   repeated string columns = 2;
-  repeated RowDataType values = 3;
+  repeated MsgRowData values = 3;
 }
 
-message TablesListRequest {
-  int32 max = 1;
+message DeleteRequest {
+  string table = 1;
+  Predicate where = 2;
 }
 
-message Request {
-  oneof data {
-      string message = 42;
-      BatchCollect batch = 2;
-      CreateTableQuery createTableQuery = 3;
-      DeleteTableQuery deleteTableQuery = 4;
-      InsertQuery insertQuery = 5;
-      TablesListRequest tablesList = 6;
-  }
+message UpdateRequest {
+  string table = 1;
+  Predicate where = 2;
+  // updates
+}
+
+message SelectRequest {
+  string table = 1;
+  Predicate where = 2;
+  JoinCondition join = 3;
+  Selector selector = 4;
+}
+
+message JoinCondition {
+  ColumnReference left = 1;
+  ColumnReference right = 2;
+}
+
+message Selector {
+  repeated ColumnReference columns = 1;
 }

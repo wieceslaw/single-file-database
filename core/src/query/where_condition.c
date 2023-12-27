@@ -5,10 +5,10 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <string.h>
+#include <malloc.h>
 #include "util_string.h"
 #include "where_condition.h"
 
-/// THROWS: [MALLOC_EXCEPTION]
 operand operand_column(char *table, char *column) {
     return (operand) {
             .type = OPERAND_VALUE_COLUMN,
@@ -43,7 +43,6 @@ operand operand_literal_bool(bool value) {
     };
 }
 
-/// THROWS: [MALLOC_EXCEPTION]
 operand operand_literal_string(char *value) {
     return (operand) {
             .type = OPERAND_VALUE_LITERAL,
@@ -51,9 +50,11 @@ operand operand_literal_string(char *value) {
     };
 }
 
-/// THROWS: [MALLOC_EXCEPTION]
 where_condition *where_condition_compare(comparing_type type, operand op1, operand op2) {
-    where_condition *result = rmalloc(sizeof(where_condition));
+    where_condition *result = malloc(sizeof(where_condition));
+    if (result == NULL) {
+        return NULL;
+    }
     result->type = CONDITION_COMPARE;
     result->compare.type = type;
     result->compare.first = op1;
@@ -61,27 +62,36 @@ where_condition *where_condition_compare(comparing_type type, operand op1, opera
     return result;
 }
 
-/// THROWS: [MALLOC_EXCEPTION]
 where_condition *where_condition_and(where_condition *first, where_condition *second) {
-    where_condition *result = rmalloc(sizeof(where_condition));
+    assert(first != NULL && second != NULL);
+    where_condition *result = malloc(sizeof(where_condition));
+    if (result == NULL) {
+        return NULL;
+    }
     result->type = CONDITION_AND;
     result->and.first = first;
     result->and.second = second;
     return result;
 }
 
-/// THROWS: [MALLOC_EXCEPTION]
 where_condition *where_condition_or(where_condition *first, where_condition *second) {
-    where_condition *result = rmalloc(sizeof(where_condition));
+    assert(first != NULL && second != NULL);
+    where_condition *result = malloc(sizeof(where_condition));
+    if (result == NULL) {
+        return NULL;
+    }
     result->type = CONDITION_OR;
     result->or.first = first;
     result->or.second = second;
     return result;
 }
 
-/// THROWS: [MALLOC_EXCEPTION]
 where_condition *where_condition_not(where_condition *first) {
-    where_condition *result = rmalloc(sizeof(where_condition));
+    assert(first != NULL);
+    where_condition *result = malloc(sizeof(where_condition));
+    if (result == NULL) {
+        return NULL;
+    }
     result->type = CONDITION_NOT;
     result->not.first = first;
     return result;
@@ -110,6 +120,7 @@ static void compare_condition_free(where_condition *condition) {
 }
 
 void where_condition_free(where_condition *condition) {
+    assert(condition != NULL);
     switch (condition->type) {
         case CONDITION_AND:
             where_condition_free(condition->and.first);
@@ -127,19 +138,4 @@ void where_condition_free(where_condition *condition) {
             break;
     }
     free(condition);
-}
-
-bool columns_equals(Column first, Column second) {
-    assert(first.type == second.type);
-    switch (first.type) {
-        case COLUMN_TYPE_INT:
-            return first.value.i32 == second.value.i32;
-        case COLUMN_TYPE_FLOAT:
-            return first.value.f32 == second.value.f32;
-        case COLUMN_TYPE_STRING:
-            return 0 == strcmp(first.value.str, second.value.str);
-        case COLUMN_TYPE_BOOL:
-            return first.value.b8 == second.value.b8;
-    }
-    assert(0);
 }

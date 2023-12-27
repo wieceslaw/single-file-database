@@ -1,0 +1,47 @@
+syntax = "proto3";
+import "common.proto";
+
+message Predicate {
+  oneof content {
+    PredicateCompare compare = 1;
+    PredicateAnd and = 2;
+    PredicateOr or = 3;
+    PredicateNot not = 4;
+  }
+}
+
+message PredicateCompare {
+  PredicateCompareType type = 1;
+  PredicateOperand left = 2;
+  PredicateOperand right = 3;
+}
+
+enum PredicateCompareType {
+  CMP_LE = 0;
+  CMP_GE = 1;
+  CMP_LS = 2;
+  CMP_GR = 3;
+  CMP_EQ = 4;
+  CMP_NQ = 5;
+};
+
+message PredicateAnd {
+  PredicateOperand first = 1;
+  PredicateOperand second = 2;
+}
+
+message PredicateOr {
+  PredicateOperand first = 1;
+  PredicateOperand second = 2;
+}
+
+message PredicateNot {
+  PredicateOperand first = 1;
+}
+
+message PredicateOperand {
+  oneof content {
+    MsgColumnData literal = 1;
+    ColumnReference column = 2;
+  }
+}

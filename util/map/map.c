@@ -110,14 +110,14 @@ void map_free(map_t *map) {
     *map = NULL;
 }
 
-size_t generic_map_size(map_t map) {
+size_t map_size(map_t map) {
     assert(map != NULL);
     return map->size;
 }
 
 bool map_is_empty(map_t map) {
     assert(map != NULL);
-    return 0 == generic_map_size(map);
+    return 0 == map_size(map);
 }
 
 bool map_exists(map_t map, map_key key) {

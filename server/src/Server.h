@@ -5,10 +5,10 @@
 #ifndef SINGLE_FILE_DATABASE_TCPSERVER_H
 #define SINGLE_FILE_DATABASE_TCPSERVER_H
 
-#include <stdint-gcc.h>
 #include <pthread.h>
 #include <netinet/in.h>
 #include "list/List.h"
+#include "DatabaseWrapper.h"
 
 struct Server {
     struct sockaddr_in serv;
@@ -18,11 +18,12 @@ struct Server {
     pthread_t loopThread;
     pthread_mutex_t lock;
     List connections;
+    struct DatabaseWrapper *databaseWrapper;
 };
 
-struct Server *ServerNew(uint16_t port);
+struct Server *ServerNew(uint16_t port, char *filename, file_open_mode mode);
 
-void ServerFree(struct Server *server);
+int ServerFree(struct Server *server);
 
 int ServerStart(struct Server *server);
 

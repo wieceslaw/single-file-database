@@ -12,7 +12,7 @@ static bool join_condition_check(join_condition *condition, Cursor cur) {
                                           condition->right.index.column_idx);
     Column left_column = CursorGetColumn(cur->join.left, condition->left.index.table_idx,
                                          condition->left.index.column_idx);
-    return columns_equals(right_column, left_column);
+    return ColumnEquals(right_column, left_column);
 }
 
 // THROWS: ?

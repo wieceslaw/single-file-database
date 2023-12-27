@@ -6,7 +6,6 @@
 #define LLP_LAB1_WHERE_CONDITION_H
 
 #include "defines.h"
-#include "exceptions/exceptions.h"
 #include "database/table/table.h"
 
 typedef enum {
@@ -70,21 +69,14 @@ operand operand_literal_int(int32_t value);
 
 operand operand_literal_bool(bool value);
 
-/// THROWS: [MALLOC_EXCEPTION]
 operand operand_literal_string(char *value);
 
-/// THROWS: [MALLOC_EXCEPTION]
 where_condition *where_condition_compare(comparing_type type, operand op1, operand op2);
 
-/// THROWS: [MALLOC_EXCEPTION]
 where_condition *where_condition_and(where_condition *first, where_condition *second);
 
-/// THROWS: [MALLOC_EXCEPTION]
 where_condition *where_condition_or(where_condition *first, where_condition *second);
 
-/// THROWS: [MALLOC_EXCEPTION]
 where_condition *where_condition_not(where_condition *first);
-
-bool columns_equals(Column first, Column second);
 
 #endif //LLP_LAB1_WHERE_CONDITION_H

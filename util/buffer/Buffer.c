@@ -82,7 +82,7 @@ b64_t BufferReadB64(Buffer buffer) {
     assert(buffer != NULL);
     uint64_t moved = buffer->rcur + sizeof(b64_t);
     if (moved > buffer->size) {
-        return (b64_t) {0};
+        return (b64_t){0};
     }
     b64_t num = *((b64_t *) (buffer->data + buffer->rcur));
     buffer->rcur = moved;
@@ -93,7 +93,7 @@ b32_t BufferReadB32(Buffer buffer) {
     assert(buffer != NULL);
     uint64_t moved = buffer->rcur + sizeof(b32_t);
     if (moved > buffer->size) {
-        return (b32_t) {0};
+        return (b32_t){0};
     }
     b32_t num = *((b32_t *) (buffer->data + buffer->rcur));
     buffer->rcur = moved;
@@ -104,7 +104,7 @@ b8_t BufferReadB8(Buffer buffer) {
     assert(buffer != NULL);
     uint64_t moved = buffer->rcur + sizeof(b8_t);
     if (moved > buffer->size) {
-        return (b8_t) {0};
+        return (b8_t){0};
     }
     b8_t num = *((b8_t *) (buffer->data + buffer->rcur));
     buffer->rcur = moved;
