@@ -3,8 +3,10 @@
 //
 
 #include <assert.h>
+#include <malloc.h>
 #include "Cursor.h"
 #include "util_string.h"
+#include "exceptions/exceptions.h"
 
 static Row cursor_get_row_from(Cursor cur) {
     if (NULL != cur->from.cached_row.columns) {

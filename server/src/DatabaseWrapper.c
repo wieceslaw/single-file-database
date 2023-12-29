@@ -2,6 +2,7 @@
 // Created by wieceslaw on 22.12.23.
 //
 
+#include <malloc.h>
 #include "network.h"
 #include "DatabaseWrapper.h"
 #include "util_string.h"

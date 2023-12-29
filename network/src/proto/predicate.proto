@@ -1,22 +1,22 @@
 syntax = "proto3";
 import "common.proto";
 
-message Predicate {
+message MsgPredicate {
   oneof content {
-    PredicateCompare compare = 1;
-    PredicateAnd and = 2;
-    PredicateOr or = 3;
-    PredicateNot not = 4;
+    MsgPredicateCompare compare = 1;
+    MsgPredicateAnd and = 2;
+    MsgPredicateOr or = 3;
+    MsgPredicateNot not = 4;
   }
 }
 
-message PredicateCompare {
-  PredicateCompareType type = 1;
-  PredicateOperand left = 2;
-  PredicateOperand right = 3;
+message MsgPredicateCompare {
+  MsgPredicateCompareType type = 1;
+  MsgPredicateOperand left = 2;
+  MsgPredicateOperand right = 3;
 }
 
-enum PredicateCompareType {
+enum MsgPredicateCompareType {
   CMP_LE = 0;
   CMP_GE = 1;
   CMP_LS = 2;
@@ -25,23 +25,23 @@ enum PredicateCompareType {
   CMP_NQ = 5;
 };
 
-message PredicateAnd {
-  PredicateOperand first = 1;
-  PredicateOperand second = 2;
+message MsgPredicateAnd {
+  MsgPredicateOperand first = 1;
+  MsgPredicateOperand second = 2;
 }
 
-message PredicateOr {
-  PredicateOperand first = 1;
-  PredicateOperand second = 2;
+message MsgPredicateOr {
+  MsgPredicateOperand first = 1;
+  MsgPredicateOperand second = 2;
 }
 
-message PredicateNot {
-  PredicateOperand first = 1;
+message MsgPredicateNot {
+  MsgPredicateOperand first = 1;
 }
 
-message PredicateOperand {
+message MsgPredicateOperand {
   oneof content {
     MsgColumnData literal = 1;
-    ColumnReference column = 2;
+    MsgColumnReference column = 2;
   }
 }

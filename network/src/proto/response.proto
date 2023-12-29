@@ -24,7 +24,15 @@ message UpdateResponse {
 }
 
 message SelectResponse {
-  // ?
+  MsgTableScheme scheme = 1;
+}
+
+message RowBatchResponse {
+  repeated MsgRowData data = 1;
+}
+
+message RowBatchEndResponse {
+  int32 count = 1;
 }
 
 message Response {
@@ -37,6 +45,8 @@ message Response {
     DeleteResponse delete = 6;
     UpdateResponse update = 7;
     SelectResponse select = 8;
+    RowBatchResponse batch = 9;
+    RowBatchEndResponse batchEnd = 10;
   }
 }
 

@@ -3,6 +3,7 @@
 //
 
 #include <assert.h>
+#include <malloc.h>
 #include "Cursor.h"
 
 // THROWS: ?

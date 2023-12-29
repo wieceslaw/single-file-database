@@ -30,7 +30,7 @@ message MsgTableScheme {
   repeated MsgColumnScheme columns = 2;
 }
 
-message ColumnReference {
+message MsgColumnReference {
   string table = 1;
   string column = 2;
 }

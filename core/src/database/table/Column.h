@@ -6,6 +6,7 @@
 #define SINGLE_FILE_DATABASE_COLUMN_H
 
 #include <stdint-gcc.h>
+#include <stdbool.h>
 
 typedef enum ColumnType {
     COLUMN_TYPE_INT = 0,

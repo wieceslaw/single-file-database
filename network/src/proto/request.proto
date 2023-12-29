@@ -34,27 +34,27 @@ message InsertRequest {
 
 message DeleteRequest {
   string table = 1;
-  Predicate where = 2;
+  MsgPredicate where = 2;
 }
 
 message UpdateRequest {
   string table = 1;
-  Predicate where = 2;
+  MsgPredicate where = 2;
   // updates
 }
 
 message SelectRequest {
   string table = 1;
-  Predicate where = 2;
+  MsgPredicate where = 2;
   JoinCondition join = 3;
   Selector selector = 4;
 }
 
 message JoinCondition {
-  ColumnReference left = 1;
-  ColumnReference right = 2;
+  MsgColumnReference left = 1;
+  MsgColumnReference right = 2;
 }
 
 message Selector {
-  repeated ColumnReference columns = 1;
+  repeated MsgColumnReference columns = 1;
 }
