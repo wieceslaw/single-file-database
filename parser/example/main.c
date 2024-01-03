@@ -7,16 +7,15 @@
 #include "ast.h"
 
 int main(int argc, char * argv[]) {
-    (void)argc;
-    (void)argv;
-    struct AstNode *tree = ParseString("select user.id from user;");
-    if (tree == NULL) {
-        printf("No tree");
-    } else {
-        PrintAst(tree, 0);
-    }
-    return 0;
-    /*
+//    (void)argc;
+//    (void)argv;
+//    struct AstNode *tree = ParseString("select user.id from user;");
+//    if (tree == NULL) {
+//        printf("No tree");
+//    } else {
+//        PrintAst(tree, 0);
+//    }
+//    return 0;
     if (argc != 2) {
         printf("Wrong number of arguments \n");
         return -1;
@@ -40,5 +39,5 @@ int main(int argc, char * argv[]) {
     }
     fclose(f);
     FreeAstNode(tree);
-    return 0; */
+    return 0;
 }

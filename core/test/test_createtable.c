@@ -9,10 +9,10 @@
 static void createTable(Database db) {
     char* tableName = "test";
     SchemeBuilder scheme_builder = SchemeBuilderNew(tableName);
-    SchemeBuilderAddColumn(scheme_builder, "int", COLUMN_TYPE_INT);
+    SchemeBuilderAddColumn(scheme_builder, "int", COLUMN_TYPE_INT32);
     SchemeBuilderAddColumn(scheme_builder, "string", COLUMN_TYPE_STRING);
     SchemeBuilderAddColumn(scheme_builder, "bool", COLUMN_TYPE_BOOL);
-    SchemeBuilderAddColumn(scheme_builder, "float", COLUMN_TYPE_FLOAT);
+    SchemeBuilderAddColumn(scheme_builder, "float", COLUMN_TYPE_FLOAT32);
     if (DatabaseCreateTable(db, scheme_builder) != 0) {
         printf("Unsuccessful table create \n");
     }

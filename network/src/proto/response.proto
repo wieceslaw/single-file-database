@@ -28,7 +28,7 @@ message SelectResponse {
 }
 
 message RowBatchResponse {
-  repeated MsgRowData data = 1;
+  MsgRowData data = 1;
 }
 
 message RowBatchEndResponse {

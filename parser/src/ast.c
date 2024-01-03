@@ -128,13 +128,11 @@ struct AstNode *NewDeleteQueryAstNode(char *table, struct AstNode *where) {
 
 struct AstNode *NewInsertQueryAstNode(
         char *table,
-        struct AstNode *columns,
         struct AstNode *values
 ) {
     struct AstNode *node = NewAstNode();
     node->type = N_INSERT_QUERY;
     node->data.INSERT_QUERY.table = table;
-    node->data.INSERT_QUERY.columns = columns;
     node->data.INSERT_QUERY.values = values;
     return node;
 }
@@ -216,7 +214,6 @@ void FreeAstNode(struct AstNode *node) {
             FreeAstNode(node->data.SELECT_QUERY.selector);
             break;
         case N_INSERT_QUERY:
-            FreeAstNode(node->data.INSERT_QUERY.columns);
             FreeAstNode(node->data.INSERT_QUERY.values);
             free(node->data.INSERT_QUERY.table);
             break;
@@ -407,8 +404,6 @@ void PrintAst(struct AstNode *tree, int indent) {
             printf("INSERT INTO [TABLE: %s] \n", tree->data.INSERT_QUERY.table);
             indent += SINGLE_INDENT;
             PrintIndent(indent);
-            printf("COLUMNS LIST \n");
-            PrintAst(tree->data.INSERT_QUERY.columns, indent + SINGLE_INDENT);
             PrintIndent(indent);
             printf("VALUES LIST \n");
             PrintAst(tree->data.INSERT_QUERY.values, indent + SINGLE_INDENT);

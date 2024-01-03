@@ -25,14 +25,14 @@ operand operand_column(char *table, char *column) {
 operand operand_literal_float(float value) {
     return (operand) {
             .type = OPERAND_VALUE_LITERAL,
-            .literal = {.type = COLUMN_TYPE_FLOAT, .value = {.f32 = value}}
+            .literal = {.type = COLUMN_TYPE_FLOAT32, .value = {.f32 = value}}
     };
 }
 
 operand operand_literal_int(int32_t value) {
     return (operand) {
             .type = OPERAND_VALUE_LITERAL,
-            .literal = {.type = COLUMN_TYPE_INT, .value = {.i32 = value}}
+            .literal = {.type = COLUMN_TYPE_INT32, .value = {.i32 = value}}
     };
 }
 
@@ -120,7 +120,9 @@ static void compare_condition_free(where_condition *condition) {
 }
 
 void where_condition_free(where_condition *condition) {
-    assert(condition != NULL);
+    if (condition == NULL) {
+        return;
+    }
     switch (condition->type) {
         case CONDITION_AND:
             where_condition_free(condition->and.first);

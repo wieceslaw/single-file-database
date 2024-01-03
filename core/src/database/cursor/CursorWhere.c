@@ -9,11 +9,11 @@
 // THROWS: ?
 static bool column_greater_than(Column first, Column second) {
     assert(first.type == second.type);
-    assert(first.type == COLUMN_TYPE_FLOAT || first.type == COLUMN_TYPE_INT);
+    assert(first.type == COLUMN_TYPE_FLOAT32 || first.type == COLUMN_TYPE_INT32);
     switch (first.type) {
-        case COLUMN_TYPE_INT:
+        case COLUMN_TYPE_INT32:
             return first.value.i32 > second.value.i32;
-        case COLUMN_TYPE_FLOAT:
+        case COLUMN_TYPE_FLOAT32:
             return first.value.f32 > second.value.f32;
         default:
             assert(0);
@@ -23,11 +23,11 @@ static bool column_greater_than(Column first, Column second) {
 // THROWS: ?
 static bool column_lesser_than(Column first, Column second) {
     assert(first.type == second.type);
-    assert(first.type == COLUMN_TYPE_FLOAT || first.type == COLUMN_TYPE_INT);
+    assert(first.type == COLUMN_TYPE_FLOAT32 || first.type == COLUMN_TYPE_INT32);
     switch (first.type) {
-        case COLUMN_TYPE_INT:
+        case COLUMN_TYPE_INT32:
             return first.value.i32 < second.value.i32;
-        case COLUMN_TYPE_FLOAT:
+        case COLUMN_TYPE_FLOAT32:
             return first.value.f32 < second.value.f32;
         default:
             assert(0);

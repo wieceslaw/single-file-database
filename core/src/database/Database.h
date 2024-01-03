@@ -27,6 +27,14 @@ typedef struct query {
     where_condition *where;
 } query_t;
 
+typedef enum DatabaseResult {
+    DB_OK = 0,
+    DB_ERR = 1,
+    DB_UNKNOWN_TABLE = 2,
+    DB_BATCH_CORRUPTED = 3,
+    DB_TABLE_EXISTS = 4,
+} DatabaseResult;
+
 typedef struct Database *Database;
 
 void indexed_maps_free(indexed_maps maps);
@@ -54,10 +62,10 @@ StrTableSchemeMap DatabaseGetTablesSchemes(Database database);
 
 table_scheme *DatabaseFindTableScheme(Database database, char *tableName);
 
-int DatabaseCreateTable(Database database, SchemeBuilder builder);
+DatabaseResult DatabaseCreateTable(Database database, SchemeBuilder builder);
 
-int DatabaseDeleteTable(Database database, char *tableName);
+DatabaseResult DatabaseDeleteTable(Database database, char *tableName);
 
-int DatabaseInsertQuery(Database database, char *tableName, RowBatch batch);
+DatabaseResult DatabaseInsertQuery(Database database, char *tableName, RowBatch batch);
 
 #endif //LLP_LAB1_DATABASE_H

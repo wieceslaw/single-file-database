@@ -10,10 +10,10 @@ static void print_row(Row row) {
     for (size_t i = 0; i < row.size; i++) {
         Column column = row.columns[i];
         switch (column.type) {
-            case COLUMN_TYPE_INT:
+            case COLUMN_TYPE_INT32:
                 printf("%d ", column.value.i32);
                 break;
-            case COLUMN_TYPE_FLOAT:
+            case COLUMN_TYPE_FLOAT32:
                 printf("%f ", column.value.f32);
                 break;
             case COLUMN_TYPE_STRING:

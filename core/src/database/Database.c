@@ -20,47 +20,13 @@ struct Database {
     StrTableSchemeMap tables;
 };
 
-static StrTableSchemeMap LoadTables(pool_t *tablesPool) {
-    assert(tablesPool != NULL);
-    StrTableSchemeMap tables = MAP_NEW_STR_TABLE_SCHEME(8);
-    if (tables == NULL) {
-        return NULL;
-    }
-    pool_it it = pool_iterator(tablesPool);
-    if (it == NULL) {
-        MAP_FREE(tables);
-        return NULL;
-    }
-    while (!pool_iterator_is_empty(it)) {
-        Buffer buffer = pool_iterator_get(it);
-        if (buffer == NULL) {
-            pool_iterator_free(&it);
-            MAP_FREE(tables);
-            return NULL;
-        }
-        table_scheme *table = table_scheme_deserialize(buffer);
-        BufferFree(&buffer);
-        if (table == NULL) {
-            pool_iterator_free(&it);
-            MAP_FREE(tables);
-            return NULL;
-        }
-        MAP_PUT(tables, table->name, table);
-        table_scheme_free(table);
-        if (pool_iterator_next(it) != 0) {
-            pool_iterator_free(&it);
-            MAP_FREE(tables);
-            return NULL;
-        }
-    }
-    pool_iterator_free(&it);
-    return tables;
-}
+static bool RowIsValid(Row row, table_scheme *scheme);
 
-StrTableSchemeMap DatabaseGetTablesSchemes(Database database) {
-    assert(database != NULL);
-    return database->tables;
-}
+static bool RowBatchIsValid(RowBatch batch, table_scheme *scheme);
+
+static StrTableSchemeMap LoadTables(pool_t *tablesPool);
+
+static table_t DatabaseFindTable(Database database, char *tableName);
 
 Database DatabaseNew(file_settings *settings) {
     Database database;
@@ -113,22 +79,22 @@ int DatabaseFree(Database database) {
     return 0;
 }
 
-int DatabaseCreateTable(Database database, SchemeBuilder builder) {
+DatabaseResult DatabaseCreateTable(Database database, SchemeBuilder builder) {
     assert(database != NULL && builder != NULL);
     StrTableSchemeMap tables = database->tables;
     if (MAP_EXISTS(tables, builder->name)) {
         debug("Table already exists");
-        return -1;
+        return DB_TABLE_EXISTS;
     }
     table_scheme *newTable = SchemeBuilderBuild(builder);
     if (newTable == NULL) {
-        return -1;
+        return DB_ERR;
     }
     offset_t offset;
     if (pool_create(database->allocator, &offset)) {
         debug("Unable to create pool");
         table_scheme_free(newTable);
-        return -1;
+        return DB_ERR;
     }
     newTable->pool_offset = offset;
     Buffer serialized = table_scheme_serialize(newTable);
@@ -136,61 +102,66 @@ int DatabaseCreateTable(Database database, SchemeBuilder builder) {
         debug("Unable to append to pool");
         table_scheme_free(newTable);
         BufferFree(&serialized);
-        return -1;
+        return DB_ERR;
     }
     if (pool_flush(database->tablesPool) != 0) {
         debug("File corruption");
         table_scheme_free(newTable);
         BufferFree(&serialized);
-        return -1;
+        return DB_ERR;
     }
     MAP_PUT(tables, newTable->name, newTable);
     table_scheme_free(newTable);
     BufferFree(&serialized);
-    return 0;
+    return DB_OK;
 }
 
-int DatabaseDeleteTable(Database database, char *tableName) {
+DatabaseResult DatabaseDeleteTable(Database database, char *tableName) {
     pool_it it = pool_iterator(database->tablesPool);
     if (it == NULL) {
-        return -1;
+        return DB_ERR;
     }
     while (!pool_iterator_is_empty(it)) {
         Buffer buffer = pool_iterator_get(it);
         if (buffer == NULL) {
             pool_iterator_free(&it);
-            return -1;
+            return DB_ERR;
         }
         table_scheme *table = table_scheme_deserialize(buffer);
         BufferFree(&buffer);
         if (table == NULL) {
             pool_iterator_free(&it);
-            return -1;
+            return DB_ERR;
         }
         if (strcmp(table->name, tableName) == 0) {
             table_scheme_free(table);
             if (pool_iterator_delete(it) != 0) {
                 pool_iterator_free(&it);
                 debug("Unable to delete table from tables pool");
-                return -1;
+                return DB_ERR;
             }
             pool_iterator_free(&it);
             if (pool_flush(database->tablesPool) != 0) {
                 debug("Unable to flush table delete");
-                return -1;
+                return DB_ERR;
             }
             MAP_REMOVE(database->tables, tableName);
-            return 0;
+            return DB_OK;
         }
         table_scheme_free(table);
         if (pool_iterator_next(it) != 0) {
             pool_iterator_free(&it);
-            return -1;
+            return DB_ERR;
         }
     }
     pool_iterator_free(&it);
     debug("Unable to find table to delete");
-    return -1;
+    return DB_UNKNOWN_TABLE;
+}
+
+StrTableSchemeMap DatabaseGetTablesSchemes(Database database) {
+    assert(database != NULL);
+    return database->tables;
 }
 
 table_scheme *DatabaseFindTableScheme(Database database, char *tableName) {
@@ -199,54 +170,16 @@ table_scheme *DatabaseFindTableScheme(Database database, char *tableName) {
     return MAP_GET(tables, tableName);
 }
 
-static table_t DatabaseFindTable(Database database, char *name) {
-    assert(database != NULL && name != NULL);
-    table_t table = malloc(sizeof(struct table));
-    if (table == NULL) {
-        return NULL;
-    }
-    table->scheme = DatabaseFindTableScheme(database, name);
-    if (table->scheme == NULL) {
-        free(table);
-        return NULL;
-    }
-    table->data_pool = pool_init(database->allocator, table->scheme->pool_offset);
-    if (table->data_pool == NULL) {
-        table_scheme_free(table->scheme);
-        free(table);
-        return NULL;
-    }
-    return table;
-}
-
-static bool RowIsValid(Row row, table_scheme *scheme) {
-    for (size_t i = 0; i < row.size; i++) {
-        if (scheme->columns[i].type != row.columns[i].type) {
-            return false;
-        }
-    }
-    return true;
-}
-
-static bool RowBatchIsValid(RowBatch batch, table_scheme *scheme) {
-    for (size_t i = 0; i < batch.size; i++) {
-        if (!RowIsValid(batch.rows[i], scheme)) {
-            return false;
-        }
-    }
-    return true;
-}
-
-int DatabaseInsertQuery(Database database, char *tableName, RowBatch batch) {
+DatabaseResult DatabaseInsertQuery(Database database, char *tableName, RowBatch batch) {
     assert(database != NULL && tableName != NULL);
     table_t table = DatabaseFindTable(database, tableName);
     if (table == NULL) {
         debug("Unable to find table to insert");
-        return -1;
+        return DB_UNKNOWN_TABLE;
     }
     if (!RowBatchIsValid(batch, table->scheme)) {
         debug("Row batch is corrupted");
-        return -1;
+        return DB_BATCH_CORRUPTED;
     }
     for (size_t i = 0; i < batch.size; i++) {
         Row row = batch.rows[i];
@@ -254,16 +187,16 @@ int DatabaseInsertQuery(Database database, char *tableName, RowBatch batch) {
         if (pool_append(table->data_pool, buffer) != 0) {
             debug("Unsaved inserts. File is corrupted");
             BufferFree(&buffer);
-            return -1;
+            return DB_ERR;
         }
         BufferFree(&buffer);
     }
     if (pool_flush(table->data_pool) != 0) {
         debug("Unable to save inserts. File is corrupted");
-        return -1;
+        return DB_ERR;
     }
     table_free(&table);
-    return 0;
+    return DB_OK;
 }
 
 static Cursor DatabaseBuildBaseCursor(Database database, char* tableName, size_t tableIdx) {
@@ -341,7 +274,7 @@ static indexed_maps query_mapping(Database database, query_t query) {
     str_int_map_t table_maps = MAP_NEW_STR_INT(size);
     int count = 0;
     str_int_map_t columns_map = table_scheme_mapping(database, query.table);
-    if (NULL == columns_map) {
+    if (columns_map == NULL) {
         RAISE(DATABASE_TRANSLATION_EXCEPTION);
     }
     MAP_PUT(columns_maps, query.table, columns_map);
@@ -535,14 +468,10 @@ ResultView DatabaseSelectQuery(Database database, query_t query, SelectorBuilder
         result->view_scheme = create_view_scheme(database, selector, maps);
         result->view_selector = create_view_selector(selector, maps);
         indexed_maps_free(maps);
-    }) CATCH(exception == DATABASE_TRANSLATION_EXCEPTION, {
-        free(result);
-        indexed_maps_free(maps);
-        RAISE(DATABASE_QUERY_EXCEPTION);
     }) CATCH(exception >= EXCEPTION, {
         free(result);
         indexed_maps_free(maps);
-        RAISE(DATABASE_INTERNAL_ERROR);
+        return NULL;
     }) FINALLY()
     return result;
 }
@@ -593,4 +522,79 @@ where_condition *where_condition_translate(where_condition *condition, indexed_m
             return where_condition_translate_indexed(condition, maps);
     }
     assert(0);
+}
+
+static bool RowIsValid(Row row, table_scheme *scheme) {
+    for (size_t i = 0; i < row.size; i++) {
+        if (scheme->columns[i].type != row.columns[i].type) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool RowBatchIsValid(RowBatch batch, table_scheme *scheme) {
+    for (size_t i = 0; i < batch.size; i++) {
+        if (!RowIsValid(batch.rows[i], scheme)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static StrTableSchemeMap LoadTables(pool_t *tablesPool) {
+    assert(tablesPool != NULL);
+    StrTableSchemeMap tables = MAP_NEW_STR_TABLE_SCHEME(8);
+    if (tables == NULL) {
+        return NULL;
+    }
+    pool_it it = pool_iterator(tablesPool);
+    if (it == NULL) {
+        MAP_FREE(tables);
+        return NULL;
+    }
+    while (!pool_iterator_is_empty(it)) {
+        Buffer buffer = pool_iterator_get(it);
+        if (buffer == NULL) {
+            pool_iterator_free(&it);
+            MAP_FREE(tables);
+            return NULL;
+        }
+        table_scheme *table = table_scheme_deserialize(buffer);
+        BufferFree(&buffer);
+        if (table == NULL) {
+            pool_iterator_free(&it);
+            MAP_FREE(tables);
+            return NULL;
+        }
+        MAP_PUT(tables, table->name, table);
+        table_scheme_free(table);
+        if (pool_iterator_next(it) != 0) {
+            pool_iterator_free(&it);
+            MAP_FREE(tables);
+            return NULL;
+        }
+    }
+    pool_iterator_free(&it);
+    return tables;
+}
+
+static table_t DatabaseFindTable(Database database, char *tableName) {
+    assert(database != NULL && tableName != NULL);
+    table_t table = malloc(sizeof(struct table));
+    if (table == NULL) {
+        return NULL;
+    }
+    table->scheme = DatabaseFindTableScheme(database, tableName);
+    if (table->scheme == NULL) {
+        free(table);
+        return NULL;
+    }
+    table->data_pool = pool_init(database->allocator, table->scheme->pool_offset);
+    if (table->data_pool == NULL) {
+        table_scheme_free(table->scheme);
+        free(table);
+        return NULL;
+    }
+    return table;
 }

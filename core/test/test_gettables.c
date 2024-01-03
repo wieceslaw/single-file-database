@@ -3,9 +3,9 @@
 
 static char *columnTypeToStr(ColumnType type) {
     switch (type) {
-        case COLUMN_TYPE_INT:
+        case COLUMN_TYPE_INT32:
             return "COLUMN_TYPE_INT";
-        case COLUMN_TYPE_FLOAT:
+        case COLUMN_TYPE_FLOAT32:
             return "COLUMN_TYPE_FLOAT";
         case COLUMN_TYPE_STRING:
             return "COLUMN_TYPE_STRING";

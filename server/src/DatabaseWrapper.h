@@ -19,6 +19,4 @@ struct DatabaseWrapper *DatabaseWrapperNew(char *filename, file_open_mode mode);
 
 int DatabaseWrapperFree(struct DatabaseWrapper *);
 
-Response *DatabaseWrapperExecute(struct DatabaseWrapper *wrapper, Request *request);
-
 #endif //SINGLE_FILE_DATABASE_DATABASEWRAPPER_H

@@ -10,7 +10,7 @@ SELECT user.id, user.account, user.is_banned
     JOIN service ON service.id = subscription.service_id
     WHERE user.account >= 2.0 AND user.is_banned = FALSE;
 
-INSERT INTO user (id, account, is_banned) VALUES (1, 0.0, FALSE);
+INSERT INTO user VALUES (1, 0.0, FALSE, 'Alex');
 
 DELETE FROM user
     WHERE user.account >= 2.0 AND user.is_banned = FALSE;

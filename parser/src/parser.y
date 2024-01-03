@@ -164,8 +164,8 @@ VALUES_LIST:
     };
 
 INSERT_QUERY:
-    T_INSERT T_INTO T_NAME T_LEFT COLUMNS_LIST T_RIGHT T_VALUES T_LEFT VALUES_LIST T_RIGHT {
-        $$ = NewInsertQueryAstNode($3, $5, $9);
+    T_INSERT T_INTO T_NAME T_VALUES T_LEFT VALUES_LIST T_RIGHT {
+        $$ = NewInsertQueryAstNode($3, $6);
     };
 
 UPDATE_LIST:

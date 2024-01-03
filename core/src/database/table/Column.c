@@ -22,8 +22,8 @@ Column ColumnCopy(Column column) {
 
 void ColumnFree(Column column) {
     switch (column.type) {
-        case COLUMN_TYPE_INT:
-        case COLUMN_TYPE_FLOAT:
+        case COLUMN_TYPE_INT32:
+        case COLUMN_TYPE_FLOAT32:
         case COLUMN_TYPE_BOOL:
             break;
         case COLUMN_TYPE_STRING:
@@ -34,9 +34,9 @@ void ColumnFree(Column column) {
 bool ColumnEquals(Column first, Column second) {
     assert(first.type == second.type);
     switch (first.type) {
-        case COLUMN_TYPE_INT:
+        case COLUMN_TYPE_INT32:
             return first.value.i32 == second.value.i32;
-        case COLUMN_TYPE_FLOAT:
+        case COLUMN_TYPE_FLOAT32:
             return first.value.f32 == second.value.f32;
         case COLUMN_TYPE_STRING:
             return 0 == strcmp(first.value.str, second.value.str);
@@ -48,14 +48,14 @@ bool ColumnEquals(Column first, Column second) {
 
 Column ColumnOfInt32(int32_t value) {
     return (Column) {
-            .type = COLUMN_TYPE_INT,
+            .type = COLUMN_TYPE_INT32,
             .value = {.i32 = value}
     };
 }
 
 Column ColumnOfFloat32(float value) {
     return (Column) {
-            .type = COLUMN_TYPE_FLOAT,
+            .type = COLUMN_TYPE_FLOAT32,
             .value = {.f32 = value}
     };
 }

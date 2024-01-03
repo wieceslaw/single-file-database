@@ -40,7 +40,9 @@ struct Server *ServerNew(uint16_t port, char *filename, file_open_mode mode) {
         logerr("Unable to get server socket info");
         return NULL;
     }
-    if (pthread_mutex_init(&server->lock, NULL) != 0) {
+    pthread_mutexattr_init(&server->ma);
+    pthread_mutexattr_settype(&server->ma, PTHREAD_MUTEX_RECURSIVE);
+    if (pthread_mutex_init(&server->lock, &server->ma) != 0) {
         free(server);
         close(sockfd);
         logerr("Mutex init has failed");
@@ -69,13 +71,16 @@ int ServerFree(struct Server *server) {
     int err = 0;
     err |= close(server->sockfd);
     err |= pthread_cancel(server->loopThread);
+    pthread_mutex_lock(&server->lock);
     ListIterator it = ListHeadIterator(server->connections);
+    // TODO: iterator invalidation in ConnectionFree
     while (!ListIteratorIsEmpty(it)) {
         struct Connection *connection = ListIteratorGet(it);
         err |= ConnectionStop(connection);
         ConnectionFree(connection);
         ListIteratorNext(it);
     }
+    pthread_mutex_unlock(&server->lock);
     ListIteratorFree(&(it));
     ListFree(server->connections);
     server->connections = NULL;
@@ -93,7 +98,7 @@ static int ServerAcceptConnection(struct Server *server) {
     connection->sockfd = accept(server->sockfd, (struct sockaddr *) &(connection->dest), &(connection->socksize));
     if (connection->sockfd < 0) {
         logerr("Server accept failed");
-        ConnectionFree(connection);
+        free(connection);
         return -1;
     }
     pthread_mutex_lock(&server->lock);

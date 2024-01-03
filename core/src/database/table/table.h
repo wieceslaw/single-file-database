@@ -46,6 +46,8 @@ typedef struct table {
     pool_t *data_pool;
 } *table_t;
 
+void free_column(table_scheme_column *column);
+
 void table_scheme_free(table_scheme *scheme);
 
 table_scheme* table_scheme_copy(table_scheme* table_scheme);

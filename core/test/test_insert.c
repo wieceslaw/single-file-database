@@ -40,10 +40,10 @@ static void insert(Database db, int n, char* table_name) {
 
 static void create_table(Database db, char* table_name) {
     SchemeBuilder scheme_builder = SchemeBuilderNew(table_name);
-    SchemeBuilderAddColumn(scheme_builder, "int", COLUMN_TYPE_INT);
+    SchemeBuilderAddColumn(scheme_builder, "int", COLUMN_TYPE_INT32);
     SchemeBuilderAddColumn(scheme_builder, "string", COLUMN_TYPE_STRING);
     SchemeBuilderAddColumn(scheme_builder, "bool", COLUMN_TYPE_BOOL);
-    SchemeBuilderAddColumn(scheme_builder, "float", COLUMN_TYPE_FLOAT);
+    SchemeBuilderAddColumn(scheme_builder, "float", COLUMN_TYPE_FLOAT32);
     DatabaseCreateTable(db, scheme_builder);
     SchemeBuilderFree(scheme_builder);
 }

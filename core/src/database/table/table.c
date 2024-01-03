@@ -9,7 +9,7 @@
 #include "util_string.h"
 #include "exceptions/exceptions.h"
 
-static void free_column(table_scheme_column *column) {
+void free_column(table_scheme_column *column) {
     assert(column != NULL);
     free(column->name);
     column->name = NULL;
@@ -58,10 +58,10 @@ Row row_deserialize(table_scheme *scheme, Buffer buffer) {
     for (uint32_t i = 0; i < scheme->size; i++) {
         table_scheme_column scheme_col = scheme->columns[i];
         switch (scheme_col.type) {
-            case COLUMN_TYPE_INT:
+            case COLUMN_TYPE_INT32:
                 columns[i].value.i32 = BufferReadB32(buffer).i32;
                 break;
-            case COLUMN_TYPE_FLOAT:
+            case COLUMN_TYPE_FLOAT32:
                 columns[i].value.f32 = BufferReadB32(buffer).f32;
                 break;
             case COLUMN_TYPE_STRING: {

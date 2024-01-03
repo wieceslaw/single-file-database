@@ -15,10 +15,10 @@ size_t RowSize(Row row) {
     for (uint32_t i = 0; i < row.size; i++) {
         Column column = row.columns[i];
         switch (column.type) {
-            case COLUMN_TYPE_INT:
+            case COLUMN_TYPE_INT32:
                 size += sizeof(b32_t);
                 break;
-            case COLUMN_TYPE_FLOAT:
+            case COLUMN_TYPE_FLOAT32:
                 size += sizeof(b32_t);
                 break;
             case COLUMN_TYPE_STRING:
@@ -50,10 +50,10 @@ Buffer RowSerialize(Row row) {
     for (uint32_t i = 0; i < row.size; i++) {
         Column col = row.columns[i];
         switch (col.type) {
-            case COLUMN_TYPE_INT:
+            case COLUMN_TYPE_INT32:
                 BufferWriteB32(buffer, (b32_t) {.i32 = col.value.i32});
                 break;
-            case COLUMN_TYPE_FLOAT:
+            case COLUMN_TYPE_FLOAT32:
                 BufferWriteB32(buffer, (b32_t) {.f32 = col.value.f32});
                 break;
             case COLUMN_TYPE_STRING:

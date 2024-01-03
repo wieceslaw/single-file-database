@@ -16,6 +16,13 @@ message MsgPredicateCompare {
   MsgPredicateOperand right = 3;
 }
 
+message MsgPredicateOperand {
+  oneof content {
+    MsgColumnData literal = 1;
+    MsgColumnReference column = 2;
+  }
+}
+
 enum MsgPredicateCompareType {
   CMP_LE = 0;
   CMP_GE = 1;
@@ -26,22 +33,15 @@ enum MsgPredicateCompareType {
 };
 
 message MsgPredicateAnd {
-  MsgPredicateOperand first = 1;
-  MsgPredicateOperand second = 2;
+  MsgPredicate first = 1;
+  MsgPredicate second = 2;
 }
 
 message MsgPredicateOr {
-  MsgPredicateOperand first = 1;
-  MsgPredicateOperand second = 2;
+  MsgPredicate first = 1;
+  MsgPredicate second = 2;
 }
 
 message MsgPredicateNot {
-  MsgPredicateOperand first = 1;
-}
-
-message MsgPredicateOperand {
-  oneof content {
-    MsgColumnData literal = 1;
-    MsgColumnReference column = 2;
-  }
+  MsgPredicate first = 1;
 }

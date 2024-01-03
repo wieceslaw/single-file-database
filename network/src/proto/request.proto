@@ -11,6 +11,7 @@ message Request {
     InsertRequest insert = 4;
     DeleteRequest delete = 5;
     UpdateRequest update = 6;
+    SelectRequest select = 7;
   }
 }
 
@@ -28,7 +29,6 @@ message DeleteTableRequest {
 
 message InsertRequest {
   string table = 1;
-  repeated string columns = 2;
   repeated MsgRowData values = 3;
 }
 
@@ -45,9 +45,9 @@ message UpdateRequest {
 
 message SelectRequest {
   string table = 1;
-  MsgPredicate where = 2;
-  JoinCondition join = 3;
   Selector selector = 4;
+  MsgPredicate where = 2;
+  repeated JoinCondition joins = 3;
 }
 
 message JoinCondition {

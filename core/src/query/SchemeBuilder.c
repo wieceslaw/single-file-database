@@ -23,6 +23,7 @@ void SchemeBuilderFree(SchemeBuilder builder) {
     if (NULL == builder) {
         return;
     }
+    ListApply(builder->column_list, (Applier) free_column);
     ListApply(builder->column_list, free);
     ListFree(builder->column_list);
     builder->column_list = NULL;
@@ -37,7 +38,7 @@ int SchemeBuilderAddColumn(SchemeBuilder builder, char *name, ColumnType type) {
         return -1;
     }
     column->type = type;
-    column->name = name;
+    column->name = string_copy(name);
     ListAppendTail(builder->column_list, column);
     return 0;
 }

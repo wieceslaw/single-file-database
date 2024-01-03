@@ -106,7 +106,6 @@ struct AstNode {
         } SELECT_QUERY;
         struct {
             char *table;
-            struct AstNode *columns;
             struct AstNode *values;
         } INSERT_QUERY;
         struct {
@@ -180,7 +179,6 @@ struct AstNode *NewDeleteQueryAstNode(char *table, struct AstNode *where);
 
 struct AstNode *NewInsertQueryAstNode(
         char *table,
-        struct AstNode *columns,
         struct AstNode *values
 );
 

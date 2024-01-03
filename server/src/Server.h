@@ -16,6 +16,7 @@ struct Server {
     uint16_t port;
     int sockfd;
     pthread_t loopThread;
+    pthread_mutexattr_t ma;
     pthread_mutex_t lock;
     List connections;
     struct DatabaseWrapper *databaseWrapper;

@@ -3,20 +3,20 @@
 //
 
 #include <assert.h>
+#include <malloc.h>
 #include "RowBatch.h"
-#include "exceptions/exceptions.h"
 
 RowBatch RowBatchNew(size_t capacity) {
     return (RowBatch) {
         .capacity = capacity,
         .size = 0,
-        .rows = rmalloc(sizeof(Row) * capacity)
+        .rows = malloc(sizeof(Row) * capacity)
     };
 }
 
 void RowBatchFree(RowBatch *batch) {
     assert(batch != NULL);
-    if (NULL == batch->rows) {
+    if (batch->rows == NULL) {
         return;
     }
     for (size_t i = 0; i < batch->size; i++) {
