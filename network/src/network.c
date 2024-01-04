@@ -43,12 +43,12 @@ int sendMessage(int sockfd, Message *message) {
     ProtobufCBuffer *buffer = (ProtobufCBuffer *) &simple;
     size_t size = message__pack_to_buffer(message, buffer);
     size_t len;
-    len = send(sockfd, &size, sizeof(size), 0);
+    len = send(sockfd, &size, sizeof(size), MSG_NOSIGNAL);
     if (len != sizeof(size)) {
         PROTOBUF_C_BUFFER_SIMPLE_CLEAR(&simple);
         return -1;
     }
-    len = send(sockfd, simple.data, size, 0);
+    len = send(sockfd, simple.data, size, MSG_NOSIGNAL);
     if (len != size) {
         PROTOBUF_C_BUFFER_SIMPLE_CLEAR(&simple);
         return -1;

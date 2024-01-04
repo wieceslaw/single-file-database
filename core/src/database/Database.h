@@ -33,6 +33,7 @@ typedef enum DatabaseResult {
     DB_UNKNOWN_TABLE = 2,
     DB_BATCH_CORRUPTED = 3,
     DB_TABLE_EXISTS = 4,
+    DB_INVALID_QUERY = 5,
 } DatabaseResult;
 
 typedef struct Database *Database;
@@ -45,9 +46,6 @@ where_condition *where_condition_translate(where_condition *condition, indexed_m
 
 /// THROWS: [DATABASE_INTERNAL_ERROR]
 int DatabaseFree(Database database);
-
-/// THROWS: [DATABASE_INTERNAL_ERROR, DATABASE_QUERY_EXCEPTION]
-void DatabaseDeleteQuery(Database database, query_t query);
 
 /// THROWS: [DATABASE_INTERNAL_ERROR, DATABASE_QUERY_EXCEPTION]
 void DatabaseUpdateQuery(Database database, query_t query, updater_builder_t updater);
@@ -67,5 +65,7 @@ DatabaseResult DatabaseCreateTable(Database database, SchemeBuilder builder);
 DatabaseResult DatabaseDeleteTable(Database database, char *tableName);
 
 DatabaseResult DatabaseInsertQuery(Database database, char *tableName, RowBatch batch);
+
+DatabaseResult DatabaseDeleteQuery(Database database, query_t query, int *result);
 
 #endif //LLP_LAB1_DATABASE_H

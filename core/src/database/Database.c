@@ -373,26 +373,31 @@ static Cursor query_cursor(Database database, query_t query, indexed_maps maps) 
     return result;
 }
 
-void DatabaseDeleteQuery(Database database, query_t query) {
+DatabaseResult DatabaseDeleteQuery(Database database, query_t query, int *result) {
     assert(database != NULL);
     indexed_maps maps = {0};
     Cursor cur = NULL;
+    int count = 0;
+    DatabaseResult res = DB_OK;
     TRY({
         maps = query_mapping(database, query);
         cur = query_cursor(database, query, maps);
         while (!CursorIsEmpty(cur)) {
             CursorDeleteRow(cur, 0);
             CursorNext(cur);
+            count++;
         }
         CursorFlush(cur);
-        CursorFree(&cur);
     }) CATCH(exception == DATABASE_TRANSLATION_EXCEPTION, {
-        RAISE(DATABASE_QUERY_EXCEPTION);
+        res = DB_INVALID_QUERY;
     }) CATCH (exception >= EXCEPTION, {
-        RAISE(DATABASE_INTERNAL_ERROR);
+        res = DB_ERR;
     }) FINALLY({
+        CursorFree(&cur);
         indexed_maps_free(maps);
     })
+    *result = count;
+    return res;
 }
 
 void DatabaseUpdateQuery(Database database, query_t query, updater_builder_t updater) {

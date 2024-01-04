@@ -12,6 +12,7 @@
 #define ERR__INTERNAL_ERROR "INTERNAl ERROR"
 #define ERR__TABLE_ALREADY_EXISTS "TABLE ALREADY EXISTS"
 #define ERR__UNKNOWN_TABLE "UNKNOWN TABLE"
+#define ERR__INVALID_QUERY "INVALID QUERY"
 #define ERR__BATCH_CORRUPTED "INAPPROPRIATE ROW VALUES"
 
 static int
@@ -534,17 +535,45 @@ ConnectionHandleSelect(struct Connection *connection, struct DatabaseWrapper *wr
     return err;
 }
 
-static int
-ConnectionHandleUpdate(struct Connection *connection, struct DatabaseWrapper *wrapper, UpdateRequest *request) {
-    (void) (connection);
-    (void) (wrapper);
-    (void) (request);
-    // TODO: Implement
-    return -1;
+static Response *DeleteResponseNew(void) {
+    DeleteResponse *delete = malloc(sizeof(DeleteResponse));
+    delete_response__init(delete);
+
+    Response *response = malloc(sizeof(Response));
+    response__init(response);
+    response->content_case = RESPONSE__CONTENT_DELETE;
+    response->delete_ = delete;
+
+    return response;
 }
 
 static int
 ConnectionHandleDelete(struct Connection *connection, struct DatabaseWrapper *wrapper, DeleteRequest *request) {
+    assert(connection != NULL && wrapper != NULL && request != NULL);
+    where_condition *where = WhereFromMsg(request->where);
+    query_t query = {.table = request->table, .where = where, .joins = NULL};
+    int count;
+    DatabaseResult result = DatabaseDeleteQuery(wrapper->db, query, &count);
+    where_condition_free(where);
+    if (result != DB_OK) {
+        switch (result) {
+            case DB_INVALID_QUERY:
+                sendError(connection->sockfd, ERR__INVALID_QUERY);
+                return 0;
+            default:
+                sendError(connection->sockfd, ERR__INTERNAL_ERROR);
+                return -1;
+        }
+    }
+    Response *response = DeleteResponseNew();
+    response->delete_->count = count;
+    int err = sendResponse(connection->sockfd, response);;
+    response__free_unpacked(response, NULL);
+    return err;
+}
+
+static int
+ConnectionHandleUpdate(struct Connection *connection, struct DatabaseWrapper *wrapper, UpdateRequest *request) {
     (void) (connection);
     (void) (wrapper);
     (void) (request);

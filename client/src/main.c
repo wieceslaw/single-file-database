@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <signal.h>
 
 #include "network.h"
 #include "DynamicBuffer.h"
@@ -86,6 +87,8 @@ static int requestInsert(int sockfd, struct AstNode *tree);
 
 static int requestSelect(int sockfd, struct AstNode *tree);
 
+static int requestDelete(int sockfd, struct AstNode *tree);
+
 static MsgPredicate *MsgPredicateFromTree(struct AstNode *tree);
 
 static MsgPredicateAnd *MsgPredicateAndFromTree(struct AstNode *tree);
@@ -124,6 +127,7 @@ static int requestQuery(int sockfd, struct AstNode *tree) {
             err = requestSelect(sockfd, node);
             break;
         case N_DELETE_QUERY:
+            err = requestDelete(sockfd, node);
             break;
         case N_UPDATE_QUERY:
             break;
@@ -378,6 +382,43 @@ static int requestSelect(int sockfd, struct AstNode *tree) {
     message__free_unpacked(msg, NULL);
 
     receiveRows(sockfd);
+    return 0;
+}
+
+static Request *DeleteRequestFromTree(struct AstNode *tree) {
+    char *table = string_copy(tree->data.DELETE_QUERY.table);
+    MsgPredicate *where = MsgPredicateFromTree(tree->data.DELETE_QUERY.where);
+
+    DeleteRequest *delete = malloc(sizeof(DeleteRequest));
+    delete_request__init(delete);
+    delete->where = where;
+    delete->table = table;
+
+    Request *request = malloc(sizeof(Request));
+    request__init(request);
+    request->content_case = REQUEST__CONTENT_DELETE;
+    request->delete_ = delete;
+
+    return request;
+}
+
+static int requestDelete(int sockfd, struct AstNode *tree) {
+    Request *request = DeleteRequestFromTree(tree);
+    int err = sendRequest(sockfd, request);
+    request__free_unpacked(request, NULL);
+    if (err != 0) {
+        debug("error sending request");
+        return -1;
+    }
+
+    Message *msg = receive(sockfd, RESPONSE__CONTENT_DELETE);
+    if (msg == NULL) {
+        debug("Response error");
+        return -1;
+    }
+    Response *response = msg->response;
+    printf("ROWS (%d) \n", response->delete_->count);
+    message__free_unpacked(msg, NULL);
     return 0;
 }
 
