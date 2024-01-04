@@ -95,7 +95,9 @@ b32_t BufferReadB32(Buffer buffer) {
     if (moved > buffer->size) {
         return (b32_t){0};
     }
-    b32_t num = *((b32_t *) (buffer->data + buffer->rcur));
+    b32_t num;
+    void* ptr = buffer->data + buffer->rcur;
+    memcpy(&num, ptr, sizeof(b32_t));
     buffer->rcur = moved;
     return num;
 }
@@ -139,8 +141,8 @@ void BufferWriteB32(Buffer buffer, b32_t num) {
     if (moved > buffer->size) {
         return;
     }
-    b32_t *ptr = (b32_t *) (buffer->data + buffer->wcur);
-    *ptr = num;
+    void *ptr = (b32_t *) (buffer->data + buffer->wcur);
+    memcpy(ptr, &num, sizeof(b32_t));
     buffer->wcur = moved;
 }
 

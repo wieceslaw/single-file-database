@@ -9,10 +9,10 @@
 #include <stdbool.h>
 
 typedef enum ColumnType {
-    COLUMN_TYPE_INT32 = 0,
-    COLUMN_TYPE_FLOAT32 = 1,
-    COLUMN_TYPE_STRING = 2,
-    COLUMN_TYPE_BOOL = 3
+    COLUMN_TYPE_INT32 = 1,
+    COLUMN_TYPE_FLOAT32 = 2,
+    COLUMN_TYPE_STRING = 3,
+    COLUMN_TYPE_BOOL = 4
 } ColumnType;
 
 typedef union ColumnValue {

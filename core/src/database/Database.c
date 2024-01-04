@@ -199,7 +199,7 @@ DatabaseResult DatabaseInsertQuery(Database database, char *tableName, RowBatch 
     return DB_OK;
 }
 
-static Cursor DatabaseBuildBaseCursor(Database database, char* tableName, size_t tableIdx) {
+static Cursor DatabaseBuildBaseCursor(Database database, char *tableName, size_t tableIdx) {
     table_t table = DatabaseFindTable(database, tableName);
     if (table == NULL) {
         debug("Unable to find table for base cursor");
@@ -264,7 +264,7 @@ static str_int_map_t table_scheme_mapping(Database database, char* table_name) {
 }
 
 // THROWS: [TRANSLATION_EXCEPTION, EXCEPTION]
-static indexed_maps query_mapping(Database database, query_t query) {
+static int query_mapping(Database database, query_t query, indexed_maps* result) {
     assert(query.table != NULL);
     size_t size = 1;
     if (query.joins != NULL) {
@@ -275,7 +275,7 @@ static indexed_maps query_mapping(Database database, query_t query) {
     int count = 0;
     str_int_map_t columns_map = table_scheme_mapping(database, query.table);
     if (columns_map == NULL) {
-        RAISE(DATABASE_TRANSLATION_EXCEPTION);
+        return -1;
     }
     MAP_PUT(columns_maps, query.table, columns_map);
     MAP_PUT(table_maps, query.table, &count);
@@ -287,29 +287,30 @@ static indexed_maps query_mapping(Database database, query_t query) {
             assert(condition->left.type == COLUMN_DESC_NAME && condition->right.type == COLUMN_DESC_NAME);
             str_int_map_t left_columns_map = MAP_GET(columns_maps, condition->left.name.table_name);
             if (NULL == left_columns_map) { // table should exists in join set
-                RAISE(DATABASE_TRANSLATION_EXCEPTION);
+                return -1;
             }
             if (!MAP_EXISTS(left_columns_map, condition->left.name.column_name)) { // table should have such column
-                RAISE(DATABASE_TRANSLATION_EXCEPTION);
+                return -1;
             }
             if (MAP_EXISTS(columns_maps, condition->right.name.table_name)) { // can't self-join
-                RAISE(DATABASE_TRANSLATION_EXCEPTION);
+                return -1;
             }
             str_int_map_t right_columns_map = table_scheme_mapping(database, condition->right.name.table_name);
-            if (NULL == right_columns_map) { // table should exist in Database
-                RAISE(DATABASE_TRANSLATION_EXCEPTION);
+            if (right_columns_map == NULL) { // table should exist in Database
+                return -1;
             }
             if (!MAP_EXISTS(right_columns_map, condition->right.name.column_name)) { // right table has such column
-                RAISE(DATABASE_TRANSLATION_EXCEPTION);
+                return -1;
             }
             MAP_PUT(columns_maps, condition->right.name.table_name, right_columns_map);
             MAP_PUT(table_maps, condition->right.name.table_name, &count);
         })
     }
-    return (indexed_maps) {
-        .columns_maps = columns_maps,
-        .table_maps = table_maps
+    *result = (indexed_maps) {
+            .columns_maps = columns_maps,
+            .table_maps = table_maps
     };
+    return 0;
 }
 
 void indexed_maps_free(indexed_maps maps) {
@@ -349,7 +350,7 @@ static Cursor query_cursor(Database database, query_t query, indexed_maps maps) 
                 }
                 result = joined;
             }) CATCH(exception >= EXCEPTION, {
-                    ListIteratorFree(&it);
+                ListIteratorFree(&it);
                 CursorFree(&result);
                 indexed_maps_free(maps);
                 RAISE(exception);
@@ -357,14 +358,14 @@ static Cursor query_cursor(Database database, query_t query, indexed_maps maps) 
         })
     }
     if (query.where != NULL) {
-        where_condition *translated_condition;
+        where_condition *translated_condition = NULL;
         TRY({
             translated_condition = where_condition_translate(query.where, maps);
             result = CursorNew_WHERE(result, translated_condition);
             if (result == NULL) {
                 RAISE(DATABASE_INTERNAL_ERROR);
             }
-        }) CATCH(exception >= exception, {
+        }) CATCH(exception >= EXCEPTION, {
             where_condition_free(translated_condition);
             CursorFree(&result);
             RAISE(exception);
@@ -380,7 +381,9 @@ DatabaseResult DatabaseDeleteQuery(Database database, query_t query, int *result
     int count = 0;
     DatabaseResult res = DB_OK;
     TRY({
-        maps = query_mapping(database, query);
+        if (query_mapping(database, query, &maps) != 0) {
+            RAISE(DATABASE_TRANSLATION_EXCEPTION);
+        }
         cur = query_cursor(database, query, maps);
         while (!CursorIsEmpty(cur)) {
             CursorDeleteRow(cur, 0);
@@ -400,7 +403,7 @@ DatabaseResult DatabaseDeleteQuery(Database database, query_t query, int *result
     return res;
 }
 
-DatabaseResult DatabaseUpdateQuery(Database database, query_t query, updater_builder_t updater, int* result) {
+DatabaseResult DatabaseUpdateQuery(Database database, query_t query, updater_builder_t updater, int *result) {
     assert(database != NULL);
     indexed_maps maps = {0};
     Cursor cur = NULL;
@@ -409,7 +412,9 @@ DatabaseResult DatabaseUpdateQuery(Database database, query_t query, updater_bui
     DatabaseResult res = DB_OK;
     int count = 0;
     TRY({
-        maps = query_mapping(database, query);
+        if (query_mapping(database, query, &maps) != 0) {
+            RAISE(DATABASE_TRANSLATION_EXCEPTION);
+        }
         cur = query_cursor(database, query, maps);
         map = MAP_GET(maps.columns_maps, query.table);
         translated_updater = updater_builder_translate(updater, map);
@@ -476,19 +481,24 @@ ResultView DatabaseSelectQuery(Database database, query_t query, SelectorBuilder
     ResultView result = NULL;
     indexed_maps maps = {0};
     Cursor cur = NULL;
+    result = malloc(sizeof(struct ResultView));
+    if (result == NULL) {
+        return NULL;
+    }
+    if (query_mapping(database, query, &maps) != 0) {
+        return NULL;
+    }
     TRY({
-        result = rmalloc(sizeof(struct ResultView));
-        maps = query_mapping(database, query);
         cur = query_cursor(database, query, maps);
         result->cursor = cur;
         result->view_scheme = create_view_scheme(database, selector, maps);
         result->view_selector = create_view_selector(selector, maps);
-        indexed_maps_free(maps);
     }) CATCH(exception >= EXCEPTION, {
         free(result);
-        indexed_maps_free(maps);
-        return NULL;
-    }) FINALLY()
+        result = NULL;
+    }) FINALLY({
+       indexed_maps_free(maps);
+    })
     return result;
 }
 
@@ -508,6 +518,19 @@ static operand column_operand_translate(operand op, indexed_maps maps) {
     }
 }
 
+static ColumnType operand_type(operand op) {
+    if (op.type == OPERAND_VALUE_LITERAL) {
+        return op.literal.type;
+    } else {
+        assert(op.column.type == COLUMN_DESC_INDEX);
+        // TODO: access operand type? add into mappings? Same problem with joins
+    }
+}
+
+static bool column_operands_have_same_type(operand first, operand second) {
+    return operand_type(first) != operand_type(second);
+}
+
 static where_condition *where_condition_translate_indexed(where_condition *condition, indexed_maps maps) {
     assert(condition->type == CONDITION_COMPARE);
     where_condition *result = rmalloc(sizeof(where_condition));
@@ -515,6 +538,10 @@ static where_condition *where_condition_translate_indexed(where_condition *condi
     result->compare.type = condition->compare.type;
     result->compare.first = column_operand_translate(condition->compare.first, maps);
     result->compare.second = column_operand_translate(condition->compare.second, maps);
+    if (!column_operands_have_same_type(result->compare.first, result->compare.second)) {
+        free(result);
+        RAISE(DATABASE_TRANSLATION_EXCEPTION);
+    }
     return result;
 }
 

@@ -43,6 +43,9 @@ bool ColumnEquals(Column first, Column second) {
         case COLUMN_TYPE_BOOL:
             return first.value.b8 == second.value.b8;
     }
+    if (first.type == 0 && second.type == 0) {
+        return false;
+    }
     assert(0);
 }
 

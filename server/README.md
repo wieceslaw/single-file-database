@@ -1,1 +1,3 @@
--p <port> - optional argument to specify port, otherwise - uses any available
+-p, --port - optional argument to specify port, otherwise - uses any available
+-m, --mode [=create, exist, clear] - required param for open mode
+-f, --file - required argument with file path

@@ -70,11 +70,8 @@ static Column CursorGet_JOIN(Cursor cur, size_t table_idx, size_t column_idx) {
     Column left_column = CursorGetColumn(cur->join.left, table_idx, column_idx);
     Column right_column = CursorGetColumn(cur->join.right, table_idx, column_idx);
     if (left_column.type != 0) {
-        assert(right_column.type == 0);
         return left_column;
     } else {
-        assert(right_column.type != 0);
-        assert(left_column.type == 0);
         return right_column;
     }
 }

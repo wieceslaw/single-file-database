@@ -15,69 +15,9 @@
 #include "defines.h"
 #include "util_string.h"
 #include "Table.h"
+#include "mapping.h"
 
-static char *MsgColumnTypeToStr(MsgColumnType type) {
-    switch (type) {
-        case MSG_COLUMN_TYPE__INT32:
-            return "int";
-        case MSG_COLUMN_TYPE__FLOAT32:
-            return "float";
-        case MSG_COLUMN_TYPE__STRING:
-            return "text";
-        case MSG_COLUMN_TYPE__BOOL:
-            return "boolean";
-        default:
-            debug("Unknown value of MsgColumnType");
-            assert(0);
-    }
-}
-
-static void printTable(MsgTableScheme *scheme) {
-    struct Table *table = TableNew(1 + scheme->n_columns, 2);
-    TableSet(table, 0, 0, "Column");
-    TableSet(table, 0, 1, "Type");
-    for (size_t i = 0; i < scheme->n_columns; i++) {
-        MsgColumnScheme *column = scheme->columns[i];
-        TableSet(table, i + 1, 0, column->name);
-        TableSet(table, i + 1, 1, MsgColumnTypeToStr(column->type));
-    }
-    printf("Table \"%s\" \n", scheme->name);
-    TablePrint(table, true);
-    TableFree(table);
-}
-
-static void printTables(ListTableResponse *response) {
-    for (size_t i = 0; i < response->n_tables; i++) {
-        MsgTableScheme *table = response->tables[i];
-        printTable(table);
-        printf("\n");
-    }
-}
-
-static Message *receive(int sockfd, Response__ContentCase expectedResponseType) {
-    Message *message = receiveMessage(sockfd);
-    if (message == NULL) {
-        debug("Receiving response error \n");
-        return NULL;
-    }
-    if (message->content_case != MESSAGE__CONTENT_RESPONSE) {
-        message__free_unpacked(message, NULL);
-        debug("Wrong message type");
-        return NULL;
-    }
-    Response *response = message->response;
-    if (strcmp(response->error, "") != 0) {
-        printf("Server error: %s \n", response->error);
-        message__free_unpacked(message, NULL);
-        return NULL;
-    }
-    if (response->content_case != expectedResponseType) {
-        message__free_unpacked(message, NULL);
-        debug("Wrong response type");
-        return NULL;
-    }
-    return message;
-}
+static int requestQuery(int sockfd, struct AstNode *tree);
 
 static int requestTablesList(int sockfd);
 
@@ -92,62 +32,6 @@ static int requestSelectQuery(int sockfd, struct AstNode *tree);
 static int requestDeleteQuery(int sockfd, struct AstNode *tree);
 
 static int requestUpdateQuery(int sockfd, struct AstNode *tree);
-
-static size_t AstListLength(struct AstNode *list);
-
-static MsgPredicate *MsgPredicateFromTree(struct AstNode *tree);
-
-static MsgPredicateAnd *MsgPredicateAndFromTree(struct AstNode *tree);
-
-static MsgPredicateNot *MsgPredicateNotFromTree(struct AstNode *tree);
-
-static MsgPredicateOr *MsgPredicateOrFromTree(struct AstNode *tree);
-
-static MsgPredicateCompare *MsgPredicateCompareFromTree(struct AstNode *tree);
-
-static MsgTableScheme *MsgTableSchemeFromTree(struct AstNode *tree);
-
-static Request *CreateTableRequestFromTree(struct AstNode *tree);
-
-static MsgRowData *MsgRowFromTree(struct AstNode *list);
-
-static Request *InsertRequestFromTree(struct AstNode *tree);
-
-static Request *SelectRequestFromTree(struct AstNode *tree);
-
-static Request *UpdateRequestFromTree(struct AstNode *tree);
-
-static MsgColumnData *MsgColumnDataFromTree(struct AstNode *tree);
-
-static int requestQuery(int sockfd, struct AstNode *tree) {
-//    PrintAst(tree, 2);
-    struct AstNode *node = tree->data.LIST.value;
-    int err = 0;
-    switch (node->type) {
-        case N_DELETE_TABLE_QUERY:
-            err = requestDeleteTable(sockfd, node);
-            break;
-        case N_CREATE_TABLE_QUERY:
-            err = requestCreateTable(sockfd, node);
-            break;
-        case N_INSERT_QUERY:
-            err = requestInsertQuery(sockfd, node);
-            break;
-        case N_SELECT_QUERY:
-            err = requestSelectQuery(sockfd, node);
-            break;
-        case N_DELETE_QUERY:
-            err = requestDeleteQuery(sockfd, node);
-            break;
-        case N_UPDATE_QUERY:
-            err = requestUpdateQuery(sockfd, node);
-            break;
-        default:
-            debug("Unexpected query type");
-            return -1;
-    }
-    return err;
-}
 
 static void cli(int sockfd) {
     int c;
@@ -234,6 +118,82 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
 }
 
+static Message *receive(int sockfd, Response__ContentCase expectedResponseType) {
+    Message *message = receiveMessage(sockfd);
+    if (message == NULL) {
+        debug("Receiving response error \n");
+        return NULL;
+    }
+    if (message->content_case != MESSAGE__CONTENT_RESPONSE) {
+        message__free_unpacked(message, NULL);
+        debug("Wrong message type");
+        return NULL;
+    }
+    Response *response = message->response;
+    if (strcmp(response->error, "") != 0) {
+        printf("Server error: %s \n", response->error);
+        message__free_unpacked(message, NULL);
+        return NULL;
+    }
+    if (response->content_case != expectedResponseType) {
+        message__free_unpacked(message, NULL);
+        debug("Wrong response type");
+        return NULL;
+    }
+    return message;
+}
+
+static int requestQuery(int sockfd, struct AstNode *tree) {
+    struct AstNode *node = tree->data.LIST.value;
+    int err;
+    switch (node->type) {
+        case N_DELETE_TABLE_QUERY:
+            err = requestDeleteTable(sockfd, node);
+            break;
+        case N_CREATE_TABLE_QUERY:
+            err = requestCreateTable(sockfd, node);
+            break;
+        case N_INSERT_QUERY:
+            err = requestInsertQuery(sockfd, node);
+            break;
+        case N_SELECT_QUERY:
+            err = requestSelectQuery(sockfd, node);
+            break;
+        case N_DELETE_QUERY:
+            err = requestDeleteQuery(sockfd, node);
+            break;
+        case N_UPDATE_QUERY:
+            err = requestUpdateQuery(sockfd, node);
+            break;
+        default:
+            debug("Unexpected query type");
+            return -1;
+    }
+    return err;
+}
+
+static void printTable(MsgTableScheme *scheme) {
+    struct Table *table = TableNew(1 + scheme->n_columns, 2);
+    TableSet(table, 0, 0, "Column");
+    TableSet(table, 0, 1, "Type");
+    for (size_t i = 0; i < scheme->n_columns; i++) {
+        MsgColumnScheme *column = scheme->columns[i];
+        TableSet(table, i + 1, 0, column->name);
+        TableSet(table, i + 1, 1, MsgColumnTypeToStr(column->type));
+    }
+    printf("Table \"%s\" \n", scheme->name);
+    TablePrint(table, true);
+    TableFree(table);
+}
+
+static void printTables(ListTableResponse *response) {
+    for (size_t i = 0; i < response->n_tables; i++) {
+        MsgTableScheme *table = response->tables[i];
+        printTable(table);
+        printf("\n");
+    }
+}
+
 static int requestTablesList(int sockfd) {
     Request request;
     request__init(&request);
@@ -298,7 +258,7 @@ static int requestCreateTable(int sockfd, struct AstNode *tree) {
 }
 
 static int requestInsertQuery(int sockfd, struct AstNode *tree) {
-    Request *request = InsertRequestFromTree(tree);
+    Request *request = InsertQueryRequestFromTree(tree);
     int err = sendRequest(sockfd, request);
     request__free_unpacked(request, NULL);
     if (err != 0) {
@@ -341,7 +301,6 @@ static char* MsgColumnDataToStr(MsgColumnData *column) {
     }
 }
 
-// select test.int, test.str from test;
 static int receiveRows(int sockfd, MsgTableScheme *scheme) {
     size_t maxRows = 100;
     size_t curRow = 1;
@@ -429,7 +388,7 @@ static int receiveRows(int sockfd, MsgTableScheme *scheme) {
 }
 
 static int requestSelectQuery(int sockfd, struct AstNode *tree) {
-    Request *request = SelectRequestFromTree(tree);
+    Request *request = SelectQueryRequestFromTree(tree);
     int err = sendRequest(sockfd, request);
     request__free_unpacked(request, NULL);
     if (err != 0) {
@@ -447,25 +406,8 @@ static int requestSelectQuery(int sockfd, struct AstNode *tree) {
     return 0;
 }
 
-static Request *DeleteRequestFromTree(struct AstNode *tree) {
-    char *table = string_copy(tree->data.DELETE_QUERY.table);
-    MsgPredicate *where = MsgPredicateFromTree(tree->data.DELETE_QUERY.where);
-
-    DeleteRequest *delete = malloc(sizeof(DeleteRequest));
-    delete_request__init(delete);
-    delete->where = where;
-    delete->table = table;
-
-    Request *request = malloc(sizeof(Request));
-    request__init(request);
-    request->content_case = REQUEST__CONTENT_DELETE;
-    request->delete_ = delete;
-
-    return request;
-}
-
 static int requestDeleteQuery(int sockfd, struct AstNode *tree) {
-    Request *request = DeleteRequestFromTree(tree);
+    Request *request = DeleteQueryRequestFromTree(tree);
     int err = sendRequest(sockfd, request);
     request__free_unpacked(request, NULL);
     if (err != 0) {
@@ -483,45 +425,8 @@ static int requestDeleteQuery(int sockfd, struct AstNode *tree) {
     return 0;
 }
 
-static SetItem *SetItemFromTree(struct AstNode *tree, char *tableName) {
-    SetItem *item = malloc(sizeof(SetItem));
-    set_item__init(item);
-    MsgColumnReference *columnRef = malloc(sizeof(MsgColumnReference));
-    msg_column_reference__init(columnRef);
-    columnRef->column = string_copy(tree->data.UPDATE_LIST_ITEM.column);
-    columnRef->table = string_copy(tableName);
-    item->column = columnRef;
-    item->value = MsgColumnDataFromTree(tree->data.UPDATE_LIST_ITEM.value);
-    return item;
-}
-
-static Request *UpdateRequestFromTree(struct AstNode *tree) {
-    char *table = string_copy(tree->data.UPDATE_QUERY.table);
-    MsgPredicate *where = MsgPredicateFromTree(tree->data.UPDATE_QUERY.where);
-    struct AstNode *updateList = tree->data.UPDATE_QUERY.updateList;
-    size_t length = AstListLength(updateList);
-
-    UpdateRequest *update = malloc(sizeof(UpdateRequest));
-    update_request__init(update);
-    update->where = where;
-    update->table = table;
-    update->n_sets = length;
-    update->sets = malloc(sizeof(SetItem *) * length);
-    for (size_t i = 0; i < length; i++) {
-        update->sets[i] = SetItemFromTree(updateList->data.LIST.value, table);
-        updateList = updateList->data.LIST.next;
-    }
-
-    Request *request = malloc(sizeof(Request));
-    request__init(request);
-    request->content_case = REQUEST__CONTENT_UPDATE;
-    request->update = update;
-
-    return request;
-}
-
 static int requestUpdateQuery(int sockfd, struct AstNode *tree) {
-    Request *request = UpdateRequestFromTree(tree);
+    Request *request = UpdateQueryRequestFromTree(tree);
     int err = sendRequest(sockfd, request);
     request__free_unpacked(request, NULL);
     if (err != 0) {
@@ -537,339 +442,4 @@ static int requestUpdateQuery(int sockfd, struct AstNode *tree) {
     printf("UPDATED (%d) \n", response->update->count);
     message__free_unpacked(msg, NULL);
     return 0;
-}
-
-static Request *CreateTableRequestFromTree(struct AstNode *tree) {
-    MsgTableScheme *scheme = MsgTableSchemeFromTree(tree);
-
-    CreateTableRequest *createTable = malloc(sizeof(CreateTableRequest));
-    create_table_request__init(createTable);
-    createTable->scheme = scheme;
-
-    Request *request = malloc(sizeof(Request));
-    request__init(request);
-    request->content_case = REQUEST__CONTENT_CREATE_TABLE;
-    request->createtable = createTable;
-
-    return request;
-}
-
-static Request *InsertRequestFromTree(struct AstNode *tree) {
-    char *tableName = string_copy(tree->data.INSERT_QUERY.table);
-    struct AstNode *list = tree->data.INSERT_QUERY.values;
-    MsgRowData *row = MsgRowFromTree(list);
-    MsgRowData **rows = malloc(sizeof(MsgRowData *) * 1);
-    rows[0] = row;
-
-    InsertRequest *insert = malloc(sizeof(InsertRequest));
-    insert_request__init(insert);
-    insert->n_values = 1;
-    insert->table = tableName;
-    insert->values = rows;
-
-    Request *request = malloc(sizeof(Request));
-    request__init(request);
-    request->content_case = REQUEST__CONTENT_INSERT;
-    request->insert = insert;
-
-    return request;
-}
-
-static size_t AstListLength(struct AstNode *list) {
-    size_t length = 0;
-    while (list != NULL) {
-        length++;
-        list = list->data.LIST.next;
-    }
-    return length;
-}
-
-static MsgColumnType MsgColumnTypeFromTree(enum DataType type) {
-    switch (type) {
-        case TYPE_INT32:
-            return MSG_COLUMN_TYPE__INT32;
-        case TYPE_FLOAT32:
-            return MSG_COLUMN_TYPE__FLOAT32;
-        case TYPE_TEXT:
-            return MSG_COLUMN_TYPE__STRING;
-        case TYPE_BOOL:
-            return MSG_COLUMN_TYPE__BOOL;
-        default:
-            debug("Unknown tree data type");
-            assert(0);
-    }
-}
-
-static MsgColumnScheme *MsgColumnSchemeFromTree(struct AstNode *tree) {
-    MsgColumnScheme *column = malloc(sizeof(MsgColumnScheme));
-    msg_column_scheme__init(column);
-    if (column == NULL) {
-        return NULL;
-    }
-    column->name = string_copy(tree->data.COLUMN_DECL.column);
-    column->type = MsgColumnTypeFromTree(tree->data.COLUMN_DECL.type);
-    return column;
-}
-
-static MsgTableScheme *MsgTableSchemeFromTree(struct AstNode *tree) {
-    MsgTableScheme *scheme = malloc(sizeof(MsgTableScheme));
-    msg_table_scheme__init(scheme);
-    if (scheme == NULL) {
-        return NULL;
-    }
-    scheme->name = string_copy(tree->data.CREATE_TABLE_QUERY.table);
-    if (scheme->name == NULL) {
-        free(scheme);
-        return NULL;
-    }
-    struct AstNode *list = tree->data.CREATE_TABLE_QUERY.columns;
-    size_t length = AstListLength(list);
-    scheme->n_columns = length;
-    scheme->columns = malloc(sizeof(MsgColumnScheme *) * length);
-    if (scheme->columns == NULL) {
-        free(scheme->name);
-        free(scheme);
-        return NULL;
-    }
-    for (size_t i = 0; i < length; i++) {
-        scheme->columns[i] = MsgColumnSchemeFromTree(list->data.LIST.value);
-        list = list->data.LIST.next;
-    }
-    return scheme;
-}
-
-static MsgColumnData *MsgColumnFromTree(struct AstNode *tree) {
-    MsgColumnData *column = malloc(sizeof(MsgColumnData));
-    if (column == NULL) {
-        return column;
-    }
-    msg_column_data__init(column);
-    switch (tree->type) {
-        case N_INT:
-            column->i = tree->data.INT.value;
-            column->value_case = MSG_COLUMN_DATA__VALUE_I;
-            break;
-        case N_BOOL:
-            column->b = tree->data.BOOL.value;
-            column->value_case = MSG_COLUMN_DATA__VALUE_B;
-            break;
-        case N_STRING:
-            column->s = string_copy(tree->data.STRING.value);
-            column->value_case = MSG_COLUMN_DATA__VALUE_S;
-            break;
-        case N_FLOAT:
-            column->f = tree->data.FLOAT.value;
-            column->value_case = MSG_COLUMN_DATA__VALUE_F;
-            break;
-        default:
-            debug("Unexpected column type");
-            assert(0);
-    }
-    return column;
-}
-
-static MsgRowData *MsgRowFromTree(struct AstNode *list) {
-    MsgRowData *row = malloc(sizeof(MsgRowData));
-    if (row == NULL) {
-        return NULL;
-    }
-    msg_row_data__init(row);
-    size_t length = AstListLength(list);
-    row->n_columns = length;
-    row->columns = malloc(sizeof(MsgColumnData *));
-    if (row->columns == NULL) {
-        free(row);
-        return NULL;
-    }
-    for (size_t i = 0; i < length; i++) {
-        row->columns[i] = MsgColumnFromTree(list->data.LIST.value);
-        list = list->data.LIST.next;
-    }
-    return row;
-}
-
-static MsgColumnReference *MsgColumnReferenceFromTree(struct AstNode *node) {
-    assert(node->type == N_COLUMN_REFERENCE);
-    MsgColumnReference *column = malloc(sizeof(MsgColumnReference));
-    msg_column_reference__init(column);
-    column->table = string_copy(node->data.COLUMN_REFERENCE.table);
-    column->column = string_copy(node->data.COLUMN_REFERENCE.column);
-    return column;
-}
-
-static Selector *MsgSelectorFromTree(struct AstNode *list) {
-    if (list == NULL) {
-        return NULL;
-    }
-    Selector *selector = malloc(sizeof(Selector));
-    selector__init(selector);
-    size_t length = AstListLength(list);
-    selector->n_columns = length;
-    selector->columns = malloc(sizeof(MsgColumnReference *) * length);
-    for (size_t i = 0; i < length; i++) {
-        selector->columns[i] = MsgColumnReferenceFromTree(list->data.LIST.value);
-        list = list->data.LIST.next;
-    }
-    return selector;
-}
-
-static MsgColumnData *MsgColumnDataFromTree(struct AstNode *tree) {
-    MsgColumnData *data = malloc(sizeof(MsgColumnData));
-    msg_column_data__init(data);
-    switch (tree->type) {
-        case N_INT:
-            data->value_case = MSG_COLUMN_DATA__VALUE_I;
-            data->i = tree->data.INT.value;
-            break;
-        case N_BOOL:
-            data->value_case = MSG_COLUMN_DATA__VALUE_B;
-            data->b = tree->data.BOOL.value;
-            break;
-        case N_STRING:
-            data->value_case = MSG_COLUMN_DATA__VALUE_S;
-            data->s = string_copy(tree->data.STRING.value);
-            break;
-        case N_FLOAT:
-            data->value_case = MSG_COLUMN_DATA__VALUE_F;
-            data->f = tree->data.FLOAT.value;
-            break;
-        default:
-            debug("Unexpected node type");
-            assert(0);
-    }
-    return data;
-}
-
-static MsgPredicateOperand *MsgPredicateOperandFromTree(struct AstNode *tree) {
-    MsgPredicateOperand *operand = malloc(sizeof(MsgPredicateOperand));
-    msg_predicate_operand__init(operand);
-    if (tree->type == N_COLUMN_REFERENCE) {
-        operand->content_case = MSG_PREDICATE_OPERAND__CONTENT_COLUMN;
-        operand->column = MsgColumnReferenceFromTree(tree);
-    } else {
-        operand->content_case = MSG_PREDICATE_OPERAND__CONTENT_LITERAL;
-        operand->literal = MsgColumnDataFromTree(tree);
-    }
-    return operand;
-}
-
-static MsgPredicateCompareType MsgPredicateCompareTypeFromTree(enum CompareType type) {
-    switch (type) {
-        case CMP_LE:
-            return MSG_PREDICATE_COMPARE_TYPE__CMP_LE;
-        case CMP_GE:
-            return MSG_PREDICATE_COMPARE_TYPE__CMP_GE;
-        case CMP_LS:
-            return MSG_PREDICATE_COMPARE_TYPE__CMP_LS;
-        case CMP_GR:
-            return MSG_PREDICATE_COMPARE_TYPE__CMP_GR;
-        case CMP_EQ:
-            return MSG_PREDICATE_COMPARE_TYPE__CMP_EQ;
-        case CMP_NQ:
-            return MSG_PREDICATE_COMPARE_TYPE__CMP_NQ;
-        default:
-            debug("Unknown compare type");
-            assert(0);
-    }
-}
-
-static MsgPredicateAnd *MsgPredicateAndFromTree(struct AstNode *tree) {
-    MsgPredicateAnd *predicateAnd = malloc(sizeof(MsgPredicateAnd));
-    msg_predicate_and__init(predicateAnd);
-    predicateAnd->first = MsgPredicateFromTree(tree->data.CONDITION.first);
-    predicateAnd->second = MsgPredicateFromTree(tree->data.CONDITION.second);
-    return predicateAnd;
-}
-
-static MsgPredicateNot *MsgPredicateNotFromTree(struct AstNode *tree) {
-    MsgPredicateNot *predicateNot = malloc(sizeof(MsgPredicateNot));
-    msg_predicate_not__init(predicateNot);
-    predicateNot->first = MsgPredicateFromTree(tree->data.CONDITION.first);
-    return predicateNot;
-}
-
-static MsgPredicateOr *MsgPredicateOrFromTree(struct AstNode *tree) {
-    MsgPredicateOr *predicateOr = malloc(sizeof(MsgPredicateOr));
-    msg_predicate_or__init(predicateOr);
-    predicateOr->first = MsgPredicateFromTree(tree->data.CONDITION.first);
-    predicateOr->second = MsgPredicateFromTree(tree->data.CONDITION.second);
-    return predicateOr;
-}
-
-static MsgPredicateCompare *MsgPredicateCompareFromTree(struct AstNode *tree) {
-    struct AstNode *compare = tree->data.CONDITION.first;
-    assert(compare->type == N_COMPARE);
-    MsgPredicateCompare *predicateCmp = malloc(sizeof(MsgPredicateCompare));
-    msg_predicate_compare__init(predicateCmp);
-    predicateCmp->type = MsgPredicateCompareTypeFromTree(compare->data.COMPARE.type);
-    predicateCmp->left = MsgPredicateOperandFromTree(compare->data.COMPARE.left);
-    predicateCmp->right = MsgPredicateOperandFromTree(compare->data.COMPARE.right);
-    return predicateCmp;
-}
-
-static MsgPredicate *MsgPredicateFromTree(struct AstNode *tree) {
-    if (tree == NULL) {
-        return NULL;
-    }
-    MsgPredicate *predicate = malloc(sizeof(MsgPredicate));
-    msg_predicate__init(predicate);
-    switch (tree->data.CONDITION.type) {
-        case COND_CMP:
-            predicate->content_case = MSG_PREDICATE__CONTENT_COMPARE;
-            predicate->compare = MsgPredicateCompareFromTree(tree);
-            break;
-        case COND_NOT:
-            predicate->content_case = MSG_PREDICATE__CONTENT_NOT;
-            predicate->not_ = MsgPredicateNotFromTree(tree);
-            break;
-        case COND_AND:
-            predicate->content_case = MSG_PREDICATE__CONTENT_AND;
-            predicate->and_ = MsgPredicateAndFromTree(tree);
-            break;
-        case COND_OR:
-            predicate->content_case = MSG_PREDICATE__CONTENT_OR;
-            predicate->or_ = MsgPredicateOrFromTree(tree);
-            break;
-        default:
-            debug("Unknown condition type");
-            assert(0);
-    }
-    return predicate;
-}
-
-static JoinCondition *JoinConditionFromTree(struct AstNode *tree) {
-    JoinCondition *joinCondition = malloc(sizeof(JoinCondition));
-    join_condition__init(joinCondition);
-    joinCondition->left = MsgColumnReferenceFromTree(tree->data.JOIN.left);
-    joinCondition->right = MsgColumnReferenceFromTree(tree->data.JOIN.right);
-    return joinCondition;
-}
-
-static Request *SelectRequestFromTree(struct AstNode *tree) {
-    SelectRequest *select = malloc(sizeof(SelectRequest));
-    select_request__init(select);
-
-    char *table = string_copy(tree->data.SELECT_QUERY.table);
-    Selector *selector = MsgSelectorFromTree(tree->data.SELECT_QUERY.selector);
-    MsgPredicate *where = MsgPredicateFromTree(tree->data.SELECT_QUERY.where);
-
-    select->where = where;
-    select->selector = selector;
-    select->table = table;
-
-    struct AstNode *joinList = tree->data.SELECT_QUERY.join;
-    size_t joinListLength = AstListLength(joinList);
-    select->n_joins = joinListLength;
-    select->joins = malloc(sizeof(JoinCondition *) * joinListLength);
-    for (size_t i = 0; i < joinListLength; i++) {
-        select->joins[i] = JoinConditionFromTree(joinList->data.LIST.value);
-        joinList = joinList->data.LIST.next;
-    }
-
-    Request *request = malloc(sizeof(Request));
-    request__init(request);
-    request->content_case = REQUEST__CONTENT_SELECT;
-    request->select = select;
-
-    return request;
 }

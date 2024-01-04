@@ -26,8 +26,8 @@ set(SANITIZERS
         -fsanitize=undefined
         -fsanitize-address-use-after-scope
 )
-#add_compile_options(${SANITIZERS})
-#add_link_options(${SANITIZERS})
+add_compile_options(${SANITIZERS})
+add_link_options(${SANITIZERS})
 
 add_subdirectory(util/)
 add_subdirectory(core/)
