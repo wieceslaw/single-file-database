@@ -8,13 +8,13 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <string.h>
-#include <signal.h>
 
 #include "network.h"
 #include "DynamicBuffer.h"
 #include "ast.h"
 #include "defines.h"
 #include "util_string.h"
+#include "Table.h"
 
 static char *MsgColumnTypeToStr(MsgColumnType type) {
     switch (type) {
@@ -32,16 +32,18 @@ static char *MsgColumnTypeToStr(MsgColumnType type) {
     }
 }
 
-static void printTable(MsgTableScheme *table) {
-    printf("Table \"%s\" \n", table->name);
-    printf("-------------\n");
-    printf("Column | Type \n");
-    printf("-------------\n");
-    for (size_t i = 0; i < table->n_columns; i++) {
-        MsgColumnScheme *column = table->columns[i];
-        printf("%s | %s \n", column->name, MsgColumnTypeToStr(column->type));
+static void printTable(MsgTableScheme *scheme) {
+    struct Table *table = TableNew(1 + scheme->n_columns, 2);
+    TableSet(table, 0, 0, "Column");
+    TableSet(table, 0, 1, "Type");
+    for (size_t i = 0; i < scheme->n_columns; i++) {
+        MsgColumnScheme *column = scheme->columns[i];
+        TableSet(table, i + 1, 0, column->name);
+        TableSet(table, i + 1, 1, MsgColumnTypeToStr(column->type));
     }
-    printf("-------------\n");
+    printf("Table \"%s\" \n", scheme->name);
+    TablePrint(table, true);
+    TableFree(table);
 }
 
 static void printTables(ListTableResponse *response) {
@@ -83,11 +85,15 @@ static int requestDeleteTable(int sockfd, struct AstNode *tree);
 
 static int requestCreateTable(int sockfd, struct AstNode *tree);
 
-static int requestInsert(int sockfd, struct AstNode *tree);
+static int requestInsertQuery(int sockfd, struct AstNode *tree);
 
-static int requestSelect(int sockfd, struct AstNode *tree);
+static int requestSelectQuery(int sockfd, struct AstNode *tree);
 
-static int requestDelete(int sockfd, struct AstNode *tree);
+static int requestDeleteQuery(int sockfd, struct AstNode *tree);
+
+static int requestUpdateQuery(int sockfd, struct AstNode *tree);
+
+static size_t AstListLength(struct AstNode *list);
 
 static MsgPredicate *MsgPredicateFromTree(struct AstNode *tree);
 
@@ -109,8 +115,12 @@ static Request *InsertRequestFromTree(struct AstNode *tree);
 
 static Request *SelectRequestFromTree(struct AstNode *tree);
 
+static Request *UpdateRequestFromTree(struct AstNode *tree);
+
+static MsgColumnData *MsgColumnDataFromTree(struct AstNode *tree);
+
 static int requestQuery(int sockfd, struct AstNode *tree) {
-    PrintAst(tree, 2);
+//    PrintAst(tree, 2);
     struct AstNode *node = tree->data.LIST.value;
     int err = 0;
     switch (node->type) {
@@ -121,15 +131,16 @@ static int requestQuery(int sockfd, struct AstNode *tree) {
             err = requestCreateTable(sockfd, node);
             break;
         case N_INSERT_QUERY:
-            err = requestInsert(sockfd, node);
+            err = requestInsertQuery(sockfd, node);
             break;
         case N_SELECT_QUERY:
-            err = requestSelect(sockfd, node);
+            err = requestSelectQuery(sockfd, node);
             break;
         case N_DELETE_QUERY:
-            err = requestDelete(sockfd, node);
+            err = requestDeleteQuery(sockfd, node);
             break;
         case N_UPDATE_QUERY:
+            err = requestUpdateQuery(sockfd, node);
             break;
         default:
             debug("Unexpected query type");
@@ -232,7 +243,7 @@ static int requestTablesList(int sockfd) {
     tablesList.max = 128;
     request.tableslist = &tablesList;
     sendRequest(sockfd, &request);
-    printf("List of relations \n");
+    printf("List of relations \n\n");
     Message *msg = receive(sockfd, RESPONSE__CONTENT_TABLE_LIST);
     if (msg == NULL) {
         debug("Response error");
@@ -286,7 +297,7 @@ static int requestCreateTable(int sockfd, struct AstNode *tree) {
     return 0;
 }
 
-static int requestInsert(int sockfd, struct AstNode *tree) {
+static int requestInsertQuery(int sockfd, struct AstNode *tree) {
     Request *request = InsertRequestFromTree(tree);
     int err = sendRequest(sockfd, request);
     request__free_unpacked(request, NULL);
@@ -306,65 +317,118 @@ static int requestInsert(int sockfd, struct AstNode *tree) {
     return 0;
 }
 
-static void printRow(MsgRowData *row) {
-    for (size_t i = 0; i < row->n_columns; i++) {
-        MsgColumnData *column = row->columns[i];
-        switch (column->value_case) {
-            case MSG_COLUMN_DATA__VALUE_I:
-                printf("%d", column->i);
-                break;
-            case MSG_COLUMN_DATA__VALUE_F:
-                printf("%f", column->f);
-                break;
-            case MSG_COLUMN_DATA__VALUE_S:
-                printf("%s", column->s);
-                break;
-            case MSG_COLUMN_DATA__VALUE_B:
-                printf("%d", column->b);
-                break;
-            default:
-                debug("Unknown column type");
-                assert(0);
+static char* MsgColumnDataToStr(MsgColumnData *column) {
+    switch (column->value_case) {
+        case MSG_COLUMN_DATA__VALUE_I: {
+            char str[128];
+            sprintf(str, "%d", column->i);
+            return string_copy(str);
         }
-        printf(" | ");
+        case MSG_COLUMN_DATA__VALUE_F: {
+            char str[128];
+            sprintf(str, "%f", column->f);
+            return string_copy(str);
+        }
+        case MSG_COLUMN_DATA__VALUE_S:
+            return string_copy(column->s);
+        case MSG_COLUMN_DATA__VALUE_B: {
+            char* str = column->b ? "true" : "false";
+            return string_copy(str);
+        }
+        default:
+            debug("Unknown column type");
+            assert(0);
     }
-    printf("\n");
 }
 
-static int receiveRows(int sockfd) {
+// select test.int, test.str from test;
+static int receiveRows(int sockfd, MsgTableScheme *scheme) {
+    size_t maxRows = 100;
+    size_t curRow = 1;
+    bool headerIsPrinted = false;
+    struct Table *table = TableNew(maxRows, scheme->n_columns);
+    for (size_t i = 0; i < table->ncols; i++) {
+        TableSet(table, 0, i, scheme->columns[i]->name);
+    }
+    int res = 0;
     while (1) {
         Message *message = receiveMessage(sockfd);
         if (message == NULL) {
             debug("Receiving response error \n");
-            return -1;
+            res = -1;
+            break;
         }
         if (message->content_case != MESSAGE__CONTENT_RESPONSE) {
             message__free_unpacked(message, NULL);
             debug("Wrong message type");
-            return -1;
+            res = -1;
+            break;
         }
         Response *response = message->response;
         if (strcmp(response->error, "") != 0) {
             printf("Server error: %s \n", response->error);
             message__free_unpacked(message, NULL);
-            return -1;
+            res = -1;
+            break;
         }
         if (response->content_case != RESPONSE__CONTENT_BATCH &&
             response->content_case != RESPONSE__CONTENT_BATCH_END) {
             message__free_unpacked(message, NULL);
             debug("Wrong response type");
-            return -1;
+            res = -1;
+            break;
         }
         if (response->content_case == RESPONSE__CONTENT_BATCH_END) {
+            for (size_t row = 0; row < curRow; row++) {
+                if (!headerIsPrinted && row == 0) {
+                    TablePrintBar(table);
+                    printf("\n");
+                    TablePrintRow(table, row);
+                    printf("\n");
+                    TablePrintInterBar(table);
+                    printf("\n");
+                    headerIsPrinted = true;
+                } else {
+                    TablePrintRow(table, row);
+                    printf("\n");
+                }
+            }
+            TablePrintBar(table);
+            printf("\n");
             printf("ROWS (%d) \n", response->batchend->count);
-            return 0;
+            break;
         }
-        printRow(response->batch->data);
+        if (curRow == maxRows) {
+            for (size_t row = 0; row < curRow; row++) {
+                if (!headerIsPrinted && row == 0) {
+                    TablePrintBar(table);
+                    printf("\n");
+                    TablePrintRow(table, row);
+                    printf("\n");
+                    TablePrintInterBar(table);
+                    printf("\n");
+                    headerIsPrinted = true;
+                } else {
+                    TablePrintRow(table, row);
+                    printf("\n");
+                }
+            }
+            curRow = 0;
+        }
+        for (size_t col = 0; col < table->ncols; col++) {
+            MsgRowData *row = response->batch->data;
+            char* str = MsgColumnDataToStr(row->columns[col]);
+            TableSet(table, curRow, col, str);
+            free(str);
+        }
+        curRow++;
         message__free_unpacked(message, NULL);
     }
+    TableFree(table);
+    return res;
 }
 
-static int requestSelect(int sockfd, struct AstNode *tree) {
+static int requestSelectQuery(int sockfd, struct AstNode *tree) {
     Request *request = SelectRequestFromTree(tree);
     int err = sendRequest(sockfd, request);
     request__free_unpacked(request, NULL);
@@ -378,10 +442,8 @@ static int requestSelect(int sockfd, struct AstNode *tree) {
         debug("Response error");
         return -1;
     }
-    printTable(msg->response->select->scheme);
+    receiveRows(sockfd, msg->response->select->scheme);
     message__free_unpacked(msg, NULL);
-
-    receiveRows(sockfd);
     return 0;
 }
 
@@ -402,22 +464,77 @@ static Request *DeleteRequestFromTree(struct AstNode *tree) {
     return request;
 }
 
-static int requestDelete(int sockfd, struct AstNode *tree) {
+static int requestDeleteQuery(int sockfd, struct AstNode *tree) {
     Request *request = DeleteRequestFromTree(tree);
     int err = sendRequest(sockfd, request);
     request__free_unpacked(request, NULL);
     if (err != 0) {
-        debug("error sending request");
+        debug("Request error");
         return -1;
     }
-
     Message *msg = receive(sockfd, RESPONSE__CONTENT_DELETE);
     if (msg == NULL) {
         debug("Response error");
         return -1;
     }
     Response *response = msg->response;
-    printf("ROWS (%d) \n", response->delete_->count);
+    printf("DELETED (%d) \n", response->delete_->count);
+    message__free_unpacked(msg, NULL);
+    return 0;
+}
+
+static SetItem *SetItemFromTree(struct AstNode *tree, char *tableName) {
+    SetItem *item = malloc(sizeof(SetItem));
+    set_item__init(item);
+    MsgColumnReference *columnRef = malloc(sizeof(MsgColumnReference));
+    msg_column_reference__init(columnRef);
+    columnRef->column = string_copy(tree->data.UPDATE_LIST_ITEM.column);
+    columnRef->table = string_copy(tableName);
+    item->column = columnRef;
+    item->value = MsgColumnDataFromTree(tree->data.UPDATE_LIST_ITEM.value);
+    return item;
+}
+
+static Request *UpdateRequestFromTree(struct AstNode *tree) {
+    char *table = string_copy(tree->data.UPDATE_QUERY.table);
+    MsgPredicate *where = MsgPredicateFromTree(tree->data.UPDATE_QUERY.where);
+    struct AstNode *updateList = tree->data.UPDATE_QUERY.updateList;
+    size_t length = AstListLength(updateList);
+
+    UpdateRequest *update = malloc(sizeof(UpdateRequest));
+    update_request__init(update);
+    update->where = where;
+    update->table = table;
+    update->n_sets = length;
+    update->sets = malloc(sizeof(SetItem *) * length);
+    for (size_t i = 0; i < length; i++) {
+        update->sets[i] = SetItemFromTree(updateList->data.LIST.value, table);
+        updateList = updateList->data.LIST.next;
+    }
+
+    Request *request = malloc(sizeof(Request));
+    request__init(request);
+    request->content_case = REQUEST__CONTENT_UPDATE;
+    request->update = update;
+
+    return request;
+}
+
+static int requestUpdateQuery(int sockfd, struct AstNode *tree) {
+    Request *request = UpdateRequestFromTree(tree);
+    int err = sendRequest(sockfd, request);
+    request__free_unpacked(request, NULL);
+    if (err != 0) {
+        debug("Request error");
+        return -1;
+    }
+    Message *msg = receive(sockfd, RESPONSE__CONTENT_UPDATE);
+    if (msg == NULL) {
+        debug("Response error");
+        return -1;
+    }
+    Response *response = msg->response;
+    printf("UPDATED (%d) \n", response->update->count);
     message__free_unpacked(msg, NULL);
     return 0;
 }
@@ -596,7 +713,7 @@ static Selector *MsgSelectorFromTree(struct AstNode *list) {
     return selector;
 }
 
-static MsgColumnData *MsgLiteralFromTree(struct AstNode *tree) {
+static MsgColumnData *MsgColumnDataFromTree(struct AstNode *tree) {
     MsgColumnData *data = malloc(sizeof(MsgColumnData));
     msg_column_data__init(data);
     switch (tree->type) {
@@ -631,7 +748,7 @@ static MsgPredicateOperand *MsgPredicateOperandFromTree(struct AstNode *tree) {
         operand->column = MsgColumnReferenceFromTree(tree);
     } else {
         operand->content_case = MSG_PREDICATE_OPERAND__CONTENT_LITERAL;
-        operand->literal = MsgLiteralFromTree(tree);
+        operand->literal = MsgColumnDataFromTree(tree);
     }
     return operand;
 }

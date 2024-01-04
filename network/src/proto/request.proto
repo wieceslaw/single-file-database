@@ -40,7 +40,12 @@ message DeleteRequest {
 message UpdateRequest {
   string table = 1;
   MsgPredicate where = 2;
-  // updates
+  repeated SetItem sets = 3;
+}
+
+message SetItem {
+  MsgColumnReference column = 1;
+  MsgColumnData value = 2;
 }
 
 message SelectRequest {

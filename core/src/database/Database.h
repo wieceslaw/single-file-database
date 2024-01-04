@@ -48,9 +48,6 @@ where_condition *where_condition_translate(where_condition *condition, indexed_m
 int DatabaseFree(Database database);
 
 /// THROWS: [DATABASE_INTERNAL_ERROR, DATABASE_QUERY_EXCEPTION]
-void DatabaseUpdateQuery(Database database, query_t query, updater_builder_t updater);
-
-/// THROWS: [DATABASE_INTERNAL_ERROR, DATABASE_QUERY_EXCEPTION]
 ResultView DatabaseSelectQuery(Database database, query_t query, SelectorBuilder selector);
 
 
@@ -67,5 +64,7 @@ DatabaseResult DatabaseDeleteTable(Database database, char *tableName);
 DatabaseResult DatabaseInsertQuery(Database database, char *tableName, RowBatch batch);
 
 DatabaseResult DatabaseDeleteQuery(Database database, query_t query, int *result);
+
+DatabaseResult DatabaseUpdateQuery(Database database, query_t query, updater_builder_t updater, int* result);
 
 #endif //LLP_LAB1_DATABASE_H

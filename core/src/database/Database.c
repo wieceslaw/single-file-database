@@ -400,12 +400,14 @@ DatabaseResult DatabaseDeleteQuery(Database database, query_t query, int *result
     return res;
 }
 
-void DatabaseUpdateQuery(Database database, query_t query, updater_builder_t updater) {
+DatabaseResult DatabaseUpdateQuery(Database database, query_t query, updater_builder_t updater, int* result) {
     assert(database != NULL);
     indexed_maps maps = {0};
     Cursor cur = NULL;
     str_int_map_t map = NULL;
     updater_builder_t translated_updater = NULL;
+    DatabaseResult res = DB_OK;
+    int count = 0;
     TRY({
         maps = query_mapping(database, query);
         cur = query_cursor(database, query, maps);
@@ -414,17 +416,20 @@ void DatabaseUpdateQuery(Database database, query_t query, updater_builder_t upd
         while (!CursorIsEmpty(cur)) {
             CursorUpdateRow(cur, 0, translated_updater);
             CursorNext(cur);
+            count++;
         }
         CursorFlush(cur);
-        CursorFree(&cur);
     }) CATCH(exception == DATABASE_TRANSLATION_EXCEPTION, {
-        RAISE(DATABASE_QUERY_EXCEPTION);
+        res = DB_INVALID_QUERY;
     }) CATCH (exception >= EXCEPTION, {
-        RAISE(DATABASE_INTERNAL_ERROR);
+        res = DB_ERR;
     }) FINALLY({
+        CursorFree(&cur);
         indexed_maps_free(maps);
         updater_builder_free(&translated_updater);
     })
+    *result = count;
+    return res;
 }
 
 static table_scheme *create_view_scheme(Database database, SelectorBuilder selector, indexed_maps maps) {
@@ -438,9 +443,15 @@ static table_scheme *create_view_scheme(Database database, SelectorBuilder selec
         column_description indexed_description = indexed_maps_translate(maps, *description);
         table_scheme *scheme = DatabaseFindTableScheme(database, description->name.table_name);
         table_scheme_column column = scheme->columns[indexed_description.index.column_idx];
-        if (SchemeBuilderAddColumn(view_scheme_builder, column.name, column.type) != 0) {
+        char *label = malloc(sizeof(char) * (2 + strlen(scheme->name) + strlen(column.name)));
+        label[0] = '\0';
+        strcat(label, scheme->name);
+        strcat(label, ".");
+        strcat(label, column.name);
+        if (SchemeBuilderAddColumn(view_scheme_builder, label, column.type) != 0) {
             RAISE(MALLOC_EXCEPTION);
         }
+        free(label);
         table_scheme_free(scheme);
     })
     table_scheme *result = SchemeBuilderBuild(view_scheme_builder);

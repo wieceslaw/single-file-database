@@ -5,12 +5,13 @@
 #include <assert.h>
 #include "updater_builder.h"
 #include "exceptions/exceptions.h"
+#include "util_string.h"
 
 /// THROWS: [MALLOC_EXCEPTION]
 column_updater *column_updater_of(char* target, Column new_value) {
     column_updater *updater = rmalloc(sizeof(column_updater));
-    updater->new_value = new_value;
-    updater->target.name = target;
+    updater->new_value = ColumnCopy(new_value);
+    updater->target.name = string_copy(target);
     updater->translated = false;
     return updater;
 }
@@ -22,13 +23,21 @@ updater_builder_t updater_builder_init(void) {
     return updater;
 }
 
+static void column_updater_free(column_updater *updater) {
+    ColumnFree(updater->new_value);
+    if (!updater->translated) {
+        free(updater->target.name);
+    }
+    free(updater);
+}
+
 void updater_builder_free(updater_builder_t* updater_ptr) {
     assert(updater_ptr != NULL);
     updater_builder_t updater = *updater_ptr;
     if (NULL == updater) {
         return;
     }
-    ListApply(updater->column_updaters, free);
+    ListApply(updater->column_updaters, (Applier) column_updater_free);
     ListFree(updater->column_updaters);
     updater->column_updaters = NULL;
     free(updater);
@@ -68,7 +77,7 @@ updater_builder_t updater_builder_translate(updater_builder_t old_updater, str_i
             RAISE(DATABASE_TRANSLATION_EXCEPTION);
         }
         column_updater *updater = rmalloc(sizeof(column_updater));
-        updater->new_value = col_upd->new_value;
+        updater->new_value = ColumnCopy(col_upd->new_value);
         updater->target.idx = *idx;
         free(idx);
         updater->translated = true;

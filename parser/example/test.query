@@ -19,4 +19,8 @@ UPDATE user
     SET account = 100.0, is_banned = FALSE
     WHERE user.account = 0.0 AND user.is_banned = TRUE;
 
+update test
+    set str = 'Updated'
+    where test.int = 1;
+
 DELETE TABLE user;

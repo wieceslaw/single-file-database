@@ -52,6 +52,8 @@ static MsgRowData *RowToMsg(Row row);
 
 static MsgColumnData *ColumnToMsg(Column column);
 
+static Response *UpdateResponseNew(void);
+
 static int handle(struct Connection *connection) {
     while (connection->sockfd) {
         Message *message = receiveMessage(connection->sockfd);
@@ -572,13 +574,58 @@ ConnectionHandleDelete(struct Connection *connection, struct DatabaseWrapper *wr
     return err;
 }
 
+static Response *UpdateResponseNew(void) {
+    UpdateResponse *update = malloc(sizeof(UpdateResponse));
+    update_response__init(update);
+
+    Response *response = malloc(sizeof(Response));
+    response__init(response);
+    response->content_case = RESPONSE__CONTENT_UPDATE;
+    response->update = update;
+
+    return response;
+}
+
+static updater_builder_t UpdaterFromMsg(UpdateRequest *request) {
+    updater_builder_t updater = updater_builder_init();
+    for (size_t i = 0; i < request->n_sets; i++) {
+        Column column;
+        ColumnFromMsg(request->sets[i]->value, &column);
+        updater_builder_add(updater,  column_updater_of(
+                request->sets[i]->column->column,
+                column
+        ));
+        ColumnFree(column);
+    }
+    return updater;
+}
+
 static int
 ConnectionHandleUpdate(struct Connection *connection, struct DatabaseWrapper *wrapper, UpdateRequest *request) {
-    (void) (connection);
-    (void) (wrapper);
-    (void) (request);
-    // TODO: Implement
-    return -1;
+    assert(connection != NULL && wrapper != NULL && request != NULL);
+    where_condition *where = WhereFromMsg(request->where);
+    query_t query = {.table = request->table, .where = where, .joins = NULL};
+    int count;
+    updater_builder_t updater = UpdaterFromMsg(request);
+    DatabaseResult result = DatabaseUpdateQuery(wrapper->db, query, updater, &count);
+    where_condition_free(where);
+    updater_builder_free(&updater);
+
+    if (result != DB_OK) {
+        switch (result) {
+            case DB_INVALID_QUERY:
+                sendError(connection->sockfd, ERR__INVALID_QUERY);
+                return 0;
+            default:
+                sendError(connection->sockfd, ERR__INTERNAL_ERROR);
+                return -1;
+        }
+    }
+    Response *response = UpdateResponseNew();
+    response->update->count = count;
+    int err = sendResponse(connection->sockfd, response);;
+    response__free_unpacked(response, NULL);
+    return err;
 }
 
 MsgTableScheme *TableSchemeToMsg(table_scheme *scheme) {
