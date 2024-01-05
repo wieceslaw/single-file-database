@@ -72,7 +72,6 @@ pool_t *pool_init(allocator_t *allocator, offset_t pool_offset) {
     for (int i = 0; i < POOL_SIZE; i++) {
         heap_t *heap = heap_init(pool->page, heap_size() * i, pool->allocator);
         if (heap == NULL) {
-            // TODO: Free all heaps before
             free(pool);
             return NULL;
         }

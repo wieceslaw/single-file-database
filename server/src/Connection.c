@@ -54,6 +54,18 @@ static MsgColumnData *ColumnToMsg(Column column);
 
 static Response *UpdateResponseNew(void);
 
+int ConnectionSendResponse(struct Connection *connection, Response* response) {
+    return sendResponse(connection->sockfd, response);
+}
+
+int ConnectionSendError(struct Connection *connection, char* message) {
+    Response response;
+    response__init(&response);
+    response.content_case = RESPONSE__CONTENT_INSERT;
+    response.error = message;
+    return ConnectionSendResponse(connection, &response);
+}
+
 static int handle(struct Connection *connection) {
     while (connection->sockfd) {
         Message *message = receiveMessage(connection->sockfd);
@@ -148,7 +160,9 @@ void ConnectionFree(struct Connection *connection) {
     if (connection == NULL) {
         return;
     }
+    pthread_mutex_lock(&connection->server->databaseWrapper->lock);
     close(connection->sockfd);
+    pthread_mutex_unlock(&connection->server->databaseWrapper->lock);
     pthread_mutex_lock(&connection->server->lock);
     ListIteratorDeleteNode(connection->node);
     pthread_mutex_unlock(&connection->server->lock);
@@ -160,33 +174,34 @@ int ConnectionStop(struct Connection *connection) {
     return pthread_cancel(connection->thread);
 }
 
+static Response *ListTablesResponseNew(void) {
+    ListTableResponse *listTable = malloc(sizeof(ListTableResponse));
+    list_table_response__init(listTable);
+    Response *response = malloc(sizeof(Response));
+    response__init(response);
+    response->content_case = RESPONSE__CONTENT_TABLE_LIST;
+    response->tablelist = listTable;
+    return response;
+}
+
 static int
 ConnectionHandleListTables(struct Connection *connection, struct DatabaseWrapper *wrapper, ListTableRequest *request) {
     assert(connection != NULL && request != NULL);
-    ListTableResponse result;
-    list_table_response__init(&result);
-    Response response;
-    response__init(&response);
-    response.content_case = RESPONSE__CONTENT_TABLE_LIST;
-    response.tablelist = &result;
     StrTableSchemeMap tables = DatabaseGetTablesSchemes(wrapper->db);
     size_t count = MAP_SIZE(tables);
-    result.n_tables = count;
-    result.tables = malloc(sizeof(MsgTableScheme *) * count);
-    if (result.tables == NULL) {
-        response.error = ERR__INTERNAL_ERROR;
-        sendResponse(connection->sockfd, &response);
-        return -1;
-    }
+    Response *response = ListTablesResponseNew();
+    ListTableResponse *listTables = response->tablelist;
+    listTables->n_tables = count;
+    listTables->tables = malloc(sizeof(MsgTableScheme *) * count);
     int i = 0;
     FOR_MAP(tables, entry, {
-        result.tables[i] = TableSchemeToMsg(entry->val);
+        listTables->tables[i] = TableSchemeToMsg(entry->val);
         free(entry->key);
         table_scheme_free(entry->val);
         i++;
     })
-    int err = sendResponse(connection->sockfd, &response);
-    // TODO: free result.tables
+    int err = ConnectionSendResponse(connection, response);
+    response__free_unpacked(response, NULL);
     return err;
 }
 
@@ -208,17 +223,17 @@ static int ConnectionHandleCreateTable(struct Connection *connection, struct Dat
     DatabaseResult res = DatabaseCreateTable(wrapper->db, scheme);
     SchemeBuilderFree(scheme);
     if (res != DB_OK) {
+        int err;
         switch (res) {
             case DB_TABLE_EXISTS: {
-                response.error = ERR__TABLE_ALREADY_EXISTS;
+                err = ConnectionSendError(connection, ERR__TABLE_ALREADY_EXISTS);
                 break;
             }
             default: {
-                response.error = ERR__INTERNAL_ERROR;
+                err = ConnectionSendError(connection, ERR__INTERNAL_ERROR);
                 break;
             }
         }
-        int err = sendResponse(connection->sockfd, &response);
         if (res == DB_ERR) {
             err = -1;
         }
@@ -479,14 +494,6 @@ static int sendRow(int sockfd, Row row) {
     return err;
 }
 
-static int sendError(int sockfd, char* message) {
-    Response response;
-    response__init(&response);
-    response.content_case = RESPONSE__CONTENT_INSERT;
-    response.error = message;
-    return sendResponse(sockfd, &response);
-}
-
 static int sendBatchEnd(int sockfd, int count) {
     RowBatchEndResponse batchEnd;
     row_batch_end_response__init(&batchEnd);
@@ -510,7 +517,7 @@ ConnectionHandleSelect(struct Connection *connection, struct DatabaseWrapper *wr
         where_condition_free(where);
         JoinBuilderFree(join);
         SelectorBuilderFree(selector);
-        return sendError(connection->sockfd, ERR__INVALID_REQUEST);
+        return ConnectionSendError(connection, ERR__INVALID_REQUEST);
     }
     Response *response = SelectResponseNew();
     response->select->scheme = TableSchemeToMsg(ResultViewGetScheme(view));
@@ -560,10 +567,10 @@ ConnectionHandleDelete(struct Connection *connection, struct DatabaseWrapper *wr
     if (result != DB_OK) {
         switch (result) {
             case DB_INVALID_QUERY:
-                sendError(connection->sockfd, ERR__INVALID_QUERY);
+                ConnectionSendError(connection, ERR__INVALID_QUERY);
                 return 0;
             default:
-                sendError(connection->sockfd, ERR__INTERNAL_ERROR);
+                ConnectionSendError(connection, ERR__INTERNAL_ERROR);
                 return -1;
         }
     }
@@ -614,10 +621,10 @@ ConnectionHandleUpdate(struct Connection *connection, struct DatabaseWrapper *wr
     if (result != DB_OK) {
         switch (result) {
             case DB_INVALID_QUERY:
-                sendError(connection->sockfd, ERR__INVALID_QUERY);
+                ConnectionSendError(connection, ERR__INVALID_QUERY);
                 return 0;
             default:
-                sendError(connection->sockfd, ERR__INTERNAL_ERROR);
+                ConnectionSendError(connection, ERR__INTERNAL_ERROR);
                 return -1;
         }
     }

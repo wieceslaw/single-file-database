@@ -24,4 +24,8 @@ int ConnectionStart(struct Connection *connection);
 
 int ConnectionStop(struct Connection *connection);
 
+int ConnectionSendResponse(struct Connection *connection, Response* response);
+
+int ConnectionSendError(struct Connection *connection, char* message);
+
 #endif //SINGLE_FILE_DATABASE_CONNECTION_H

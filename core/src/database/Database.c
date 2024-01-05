@@ -518,19 +518,6 @@ static operand column_operand_translate(operand op, indexed_maps maps) {
     }
 }
 
-static ColumnType operand_type(operand op) {
-    if (op.type == OPERAND_VALUE_LITERAL) {
-        return op.literal.type;
-    } else {
-        assert(op.column.type == COLUMN_DESC_INDEX);
-        // TODO: access operand type? add into mappings? Same problem with joins
-    }
-}
-
-static bool column_operands_have_same_type(operand first, operand second) {
-    return operand_type(first) != operand_type(second);
-}
-
 static where_condition *where_condition_translate_indexed(where_condition *condition, indexed_maps maps) {
     assert(condition->type == CONDITION_COMPARE);
     where_condition *result = rmalloc(sizeof(where_condition));
@@ -538,10 +525,10 @@ static where_condition *where_condition_translate_indexed(where_condition *condi
     result->compare.type = condition->compare.type;
     result->compare.first = column_operand_translate(condition->compare.first, maps);
     result->compare.second = column_operand_translate(condition->compare.second, maps);
-    if (!column_operands_have_same_type(result->compare.first, result->compare.second)) {
-        free(result);
-        RAISE(DATABASE_TRANSLATION_EXCEPTION);
-    }
+//    if (!column_operands_have_same_type(result->compare.first, result->compare.second)) {
+//        free(result);
+//        RAISE(DATABASE_TRANSLATION_EXCEPTION);
+//    }
     return result;
 }
 

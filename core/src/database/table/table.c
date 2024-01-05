@@ -97,7 +97,7 @@ table_scheme *table_scheme_deserialize(Buffer buffer) {
         return NULL;
     }
     scheme->pool_offset = BufferReadB64(buffer).ui64;
-    scheme->name = BufferReadString(buffer); // TODO: may be null
+    scheme->name = BufferReadString(buffer);
     scheme->size = BufferReadB32(buffer).ui32;
     scheme->columns = malloc(sizeof(table_scheme_column) * scheme->size);
     if (scheme->columns == NULL) {
@@ -105,7 +105,7 @@ table_scheme *table_scheme_deserialize(Buffer buffer) {
         free(scheme);
         return NULL;
     }
-    read_columns(scheme, buffer); // TODO: may be null
+    read_columns(scheme, buffer);
     return scheme;
 }
 
@@ -141,7 +141,6 @@ table_scheme *table_scheme_copy(table_scheme *src) {
         copy->columns[i].type = src->columns[i].type;
         copy->columns[i].name = string_copy(src->columns[i].name);
         if (copy->columns[i].name == NULL) {
-            // TODO: free all columns before
             free(copy->name);
             free(copy);
             return NULL;

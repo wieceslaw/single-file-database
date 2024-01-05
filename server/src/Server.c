@@ -72,16 +72,12 @@ int ServerFree(struct Server *server) {
     err |= close(server->sockfd);
     err |= pthread_cancel(server->loopThread);
     pthread_mutex_lock(&server->lock);
-    ListIterator it = ListHeadIterator(server->connections);
-    // TODO: iterator invalidation in ConnectionFree
-    while (!ListIteratorIsEmpty(it)) {
-        struct Connection *connection = ListIteratorGet(it);
+    while (!ListIsEmpty(server->connections)) {
+        struct Connection *connection = ListGetHead(server->connections);
         err |= ConnectionStop(connection);
         ConnectionFree(connection);
-        ListIteratorNext(it);
     }
     pthread_mutex_unlock(&server->lock);
-    ListIteratorFree(&(it));
     ListFree(server->connections);
     server->connections = NULL;
     err |= pthread_mutex_destroy(&server->lock);
