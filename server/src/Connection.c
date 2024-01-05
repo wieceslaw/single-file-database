@@ -8,7 +8,6 @@
 #include "defines.h"
 #include "util_string.h"
 
-#define ERR__INVALID_REQUEST "INVALID REQUEST"
 #define ERR__INTERNAL_ERROR "INTERNAl ERROR"
 #define ERR__TABLE_ALREADY_EXISTS "TABLE ALREADY EXISTS"
 #define ERR__UNKNOWN_TABLE "UNKNOWN TABLE"
@@ -512,12 +511,23 @@ ConnectionHandleSelect(struct Connection *connection, struct DatabaseWrapper *wr
     where_condition *where = WhereFromMsg(request->where);
     JoinBuilder join = JoinFromMsg(request->n_joins, request->joins);
     query_t query = {.table = request->table, .where = where, .joins = join};
-    ResultView view = DatabaseSelectQuery(wrapper->db, query, selector);
-    if (view == NULL) {
+    ResultView view;
+    DatabaseResult result = DatabaseSelectQuery(wrapper->db, query, selector, &view);
+    if (result != DB_OK) {
         where_condition_free(where);
         JoinBuilderFree(join);
         SelectorBuilderFree(selector);
-        return ConnectionSendError(connection, ERR__INVALID_REQUEST);
+        int err = 0;
+        switch (result) {
+            case DB_INVALID_QUERY:
+                ConnectionSendError(connection, ERR__INVALID_QUERY);
+                break;
+            default:
+                err = -1;
+                ConnectionSendError(connection, ERR__INTERNAL_ERROR);
+                break;
+        }
+        return err;
     }
     Response *response = SelectResponseNew();
     response->select->scheme = TableSchemeToMsg(ResultViewGetScheme(view));

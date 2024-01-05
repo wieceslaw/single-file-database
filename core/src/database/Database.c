@@ -476,30 +476,39 @@ static column_description *create_view_selector(SelectorBuilder selector, indexe
     return result;
 }
 
-ResultView DatabaseSelectQuery(Database database, query_t query, SelectorBuilder selector) {
+DatabaseResult DatabaseSelectQuery(Database database, query_t query, SelectorBuilder selector, ResultView *resultp) {
     assert(database != NULL && selector != NULL);
-    ResultView result = NULL;
     indexed_maps maps = {0};
     Cursor cur = NULL;
-    result = malloc(sizeof(struct ResultView));
+    ResultView result = malloc(sizeof(struct ResultView));
+    DatabaseResult res = DB_OK;
     if (result == NULL) {
-        return NULL;
+        return DB_ERR;
     }
     if (query_mapping(database, query, &maps) != 0) {
-        return NULL;
+        return DB_INVALID_QUERY;
     }
     TRY({
         cur = query_cursor(database, query, maps);
         result->cursor = cur;
         result->view_scheme = create_view_scheme(database, selector, maps);
         result->view_selector = create_view_selector(selector, maps);
+        // invoke type error
+        Row row = ResultViewGetRow(result);
+        RowFree(row);
+    }) CATCH(exception == DATABASE_TRANSLATION_EXCEPTION, {
+        free(result);
+        result = NULL;
+        res = DB_INVALID_QUERY;
     }) CATCH(exception >= EXCEPTION, {
         free(result);
         result = NULL;
+        res = DB_ERR;
     }) FINALLY({
-       indexed_maps_free(maps);
+        indexed_maps_free(maps);
     })
-    return result;
+    *resultp = result;
+    return res;
 }
 
 static operand column_operand_translate(operand op, indexed_maps maps) {
@@ -520,11 +529,15 @@ static operand column_operand_translate(operand op, indexed_maps maps) {
 
 static where_condition *where_condition_translate_indexed(where_condition *condition, indexed_maps maps) {
     assert(condition->type == CONDITION_COMPARE);
-    where_condition *result = rmalloc(sizeof(where_condition));
+    where_condition *result = malloc(sizeof(where_condition));
+    if (result == NULL) {
+        return NULL;
+    }
     result->type = CONDITION_COMPARE;
     result->compare.type = condition->compare.type;
     result->compare.first = column_operand_translate(condition->compare.first, maps);
     result->compare.second = column_operand_translate(condition->compare.second, maps);
+    // TODO: type validation
 //    if (!column_operands_have_same_type(result->compare.first, result->compare.second)) {
 //        free(result);
 //        RAISE(DATABASE_TRANSLATION_EXCEPTION);

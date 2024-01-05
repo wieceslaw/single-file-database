@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <malloc.h>
 #include "Cursor.h"
+#include "exceptions/exceptions.h"
 
 // THROWS: ?
 static bool column_greater_than(Column first, Column second) {
@@ -72,6 +73,9 @@ static bool where_condition_check_compare(where_condition *condition, Cursor cur
     assert(condition != NULL && condition->type == CONDITION_COMPARE);
     Column first_column = operand_extract_column(condition->compare.first, cur);
     Column second_column = operand_extract_column(condition->compare.second, cur);
+    if (first_column.type != second_column.type) {
+        RAISE(DATABASE_TRANSLATION_EXCEPTION);
+    }
     return compare_columns(condition->compare.type, first_column, second_column);
 }
 

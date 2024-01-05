@@ -130,12 +130,7 @@ static Message *receive(int sockfd, Response__ContentCase expectedResponseType) 
         return NULL;
     }
     Response *response = message->response;
-    if (strcmp(response->error, "") != 0) {
-        printf("Server error: %s \n", response->error);
-        message__free_unpacked(message, NULL);
-        return NULL;
-    }
-    if (response->content_case != expectedResponseType) {
+    if (strcmp(response->error, "") == 0 && response->content_case != expectedResponseType) {
         message__free_unpacked(message, NULL);
         debug("Wrong response type");
         return NULL;
@@ -207,7 +202,12 @@ static int requestTablesList(int sockfd) {
     Message *msg = receive(sockfd, RESPONSE__CONTENT_TABLE_LIST);
     if (msg == NULL) {
         debug("Response error");
-        return -1;
+        return 0;
+    }
+    if (strcmp(msg->response->error, "") != 0) {
+        printf("ERROR: %s \n", msg->response->error);
+        message__free_unpacked(msg, NULL);
+        return 0;
     }
     Response *resp = msg->response;
     printTables(resp->tablelist);
@@ -231,7 +231,12 @@ static int requestDeleteTable(int sockfd, struct AstNode *tree) {
     Message *msg = receive(sockfd, RESPONSE__CONTENT_DELETE_TABLE);
     if (msg == NULL) {
         debug("Response error");
-        return -1;
+        return 0;
+    }
+    if (strcmp(msg->response->error, "") != 0) {
+        printf("ERROR: %s \n", msg->response->error);
+        message__free_unpacked(msg, NULL);
+        return 0;
     }
     message__free_unpacked(msg, NULL);
     printf("OK \n");
@@ -246,11 +251,15 @@ static int requestCreateTable(int sockfd, struct AstNode *tree) {
         debug("Request error");
         return -1;
     }
-
     Message *msg = receive(sockfd, RESPONSE__CONTENT_CREATE_TABLE);
     if (msg == NULL) {
         debug("Response error");
-        return -1;
+        return 0;
+    }
+    if (strcmp(msg->response->error, "") != 0) {
+        printf("ERROR: %s \n", msg->response->error);
+        message__free_unpacked(msg, NULL);
+        return 0;
     }
     message__free_unpacked(msg, NULL);
     printf("OK \n");
@@ -265,14 +274,17 @@ static int requestInsertQuery(int sockfd, struct AstNode *tree) {
         debug("error sending request");
         return -1;
     }
-
     Message *msg = receive(sockfd, RESPONSE__CONTENT_INSERT);
     if (msg == NULL) {
         debug("Response error");
-        return -1;
+        return 0;
+    }
+    if (strcmp(msg->response->error, "") != 0) {
+        printf("ERROR: %s \n", msg->response->error);
+        message__free_unpacked(msg, NULL);
+        return 0;
     }
     message__free_unpacked(msg, NULL);
-
     printf("OK \n");
     return 0;
 }
@@ -395,11 +407,15 @@ static int requestSelectQuery(int sockfd, struct AstNode *tree) {
         debug("error sending request");
         return -1;
     }
-
     Message *msg = receive(sockfd, RESPONSE__CONTENT_SELECT);
     if (msg == NULL) {
         debug("Response error");
-        return -1;
+        return 0;
+    }
+    if (strcmp(msg->response->error, "") != 0) {
+        printf("ERROR: %s \n", msg->response->error);
+        message__free_unpacked(msg, NULL);
+        return 0;
     }
     receiveRows(sockfd, msg->response->select->scheme);
     message__free_unpacked(msg, NULL);
@@ -417,7 +433,12 @@ static int requestDeleteQuery(int sockfd, struct AstNode *tree) {
     Message *msg = receive(sockfd, RESPONSE__CONTENT_DELETE);
     if (msg == NULL) {
         debug("Response error");
-        return -1;
+        return 0;
+    }
+    if (strcmp(msg->response->error, "") != 0) {
+        printf("ERROR: %s \n", msg->response->error);
+        message__free_unpacked(msg, NULL);
+        return 0;
     }
     Response *response = msg->response;
     printf("DELETED (%d) \n", response->delete_->count);
@@ -436,7 +457,12 @@ static int requestUpdateQuery(int sockfd, struct AstNode *tree) {
     Message *msg = receive(sockfd, RESPONSE__CONTENT_UPDATE);
     if (msg == NULL) {
         debug("Response error");
-        return -1;
+        return 0;
+    }
+    if (strcmp(msg->response->error, "") != 0) {
+        printf("ERROR: %s \n", msg->response->error);
+        message__free_unpacked(msg, NULL);
+        return 0;
     }
     Response *response = msg->response;
     printf("UPDATED (%d) \n", response->update->count);

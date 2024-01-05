@@ -47,10 +47,6 @@ where_condition *where_condition_translate(where_condition *condition, indexed_m
 /// THROWS: [DATABASE_INTERNAL_ERROR]
 int DatabaseFree(Database database);
 
-/// THROWS: [DATABASE_INTERNAL_ERROR, DATABASE_QUERY_EXCEPTION]
-ResultView DatabaseSelectQuery(Database database, query_t query, SelectorBuilder selector);
-
-
 Database DatabaseNew(file_settings *settings);
 
 StrTableSchemeMap DatabaseGetTablesSchemes(Database database);
@@ -66,5 +62,7 @@ DatabaseResult DatabaseInsertQuery(Database database, char *tableName, RowBatch 
 DatabaseResult DatabaseDeleteQuery(Database database, query_t query, int *result);
 
 DatabaseResult DatabaseUpdateQuery(Database database, query_t query, updater_builder_t updater, int* result);
+
+DatabaseResult DatabaseSelectQuery(Database database, query_t query, SelectorBuilder selector, ResultView *resultp);
 
 #endif //LLP_LAB1_DATABASE_H
