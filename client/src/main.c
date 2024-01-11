@@ -56,6 +56,7 @@ static void cli(int sockfd) {
                 if (tree != NULL) {
                     if (requestQuery(sockfd, tree) != 0) {
                         debug("Error while executing request");
+                        FreeAstNode(tree);
                         goto out;
                     }
                     FreeAstNode(tree);
